@@ -8,4 +8,17 @@ Frontend application for the Criatório Virtual SaaS.
 - Responsive, mobile-first interface
 - Consumption of the Criatório Virtual API
 
-The application code will be created in its corresponding frontend backlog card. This repository is already configured with the team Git workflow and Codex instructions.
+## Run locally
+
+Requires Node.js 20.9 or later and npm.
+
+```bash
+npm ci
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). To generate the production build, run:
+
+```bash
+npm run build
+```
