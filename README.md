@@ -17,6 +17,22 @@ npm ci
 npm run dev
 ```
 
+Before starting the application, create `.env.local` from the example and set
+the local API URL when it differs from the default:
+
+```bash
+Copy-Item .env.example .env.local
+npm run dev
+```
+
+`NEXT_PUBLIC_API_URL` defaults to `http://localhost:5000` in the example. It
+is public browser configuration only; do not add credentials or secrets to
+this variable or commit `.env.local`.
+
+Start the frontend after the local API is available at that address. To point
+the frontend to another local API port, change only `NEXT_PUBLIC_API_URL` in
+`.env.local`.
+
 Open [http://localhost:3000](http://localhost:3000). To generate the production build, run:
 
 ```bash
