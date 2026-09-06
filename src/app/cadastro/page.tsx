@@ -44,7 +44,7 @@ export default function RegistrationPage() {
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [formError, setFormError] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState<string | undefined>();
+  const [registration, setRegistration] = useState<AccountRegistrationResponse | undefined>();
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
 
@@ -72,7 +72,7 @@ export default function RegistrationPage() {
         method: "POST"
       });
 
-      if (response.emailConfirmationRequired) setRegisteredEmail(response.email);
+      setRegistration(response);
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(error.fields);
@@ -89,7 +89,7 @@ export default function RegistrationPage() {
     }
   }
 
-  if (registeredEmail) {
+  if (registration) {
     return (
       <main className="auth-page">
         <a className="skip-link" href="#conteudo-cadastro">Pular para o conteúdo</a>
@@ -99,9 +99,11 @@ export default function RegistrationPage() {
             <span>Criatório Virtual</span>
           </a>
           <section className="registration-card confirmation-card" id="conteudo-cadastro" aria-labelledby="titulo-confirmacao">
-            <p className="eyebrow">Quase lá</p>
-            <h1 id="titulo-confirmacao">Confirme seu e-mail</h1>
-            <p className="lede">Sua conta foi criada com o e-mail <strong>{registeredEmail}</strong>. Confirme seu endereço antes de usar o login para liberar o acesso à plataforma.</p>
+            <p className="eyebrow">Cadastro concluído</p>
+            <h1 id="titulo-confirmacao">{registration.emailConfirmationRequired ? "Confirme seu e-mail" : "Sua conta está pronta"}</h1>
+            <p className="lede">{registration.emailConfirmationRequired
+              ? <>Sua conta foi criada com o e-mail <strong>{registration.email}</strong>. Confirme seu endereço antes de usar o login para liberar o acesso à plataforma.</>
+              : <>Sua conta foi criada com o e-mail <strong>{registration.email}</strong>. Use o login para continuar.</>}</p>
             <div className="confirmation-actions">
               <a className="primary-action" href="/login">Ir para o login</a>
               <a className="text-action" href="/">Voltar para a página inicial</a>
