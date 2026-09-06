@@ -21,6 +21,8 @@ describe("RegistrationPage", () => {
     expect(screen.getByText("Informe uma senha.")).toBeTruthy();
     expect(screen.getByText("Aceite os Termos de Uso e a Política de Privacidade para continuar.")).toBeTruthy();
     expect(screen.getByLabelText("E-mail").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByRole("checkbox").getAttribute("aria-describedby")).toBe("terms-error");
+    expect(screen.getByRole("checkbox").getAttribute("aria-invalid")).toBe("true");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

@@ -341,6 +341,8 @@ export default function RegistrationPage() {
 
               <label className={`terms-control${termsError ? " terms-control-error" : ""}`}>
                 <input
+                  aria-describedby={termsError ? "terms-error" : undefined}
+                  aria-invalid={Boolean(termsError)}
                   checked={acceptedTerms}
                   disabled={isSubmitting}
                   onChange={(event) => setAcceptedTerms(event.target.checked)}
@@ -348,7 +350,7 @@ export default function RegistrationPage() {
                 />
                 <span>Li e concordo com os <a href="/termos-de-uso">Termos de Uso</a> e a <a href="/politica-de-privacidade">Política de Privacidade</a>.</span>
               </label>
-              {termsError && <p className="field-error terms-error">{termsError}</p>}
+              {termsError && <p className="field-error terms-error" id="terms-error">{termsError}</p>}
 
               <button className="primary-action submit-action" disabled={isSubmitting} type="submit">
                 {isSubmitting ? "Criando sua conta…" : "Criar conta"}
