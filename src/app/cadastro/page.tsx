@@ -206,7 +206,6 @@ export default function RegistrationPage() {
             <div className="auth-form-content confirmation-card" id="conteudo-cadastro">
               <div className="auth-mobile-brand"><BrandLockup /></div>
               <div className="confirmation-icon" aria-hidden="true"><MailIcon /></div>
-              <p className="eyebrow">Cadastro concluído</p>
               <h1 id="titulo-confirmacao">{registration.emailConfirmationRequired ? "Verifique seu e-mail" : "Sua conta está pronta"}</h1>
               <p className="lede">{registration.emailConfirmationRequired
                 ? <>Enviamos um link de confirmação para <strong>{registration.email}</strong>.</>
@@ -299,7 +298,7 @@ export default function RegistrationPage() {
                     id="password"
                     name="password"
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Crie uma senha segura"
+                    placeholder="Mínimo de 12 caracteres"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     aria-describedby={passwordError ? "password-error" : undefined}
