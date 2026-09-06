@@ -38,6 +38,30 @@ h2 { font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: -.03em; max-width: 15c
 .lede { color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.25rem); margin: 1.5rem 0 2rem; max-width: 58ch; }
 .primary-action { background: var(--accent); border-radius: .6rem; color: white; display: inline-block; font-weight: 700; padding: .85rem 1.1rem; text-decoration: none; }
 .primary-action:hover { background: var(--accent-dark); }
+.primary-action:disabled { cursor: wait; opacity: .65; }
+
+.auth-page { min-height: 100vh; padding: 1.25rem; }
+.auth-shell { display: grid; gap: 2rem; margin: 0 auto; max-width: 34rem; padding-block: 1rem 3rem; }
+.registration-card { background: white; border: 1px solid var(--line); border-radius: 1.25rem; box-shadow: 0 1rem 3rem rgb(23 36 29 / 8%); padding: clamp(1.5rem, 6vw, 3rem); }
+.registration-card h1 { font-size: clamp(2.4rem, 10vw, 4rem); max-width: 10ch; }
+.registration-card .lede { font-size: 1rem; margin-bottom: 2rem; }
+.field-group { display: grid; gap: .45rem; margin-top: 1.25rem; }
+.field-group label { font-weight: 700; }
+.field-group input { background: var(--surface); border: 1px solid #aebcaf; border-radius: .55rem; color: var(--ink); font: inherit; min-height: 3rem; padding: .7rem .8rem; width: 100%; }
+.field-group input:focus { border-color: var(--accent); outline: 3px solid rgb(40 112 68 / 22%); }
+.field-group input[aria-invalid="true"] { border-color: #b3261e; }
+.field-group input:disabled { cursor: wait; opacity: .7; }
+.field-help, .field-error { font-size: .875rem; margin: 0; }
+.field-help { color: var(--muted); }
+.field-error, .form-error { color: #8f1d18; }
+.form-error { background: #fff0ef; border: 1px solid #e2aaa5; border-radius: .55rem; padding: .75rem .85rem; }
+.submit-action { border: 0; cursor: pointer; font: inherit; margin-top: 1.75rem; width: 100%; }
+.auth-footer { border-top: 1px solid var(--line); color: var(--muted); margin: 2rem 0 0; padding-top: 1.25rem; text-align: center; }
+.auth-footer a, .text-action { color: var(--accent-dark); font-weight: 700; }
+.confirmation-card { text-align: left; }
+.confirmation-card .lede { max-width: none; }
+.confirmation-actions { align-items: flex-start; display: flex; flex-wrap: wrap; gap: 1rem; }
+.text-action { padding: .85rem 0; }
 
 .benefits { display: grid; gap: 2rem; padding-block: 4rem; }
 .benefits ul { display: grid; gap: 1rem; list-style: none; margin: 0; padding: 0; }
@@ -54,3 +78,9 @@ h2 { font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: -.03em; max-width: 15c
   .site-header { align-items: flex-start; flex-direction: column; justify-content: center; padding-block: 1rem; }
   nav ul { justify-content: flex-start; }
 }
+
+@media (min-width: 48rem) {
+  .auth-page { padding: 2rem; }
+  .auth-shell { padding-block: 2rem 4rem; }
+}
+
