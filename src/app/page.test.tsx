@@ -10,5 +10,8 @@ describe("Home", () => {
     expect(screen.getByRole("link", { name: "Pular para o conteúdo" }).getAttribute("href")).toBe("#conteudo");
     expect(screen.getByRole("navigation", { name: "Navegação principal" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Visão geral" }).getAttribute("href")).toBe("#visao-geral");
+    expect(screen.getByRole("link", { name: "Criar conta" }).getAttribute("href")).toBe("/cadastro");
+    expect(screen.getByRole("link", { name: "Criar minha conta" }).getAttribute("href")).toBe("/cadastro");
   });
 });
+
