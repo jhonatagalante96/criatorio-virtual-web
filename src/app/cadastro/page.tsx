@@ -72,27 +72,7 @@ function AuthBrandPanel() {
         <h2>Gestão completa para o seu criatório</h2>
         <p>Organize suas aves, acompanhe sua evolução e tenha tudo reunido em um só lugar.</p>
       </div>
-      <svg className="auth-bird" viewBox="0 0 300 230" aria-hidden="true">
-        <defs>
-          <linearGradient id="bird-body" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0" stopColor="#dce366" />
-            <stop offset=".58" stopColor="#86a72f" />
-            <stop offset="1" stopColor="#315f2c" />
-          </linearGradient>
-          <linearGradient id="bird-wing" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0" stopColor="#6e8b28" />
-            <stop offset="1" stopColor="#173f32" />
-          </linearGradient>
-        </defs>
-        <path d="M16 194c69-10 163-5 269 16" fill="none" stroke="#7b5a32" strokeLinecap="round" strokeWidth="13" />
-        <path d="M75 202c-15-28-13-58 6-81M112 202c-4-30 5-59 28-82M244 209c-8-26-1-49 19-66" fill="none" stroke="#315c35" strokeLinecap="round" strokeWidth="8" />
-        <path d="M92 119c-4-42 17-77 61-84 42-7 79 17 83 53 5 39-23 78-67 86-36 7-73-17-77-55Z" fill="url(#bird-body)" />
-        <path d="M139 72c25-18 61-11 78 12 13 18 10 45-5 62-28-8-54-29-73-74Z" fill="url(#bird-wing)" />
-        <path d="M211 72c15-13 31-11 47-2-8 14-19 22-36 23Z" fill="#e3c74c" />
-        <circle cx="201" cy="53" r="5" fill="#112b25" />
-        <path d="M120 150c16 19 38 25 60 22" fill="none" stroke="#e8d94f" strokeLinecap="round" strokeWidth="9" />
-        <path d="M93 120c-10-22-8-43 2-58 12 13 21 29 25 49Z" fill="#bdd244" opacity=".9" />
-      </svg>
+      <img className="auth-bird" src="/images/auth-canary.png" alt="" aria-hidden="true" />
       <p className="auth-brand-footnote">Tradição e tecnologia lado a lado.</p>
     </aside>
   );

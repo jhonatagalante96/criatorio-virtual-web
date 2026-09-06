@@ -51,7 +51,7 @@ h2 { font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: -.03em; max-width: 15c
 .auth-brand-copy { margin-top: 2.8rem; max-width: 13rem; position: relative; z-index: 1; }
 .auth-brand-copy h2 { color: #fff; font-size: clamp(1.25rem, 2.2vw, 1.8rem); letter-spacing: -.055em; line-height: 1.05; margin: 0; max-width: 13ch; }
 .auth-brand-copy > p { color: rgb(255 255 255 / 78%); font-size: .66rem; line-height: 1.45; margin: .9rem 0 0; max-width: 28ch; }
-.auth-bird { bottom: -2.5rem; height: auto; opacity: .98; pointer-events: none; position: absolute; right: -5rem; width: min(132%, 25rem); }
+.auth-bird { bottom: -7rem; display: block; height: auto; opacity: .98; pointer-events: none; position: absolute; right: -1rem; width: min(145%, 28rem); }
 .auth-brand-footnote { color: rgb(255 255 255 / 64%); font-size: .58rem; margin: auto 0 0; max-width: 18ch; padding-top: 10rem; position: relative; z-index: 1; }
 .auth-form-panel { align-items: center; display: flex; justify-content: center; padding: clamp(1.75rem, 4vw, 3rem); }
 .auth-form-content { max-width: 24rem; width: 100%; }
