@@ -3,7 +3,8 @@ import React from "react";
 const navigationItems = [
   { href: "#visao-geral", label: "Visão geral" },
   { href: "#beneficios", label: "Benefícios" },
-  { href: "#suporte", label: "Suporte" }
+  { href: "#suporte", label: "Suporte" },
+  { href: "/cadastro", label: "Criar conta" }
 ];
 
 export default function Home() {
@@ -29,7 +30,7 @@ export default function Home() {
           <p className="eyebrow">Gestão do seu criatório</p>
           <h1 id="titulo-principal">Informações claras para decisões melhores.</h1>
           <p className="lede">Organize o acompanhamento das suas aves em um único lugar, com simplicidade desde o primeiro acesso.</p>
-          <a className="primary-action" href="#beneficios">Conhecer a plataforma</a>
+          <a className="primary-action" href="/cadastro">Criar minha conta</a>
         </section>
 
         <section id="beneficios" className="benefits" aria-labelledby="titulo-beneficios">
@@ -52,3 +53,4 @@ export default function Home() {
     </main>
   );
 }
+
