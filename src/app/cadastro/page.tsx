@@ -69,8 +69,8 @@ function AuthBrandPanel() {
         <BrandLockup light />
       </a>
       <div className="auth-brand-copy">
-        <h2>Gestão completa para o seu criatório</h2>
-        <p>Organize suas aves, acompanhe sua evolução e tenha tudo reunido em um só lugar.</p>
+        <h2>Gestão completa<br />para o seu criatório</h2>
+        <p>Organize suas aves, acompanhe sua evolução, gere documentos em minutos. Tudo em um só lugar.</p>
       </div>
       <img className="auth-bird" src="/images/auth-canary.png" alt="" aria-hidden="true" />
       <p className="auth-brand-footnote">Tradição e tecnologia lado a lado.</p>
