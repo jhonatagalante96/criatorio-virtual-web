@@ -15,23 +15,11 @@ const featureItems = [
   { icon: "relatorios", title: "Relatórios", copy: "Resultados para decisões melhores." }
 ];
 
-const planItems = [
-  {
-    title: "Comece organizado",
-    copy: "Centralize as informações essenciais do seu criatório desde o primeiro dia.",
-    items: ["Cadastro do plantel", "Documentos em um só lugar", "Rotina mais simples"]
-  },
-  {
-    title: "Cresça com clareza",
-    copy: "Acompanhe movimentações e mantenha o histórico das suas aves sempre acessível.",
-    items: ["Transferências registradas", "Histórico organizado", "Visão completa da criação"],
-    featured: true
-  },
-  {
-    title: "Profissionalize a gestão",
-    copy: "Use informações confiáveis para tomar decisões melhores no dia a dia.",
-    items: ["Indicadores objetivos", "Processos padronizados", "Dados prontos para consultar"]
-  }
+const planFeatures = [
+  "Gestão completa do plantel",
+  "Documentos e registros organizados",
+  "Histórico de transferências",
+  "Indicadores para acompanhar a criação"
 ];
 
 const contentItems = [
@@ -176,21 +164,36 @@ export default function Home() {
 
           <section id="planos" className="landing-section plans-section" aria-labelledby="titulo-planos">
             <div className="section-heading section-heading-centered">
-              <p className="eyebrow">Uma base para cada fase</p>
-              <h2 id="titulo-planos">Escolha como quer evoluir a gestão.</h2>
-              <p>Comece com o essencial e avance conforme o seu criatório cresce. Você conhece as opções antes de decidir.</p>
+              <p className="eyebrow">Um plano. Duas formas de assinar.</p>
+              <h2 id="titulo-planos">Tudo o que o seu criatório precisa.</h2>
+              <p>Tenha acesso a todos os recursos e escolha apenas a periodicidade que funciona melhor para você.</p>
             </div>
-            <div className="plan-grid">
-              {planItems.map((plan) => (
-                <article className={`plan-card${plan.featured ? " plan-card-featured" : ""}`} key={plan.title}>
-                  {plan.featured && <span className="plan-badge">Mais completo</span>}
-                  <h3>{plan.title}</h3>
-                  <p>{plan.copy}</p>
-                  <ul>{plan.items.map((item) => <li key={item}>{item}</li>)}</ul>
-                  <a className={plan.featured ? "primary-action" : "secondary-action"} href="/cadastro">Criar minha conta <ArrowIcon /></a>
-                </article>
-              ))}
-            </div>
+            <article className="single-plan-card">
+              <div className="plan-summary">
+                <span className="plan-label">Plano Criatório Virtual</span>
+                <h3>Gestão completa, sem recursos bloqueados.</h3>
+                <p>As duas assinaturas incluem exatamente as mesmas funcionalidades.</p>
+                <ul>{planFeatures.map((feature) => <li key={feature}>{feature}</li>)}</ul>
+              </div>
+              <div className="billing-options" aria-label="Opções de assinatura">
+                <div className="billing-option">
+                  <div>
+                    <span className="billing-period">Assinatura mensal</span>
+                    <p>Cobrança realizada todos os meses.</p>
+                  </div>
+                  <p className="plan-price"><strong>R$ 19,90</strong><span>por mês</span></p>
+                </div>
+                <div className="billing-option billing-option-featured">
+                  <span className="savings-badge">2 meses grátis</span>
+                  <div>
+                    <span className="billing-period">Assinatura anual</span>
+                    <p>Uma cobrança por ano, com o melhor valor.</p>
+                  </div>
+                  <p className="plan-price"><strong>R$ 199,90</strong><span>por ano</span></p>
+                </div>
+                <a className="primary-action plan-action" href="/cadastro">Criar minha conta <ArrowIcon /></a>
+              </div>
+            </article>
           </section>
 
           <section id="sobre" className="landing-section about-section" aria-labelledby="titulo-sobre">

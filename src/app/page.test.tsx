@@ -17,5 +17,9 @@ describe("Home", () => {
     expect(screen.getAllByRole("link", { name: "Começar agora" })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: "Começar agora" })[0].getAttribute("href")).toBe("/cadastro");
     expect(screen.getAllByRole("link", { name: "Entrar" })[0].getAttribute("href")).toBe("/login");
+    expect(screen.getByText("R$ 19,90")).toBeTruthy();
+    expect(screen.getByText("R$ 199,90")).toBeTruthy();
+    expect(screen.getByText("2 meses grátis")).toBeTruthy();
+    expect(screen.getByText("As duas assinaturas incluem exatamente as mesmas funcionalidades.")).toBeTruthy();
   });
 });
