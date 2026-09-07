@@ -69,7 +69,11 @@ describe("RegistrationPage", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [, request] = fetchMock.mock.calls[1];
     expect(new Headers(request.headers).get("x-xsrf-token")).toBe("csrf-token");
-    expect(JSON.parse(request.body as string)).toEqual({ email: "owner@example.com", password: "StrongPassword!123" });
+    expect(JSON.parse(request.body as string)).toEqual({
+      email: "owner@example.com",
+      password: "StrongPassword!123",
+      confirmPassword: "StrongPassword!123"
+    });
   });
 
   it("keeps the form available and maps API field errors", async () => {

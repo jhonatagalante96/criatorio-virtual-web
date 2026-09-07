@@ -105,7 +105,7 @@ export default function RegistrationPage() {
       if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
 
       const response = await client.current!.request<AccountRegistrationResponse>("api/auth/register", {
-        body: JSON.stringify({ email: normalizedEmail, password }),
+        body: JSON.stringify({ email: normalizedEmail, password, confirmPassword }),
         headers: { "content-type": "application/json" },
         method: "POST"
       });
