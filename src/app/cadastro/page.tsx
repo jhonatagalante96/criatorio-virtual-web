@@ -13,8 +13,8 @@ function BrandLockup({ light = false }: { light?: boolean }) {
   return (
     <span className={`auth-brand-lockup${light ? " auth-brand-lockup-light" : ""}`}>
       <svg className="auth-brand-symbol" viewBox="0 0 48 48" aria-hidden="true">
-        <path d="M9 31c8-2 14-9 16-20 9 5 13 12 10 20-3 8-13 12-26 10 5-2 8-5 10-9Z" fill="currentColor" />
-        <path d="M12 37c7-8 13-14 23-21" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.5" />
+        <path d="M7.5 39.5C10 23 22.5 9.5 40.5 6.5c-.5 17.5-11 30.5-30.5 36.5-2 .5-3-1.5-2.5-3.5Z" fill="currentColor" />
+        <path d="M9 42c8.5-11 17-20 29.5-32" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.5" />
       </svg>
       <span>Criatório Virtual</span>
     </span>
