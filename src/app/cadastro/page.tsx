@@ -2,23 +2,12 @@
 
 import React, { FormEvent, useRef, useState } from "react";
 import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../lib/http/api-client";
+import { BrandLockup, BrandPanel } from "../components/brand";
 
 interface AccountRegistrationResponse {
   email: string;
   emailConfirmationRequired: boolean;
   userId: string;
-}
-
-function BrandLockup({ light = false }: { light?: boolean }) {
-  return (
-    <span className={`auth-brand-lockup${light ? " auth-brand-lockup-light" : ""}`}>
-      <svg className="auth-brand-symbol" viewBox="0 0 48 48" aria-hidden="true">
-        <path d="M7.5 39.5C10 23 22.5 9.5 40.5 6.5c-.5 17.5-11 30.5-30.5 36.5-2 .5-3-1.5-2.5-3.5Z" fill="currentColor" />
-        <path d="M9 42c8.5-11 17-20 29.5-32" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.5" />
-      </svg>
-      <span>Criatório Virtual</span>
-    </span>
-  );
 }
 
 function MailIcon() {
@@ -59,22 +48,6 @@ function EyeIcon({ visible }: { visible: boolean }) {
       <circle cx="12" cy="12" r="2.5" />
       {!visible && <path d="m4 4 16 16" />}
     </svg>
-  );
-}
-
-function AuthBrandPanel() {
-  return (
-    <aside className="auth-brand-panel" aria-label="Sobre o Criatório Virtual">
-      <a className="auth-brand-link" href="/" aria-label="Criatório Virtual, página inicial">
-        <BrandLockup light />
-      </a>
-      <div className="auth-brand-copy">
-        <h2>Gestão completa<br />para o seu criatório</h2>
-        <p>Organize suas aves, acompanhe sua evolução, gere documentos em minutos. Tudo em um só lugar.</p>
-      </div>
-      <img className="auth-bird" src="/images/auth-canary.png" alt="" aria-hidden="true" />
-      <p className="auth-brand-footnote">Tradição e tecnologia lado a lado.</p>
-    </aside>
   );
 }
 
@@ -201,7 +174,7 @@ export default function RegistrationPage() {
       <main className="auth-page">
         <a className="skip-link" href="#conteudo-cadastro">Pular para o conteúdo</a>
         <div className="auth-shell">
-          <AuthBrandPanel />
+          <BrandPanel />
           <section className="auth-form-panel" aria-labelledby="titulo-confirmacao">
             <div className="auth-form-content confirmation-card" id="conteudo-cadastro">
               <div className="auth-mobile-brand"><BrandLockup /></div>
@@ -239,7 +212,7 @@ export default function RegistrationPage() {
     <main className="auth-page">
       <a className="skip-link" href="#conteudo-cadastro">Pular para o conteúdo</a>
       <div className="auth-shell">
-        <AuthBrandPanel />
+          <BrandPanel />
         <section className="auth-form-panel" aria-labelledby="titulo-cadastro">
           <div className="auth-form-content" id="conteudo-cadastro">
             <div className="auth-mobile-brand"><BrandLockup /></div>
