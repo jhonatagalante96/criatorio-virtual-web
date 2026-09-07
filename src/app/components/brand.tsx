@@ -24,9 +24,6 @@ export function BrandPanel() {
         <span className="brand-panel-rule" aria-hidden="true" />
         <p>A avicultura<br />brasileira mais forte,<br />organizada e conectada.</p>
       </div>
-      <div className="brand-panel-landscape" aria-hidden="true">
-        <img src="/assets/imagery/landscapes/mountain-landscape.png" alt="" />
-      </div>
     </aside>
   );
 }

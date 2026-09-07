@@ -338,8 +338,6 @@ h1, h2 { line-height: 1.08; }
 .brand-panel-copy { bottom: 8.3rem; color: #27546a; left: 12%; position: absolute; right: 8%; z-index: 3; }
 .brand-panel-rule { background: var(--green); border-radius: 2rem; display: block; height: .2rem; margin-bottom: .8rem; width: 2.2rem; }
 .brand-panel-copy p { font-family: Georgia, serif; font-size: clamp(1rem, 1.9vw, 1.5rem); font-style: italic; line-height: 1.25; margin: 0; }
-.brand-panel-landscape { bottom: 0; height: 8.5rem; left: 0; overflow: hidden; position: absolute; right: 0; z-index: 2; }
-.brand-panel-landscape img { bottom: 0; height: 100%; left: 0; object-fit: cover; object-position: center bottom; position: absolute; width: 100%; }
 
 @media (max-width: 62rem) {
   .landing-hero { gap: 2rem; grid-template-columns: minmax(14rem, .75fr) minmax(25rem, 1.25fr); }
