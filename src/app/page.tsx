@@ -175,7 +175,7 @@ export default function Home() {
                 <p>As duas assinaturas incluem exatamente as mesmas funcionalidades.</p>
                 <ul>{planFeatures.map((feature) => <li key={feature}>{feature}</li>)}</ul>
               </div>
-              <div className="billing-options" aria-label="Opções de assinatura">
+              <div className="billing-options" role="group" aria-label="Opções de assinatura">
                 <div className="billing-option">
                   <div>
                     <span className="billing-period">Assinatura mensal</span>

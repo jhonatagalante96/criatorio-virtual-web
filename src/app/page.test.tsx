@@ -20,6 +20,7 @@ describe("Home", () => {
     expect(screen.getByText("R$ 19,90")).toBeTruthy();
     expect(screen.getByText("R$ 199,90")).toBeTruthy();
     expect(screen.getByText("2 meses grátis")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Opções de assinatura" })).toBeTruthy();
     expect(screen.getByText("As duas assinaturas incluem exatamente as mesmas funcionalidades.")).toBeTruthy();
   });
 });
