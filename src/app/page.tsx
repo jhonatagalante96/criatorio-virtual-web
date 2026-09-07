@@ -20,6 +20,7 @@ export default function Home() {
             {navigationItems.map((item) => (
               <li key={item.href}><a href={item.href}>{item.label}</a></li>
             ))}
+            <li><a href="/login">Entrar</a></li>
           </ul>
         </nav>
       </header>

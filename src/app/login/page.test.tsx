@@ -1,0 +1,146 @@
+import React from "react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import LoginPage from "./page";
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+function unauthenticatedResponse(): Response {
+  return new Response(null, { status: 401 });
+}
+
+function authenticatedSession(): Response {
+  return new Response(JSON.stringify({
+    email: "owner@example.com",
+    emailConfirmed: true,
+    userId: "user-id"
+  }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
+describe("LoginPage", () => {
+  it("restores an anonymous session and validates the form accessibly", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(unauthenticatedResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(screen.getByText("Informe seu e-mail.")).toBeTruthy();
+    expect(screen.getByText("Informe sua senha.")).toBeTruthy();
+    expect(screen.getByLabelText("E-mail").getAttribute("aria-invalid")).toBe("true");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs in with a fresh antiforgery token and renders the restored session", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(authenticatedSession());
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: " owner@example.com " } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
+    expect(screen.getByText("owner@example.com")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    const [, loginRequest] = fetchMock.mock.calls[2];
+    expect(new Headers(loginRequest.headers).get("x-xsrf-token")).toBe("before-login");
+    expect(JSON.parse(loginRequest.body as string)).toEqual({ email: "owner@example.com", password: "StrongPassword!123" });
+  });
+
+  it("shows a generic invalid-credentials message for a 401 response", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Invalid email or password." }), {
+        headers: { "content-type": "application/problem+json" },
+        status: 401
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "WrongPassword!123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("E-mail ou senha inválidos."));
+    expect(screen.queryByText("Invalid email or password.")).toBeNull();
+  });
+
+  it("keeps a forbidden session response in a blocked state instead of redirecting", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Acesso bloqueado" })).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Verificar novamente" })).toBeTruthy();
+    expect(screen.queryByRole("textbox", { name: "E-mail" })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirms logout, refreshes antiforgery, and clears the session context", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-logout" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "Sair da conta" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Sair da conta" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar saída" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+
+    const [, logoutRequest] = fetchMock.mock.calls[5];
+    expect(new Headers(logoutRequest.headers).get("x-xsrf-token")).toBe("before-logout");
+  });
+
+  it("keeps the authenticated session visible when logout is forbidden", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-logout" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "Sair da conta" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar saída" }));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("não está autorizado"));
+    expect(screen.getByText("owner@example.com")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy();
+  });
+});

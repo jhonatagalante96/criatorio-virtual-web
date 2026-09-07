@@ -9,6 +9,7 @@ describe("Home", () => {
 
     expect(screen.getByRole("link", { name: "Pular para o conteúdo" }).getAttribute("href")).toBe("#conteudo");
     expect(screen.getByRole("navigation", { name: "Navegação principal" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Entrar" }).getAttribute("href")).toBe("/login");
     expect(screen.getByRole("link", { name: "Visão geral" }).getAttribute("href")).toBe("#visao-geral");
   });
 });
