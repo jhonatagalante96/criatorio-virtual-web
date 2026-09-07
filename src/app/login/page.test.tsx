@@ -143,4 +143,29 @@ describe("LoginPage", () => {
     expect(screen.getByText("owner@example.com")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy();
   });
+
+  it("clears an expired session when logout returns 401", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-logout" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "Sair da conta" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar saída" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+
+    expect(screen.getByRole("alert").textContent).toContain("Sua sessão expirou");
+    expect(screen.queryByText("owner@example.com")).toBeNull();
+  });
 });
