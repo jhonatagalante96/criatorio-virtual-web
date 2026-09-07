@@ -18,7 +18,7 @@ export function BrandPanel() {
       <div className="brand-panel-leaves brand-panel-leaves-top" aria-hidden="true" />
       <div className="brand-panel-leaves brand-panel-leaves-side" aria-hidden="true" />
       <div className="brand-panel-bird-wrap" aria-hidden="true">
-        <img className="brand-panel-bird" src="/assets/imagery/birds/great-tit-header.png" alt="" />
+        <img className="brand-panel-bird" src="/assets/imagery/birds/great-tit-header-hd.webp" alt="" />
       </div>
       <div className="brand-panel-copy">
         <span className="brand-panel-rule" aria-hidden="true" />

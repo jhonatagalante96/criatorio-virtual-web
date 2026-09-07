@@ -15,6 +15,31 @@ const featureItems = [
   { icon: "relatorios", title: "Relatórios", copy: "Resultados para decisões melhores." }
 ];
 
+const planItems = [
+  {
+    title: "Comece organizado",
+    copy: "Centralize as informações essenciais do seu criatório desde o primeiro dia.",
+    items: ["Cadastro do plantel", "Documentos em um só lugar", "Rotina mais simples"]
+  },
+  {
+    title: "Cresça com clareza",
+    copy: "Acompanhe movimentações e mantenha o histórico das suas aves sempre acessível.",
+    items: ["Transferências registradas", "Histórico organizado", "Visão completa da criação"],
+    featured: true
+  },
+  {
+    title: "Profissionalize a gestão",
+    copy: "Use informações confiáveis para tomar decisões melhores no dia a dia.",
+    items: ["Indicadores objetivos", "Processos padronizados", "Dados prontos para consultar"]
+  }
+];
+
+const contentItems = [
+  { tag: "GESTÃO", title: "Uma rotina mais leve começa pela organização", copy: "Tenha uma visão clara do plantel e encontre rapidamente o que precisa." },
+  { tag: "DOCUMENTAÇÃO", title: "Informações importantes sempre à mão", copy: "Reúna documentos, registros e históricos sem depender de arquivos espalhados." },
+  { tag: "CONSERVAÇÃO", title: "Tecnologia que aproxima criadores e propósito", copy: "Construa um histórico responsável para hoje e para as próximas gerações." }
+];
+
 function ArrowIcon() {
   return (
     <svg className="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -33,7 +58,7 @@ function FeatureIcon({ type }: { type: string }) {
 
 function BirdThumb({ variant = "great-tit" }: { variant?: string }) {
   const flockBird = variant !== "great-tit";
-  return <img className={`bird-thumb bird-thumb-${variant}`} src={flockBird ? "/assets/imagery/birds/budgie-and-finch-flock.png" : "/assets/imagery/birds/great-tit-header.png"} alt="" aria-hidden="true" />;
+  return <img className={`bird-thumb bird-thumb-${variant}`} src={flockBird ? "/assets/imagery/birds/bird-flock-hd.webp" : "/assets/imagery/birds/great-tit-header-hd.webp"} alt="" aria-hidden="true" />;
 }
 
 function DashboardPreview() {
@@ -41,7 +66,6 @@ function DashboardPreview() {
     <div className="dashboard-window" aria-label="Prévia do painel do Criatório Virtual">
       <div className="dashboard-leaf dashboard-leaf-one" aria-hidden="true" />
       <div className="dashboard-leaf dashboard-leaf-two" aria-hidden="true" />
-      <div className="dashboard-window-top" />
       <div className="dashboard-body">
         <aside className="dashboard-sidebar">
           <BrandLockup className="brand-lockup-dashboard" />
@@ -83,13 +107,13 @@ function DashboardPreview() {
 
 export default function Home() {
   return (
-    <main className="landing-page">
-      <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <main className="landing-page" id="inicio">
+      <a className="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
       <div className="landing-leaf landing-leaf-top" aria-hidden="true" />
       <div className="landing-leaf landing-leaf-bottom" aria-hidden="true" />
       <div className="landing-shell">
         <header className="landing-header">
-          <a className="landing-brand-link" href="#conteudo" aria-label="Criatório Virtual, página inicial">
+          <a className="landing-brand-link" href="#inicio" aria-label="Criatório Virtual, voltar ao início">
             <BrandLockup />
           </a>
           <nav className="landing-nav" aria-label="Navegação principal">
@@ -108,7 +132,7 @@ export default function Home() {
           </a>
         </header>
 
-        <div id="conteudo" className="landing-main" tabIndex={-1}>
+        <div id="conteudo-principal" className="landing-main" tabIndex={-1}>
           <section className="landing-hero" aria-labelledby="titulo-principal">
             <div className="landing-copy">
               <p className="eyebrow">Gestão simples para grandes criadores</p>
@@ -123,6 +147,11 @@ export default function Home() {
           </section>
 
           <section id="recursos" className="landing-features" aria-labelledby="titulo-recursos">
+            <div className="section-heading">
+              <p className="eyebrow">Tudo o que você precisa</p>
+              <h2 id="titulo-recursos">Gestão simples, do plantel aos resultados.</h2>
+              <p>Recursos pensados para reduzir tarefas manuais e deixar as informações do seu criatório fáceis de encontrar.</p>
+            </div>
             <div className="landing-feature-grid">
               {featureItems.map((feature) => (
                 <article className="landing-feature-card" key={feature.title}>
@@ -131,19 +160,73 @@ export default function Home() {
                 </article>
               ))}
             </div>
-            <h2 id="titulo-recursos" className="sr-only">Recursos do Criatório Virtual</h2>
           </section>
 
           <section className="landing-mobile-showcase" aria-hidden="true">
             <div className="landing-showcase-copy">Criadores de hoje.<br /><em>Conservação de amanhã.</em></div>
-            <img src="/assets/imagery/birds/budgie-and-finch-flock.png" alt="" />
+            <img src="/assets/imagery/birds/bird-flock-hd.webp" alt="" />
+          </section>
+
+          <section id="planos" className="landing-section plans-section" aria-labelledby="titulo-planos">
+            <div className="section-heading section-heading-centered">
+              <p className="eyebrow">Uma base para cada fase</p>
+              <h2 id="titulo-planos">Escolha como quer evoluir a gestão.</h2>
+              <p>Comece com o essencial e avance conforme o seu criatório cresce. Você conhece as opções antes de decidir.</p>
+            </div>
+            <div className="plan-grid">
+              {planItems.map((plan) => (
+                <article className={`plan-card${plan.featured ? " plan-card-featured" : ""}`} key={plan.title}>
+                  {plan.featured && <span className="plan-badge">Mais completo</span>}
+                  <h3>{plan.title}</h3>
+                  <p>{plan.copy}</p>
+                  <ul>{plan.items.map((item) => <li key={item}>{item}</li>)}</ul>
+                  <a className={plan.featured ? "primary-action" : "secondary-action"} href="/cadastro">Criar minha conta <ArrowIcon /></a>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section id="sobre" className="landing-section about-section" aria-labelledby="titulo-sobre">
+            <div className="about-visual" aria-hidden="true">
+              <img src="/assets/imagery/birds/great-tit-header-hd.webp" alt="" />
+              <span>Pássaros conectam pessoas.</span>
+            </div>
+            <div className="about-copy">
+              <p className="eyebrow">Sobre o Criatório Virtual</p>
+              <h2 id="titulo-sobre">Mais que um sistema. Um parceiro para o seu criatório.</h2>
+              <p>O Criatório Virtual nasceu para tornar a rotina de criadores mais clara, segura e organizada. A tecnologia cuida dos processos para que você tenha mais tempo para cuidar das aves.</p>
+              <div className="about-values">
+                <span><strong>Organização</strong> para hoje</span>
+                <span><strong>Informação</strong> para decidir</span>
+                <span><strong>Paixão</strong> pelo que importa</span>
+              </div>
+            </div>
+          </section>
+
+          <section id="conteudo" className="landing-section content-section" aria-labelledby="titulo-conteudo">
+            <div className="section-heading">
+              <p className="eyebrow">Conteúdo para criadores</p>
+              <h2 id="titulo-conteudo">Conhecimento que acompanha a sua criação.</h2>
+            </div>
+            <div className="content-grid">
+              {contentItems.map((item) => (
+                <article className="content-card" key={item.title}>
+                  <span>{item.tag}</span>
+                  <h3>{item.title}</h3>
+                  <p>{item.copy}</p>
+                </article>
+              ))}
+            </div>
           </section>
         </div>
 
-        <footer id="sobre" className="landing-footer">
+        <footer className="landing-footer">
           <span className="landing-footer-brand"><BrandLockup /></span>
           <span className="landing-footer-links"><a href="#recursos">Gestão</a><span>•</span><a href="#recursos">Organização</a><span>•</span><a href="#recursos">Paixão</a><span>•</span><a href="#recursos">Conservação</a></span>
-          <a className="landing-support" href="mailto:suporte@criatoriovirtual.com.br">Falar com o suporte</a>
+          <span className="landing-footer-actions">
+            <a href="#inicio">Voltar ao topo</a>
+            <a className="landing-support" href="mailto:suporte@criatoriovirtual.com.br">Falar com o suporte</a>
+          </span>
         </footer>
       </div>
     </main>

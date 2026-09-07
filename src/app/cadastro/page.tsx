@@ -18,10 +18,6 @@ function LockIcon() {
   return <img src="/assets/icons/ui/lock.svg" alt="" aria-hidden="true" />;
 }
 
-function UserIcon() {
-  return <img src="/assets/icons/ui/user.svg" alt="" aria-hidden="true" />;
-}
-
 function BackIcon() {
   return <img src="/assets/icons/ui/arrow-left.svg" alt="" aria-hidden="true" />;
 }
@@ -30,12 +26,8 @@ function EyeIcon() {
   return <img src="/assets/icons/ui/eye.svg" alt="" aria-hidden="true" />;
 }
 
-function validateForm(fullName: string, email: string, password: string, confirmPassword: string, acceptedTerms: boolean): ValidationErrors {
+function validateForm(email: string, password: string, confirmPassword: string, acceptedTerms: boolean): ValidationErrors {
   const errors: ValidationErrors = {};
-
-  if (!fullName.trim()) {
-    errors.fullName = ["Informe seu nome completo."];
-  }
 
   if (!email.trim()) {
     errors.email = ["Informe seu e-mail."];
@@ -73,7 +65,6 @@ function firstError(errors: ValidationErrors, field: string): string | undefined
 }
 
 export default function RegistrationPage() {
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -102,7 +93,7 @@ export default function RegistrationPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedEmail = email.trim();
-    const validationErrors = validateForm(fullName, normalizedEmail, password, confirmPassword, acceptedTerms);
+    const validationErrors = validateForm(normalizedEmail, password, confirmPassword, acceptedTerms);
     setErrors(validationErrors);
     setFormError(undefined);
 
@@ -166,14 +157,6 @@ export default function RegistrationPage() {
       <main className="auth-page">
         <a className="skip-link" href="#conteudo-cadastro">Pular para o conteúdo</a>
         <div className="auth-shell">
-          <div className="window-chrome" aria-hidden="true">
-            <span className="window-dot window-dot-red" />
-            <span className="window-dot window-dot-yellow" />
-            <span className="window-dot window-dot-green" />
-            <span className="window-address" />
-            <span className="window-control window-control-dots" />
-            <span className="window-control window-control-square" />
-          </div>
           <BrandPanel />
           <section className="auth-form-panel" aria-labelledby="titulo-confirmacao">
             <div className="auth-form-content confirmation-card" id="conteudo-cadastro">
@@ -211,7 +194,6 @@ export default function RegistrationPage() {
     );
   }
 
-  const fullNameError = firstError(errors, "fullName");
   const emailError = firstError(errors, "email");
   const passwordError = firstError(errors, "password");
   const termsError = firstError(errors, "terms");
@@ -220,15 +202,7 @@ export default function RegistrationPage() {
       <main className="auth-page">
       <a className="skip-link" href="#conteudo-cadastro">Pular para o conteúdo</a>
       <div className="auth-shell">
-        <div className="window-chrome" aria-hidden="true">
-          <span className="window-dot window-dot-red" />
-          <span className="window-dot window-dot-yellow" />
-          <span className="window-dot window-dot-green" />
-          <span className="window-address" />
-          <span className="window-control window-control-dots" />
-          <span className="window-control window-control-square" />
-        </div>
-          <BrandPanel />
+        <BrandPanel />
         <section className="auth-form-panel" aria-labelledby="titulo-cadastro">
           <div className="auth-form-content" id="conteudo-cadastro">
             <a className="auth-mobile-back" href="/" aria-label="Voltar para a página inicial"><BackIcon /></a>
@@ -238,26 +212,6 @@ export default function RegistrationPage() {
 
             <form onSubmit={handleSubmit} noValidate>
               {formError && <div className="form-error" role="alert">{formError}</div>}
-
-              <div className="field-group">
-                <label htmlFor="fullName">Nome completo</label>
-                <div className="field-control">
-                  <span className="field-icon"><UserIcon /></span>
-                  <input
-                    autoComplete="name"
-                    id="fullName"
-                    name="fullName"
-                    onChange={(event) => setFullName(event.target.value)}
-                    placeholder="Seu nome completo"
-                    type="text"
-                    value={fullName}
-                    aria-describedby={fullNameError ? "full-name-error" : undefined}
-                    aria-invalid={Boolean(fullNameError)}
-                    disabled={isSubmitting}
-                  />
-                </div>
-                {fullNameError && <p className="field-error" id="full-name-error">{fullNameError}</p>}
-              </div>
 
               <div className="field-group">
                 <label htmlFor="email">E-mail</label>
