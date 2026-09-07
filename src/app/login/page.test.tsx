@@ -109,7 +109,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sair da conta" }));
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(4);
-    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Sair da conta" }));
