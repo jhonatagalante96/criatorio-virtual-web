@@ -127,9 +127,16 @@ export default function Home() {
             <a className="landing-login-link" href="/login">Entrar</a>
             <a className="landing-header-cta" href="/cadastro">Começar agora <ArrowIcon /></a>
           </div>
-          <a className="landing-menu-button" href="#recursos" aria-label="Ir para os recursos">
-            <MenuIcon />
-          </a>
+          <details className="landing-mobile-menu">
+            <summary aria-label="Abrir menu de navegação"><MenuIcon /></summary>
+            <nav aria-label="Navegação móvel">
+              <ul>
+                {navigationItems.map((item) => (
+                  <li key={item.href}><a href={item.href}>{item.label}</a></li>
+                ))}
+              </ul>
+            </nav>
+          </details>
         </header>
 
         <div id="conteudo-principal" className="landing-main" tabIndex={-1}>
