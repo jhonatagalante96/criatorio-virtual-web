@@ -14,15 +14,30 @@ describe("RegistrationPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<RegistrationPage />);
 
+    expect(screen.queryByLabelText("Nome completo")).toBeNull();
     fireEvent.submit(screen.getByRole("button", { name: "Criar conta" }));
 
-    expect(screen.getByText("Informe seu nome completo.")).toBeTruthy();
     expect(screen.getByText("Informe seu e-mail.")).toBeTruthy();
     expect(screen.getByText("Informe uma senha.")).toBeTruthy();
     expect(screen.getByText("Aceite os Termos de Uso e a Política de Privacidade para continuar.")).toBeTruthy();
     expect(screen.getByLabelText("E-mail").getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByRole("checkbox").getAttribute("aria-describedby")).toBe("terms-error");
     expect(screen.getByRole("checkbox").getAttribute("aria-invalid")).toBe("true");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a confirmation password that does not match", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<RegistrationPage />);
+
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), { target: { value: "DifferentPassword!123" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
+
+    expect(screen.getByText("As senhas não coincidem.")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -40,13 +55,14 @@ describe("RegistrationPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<RegistrationPage />);
 
-    fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Pessoa Usuária" } });
     fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: " owner@example.com " } });
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), { target: { value: "StrongPassword!123" } });
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Verifique seu e-mail" })).toBeTruthy());
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Verifique seu e-mail" }));
     expect(screen.getByText("owner@example.com")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Voltar para o login" }).getAttribute("href")).toBe("/login");
 
@@ -69,9 +85,9 @@ describe("RegistrationPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<RegistrationPage />);
 
-    fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Pessoa Usuária" } });
     fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), { target: { value: "StrongPassword!123" } });
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
 
@@ -94,9 +110,9 @@ describe("RegistrationPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<RegistrationPage />);
 
-    fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Pessoa Usuária" } });
     fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), { target: { value: "StrongPassword!123" } });
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
 
@@ -121,9 +137,9 @@ describe("RegistrationPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<RegistrationPage />);
 
-    fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Pessoa Usuária" } });
     fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), { target: { value: "StrongPassword!123" } });
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
 
@@ -135,9 +151,9 @@ describe("RegistrationPage", () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
     render(<RegistrationPage />);
 
-    fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Pessoa Usuária" } });
     fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), { target: { value: "StrongPassword!123" } });
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
 
@@ -145,4 +161,3 @@ describe("RegistrationPage", () => {
     expect((screen.getByLabelText("E-mail") as HTMLInputElement).disabled).toBe(true);
   });
 });
-

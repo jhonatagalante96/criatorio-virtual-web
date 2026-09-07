@@ -1,13 +1,13 @@
 import React from "react";
 
-export function BrandLockup({ light = false }: { light?: boolean }) {
+export function BrandLockup({ className = "", stacked = false }: { className?: string; stacked?: boolean }) {
   return (
-    <span className={`brand-lockup${light ? " brand-lockup-light" : ""}`}>
-      <svg className="brand-symbol" viewBox="0 0 48 48" aria-hidden="true">
-        <path d="M7.5 39.5C10 23 22.5 9.5 40.5 6.5c-.5 17.5-11 30.5-30.5 36.5-2 .5-3-1.5-2.5-3.5Z" fill="currentColor" />
-        <path d="M9 42c8.5-11 17-20 29.5-32" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.5" />
-      </svg>
-      <span>Criatório Virtual</span>
+    <span className={`brand-lockup${stacked ? " brand-lockup-stacked" : ""}${className ? ` ${className}` : ""}`} role="img" aria-label="Criatório Virtual">
+      <img
+        src={`/assets/brand/svg/criatorio-virtual-${stacked ? "empilhada" : "horizontal"}.svg`}
+        alt=""
+        aria-hidden="true"
+      />
     </span>
   );
 }
@@ -15,15 +15,15 @@ export function BrandLockup({ light = false }: { light?: boolean }) {
 export function BrandPanel() {
   return (
     <aside className="brand-panel" aria-label="Sobre o Criatório Virtual">
-      <a className="brand-panel-link" href="/" aria-label="Criatório Virtual, página inicial">
-        <BrandLockup light />
-      </a>
-      <div className="brand-panel-copy">
-        <h2>Gestão completa<br />para o seu criatório</h2>
-        <p>Organize suas aves, acompanhe sua evolução, gere documentos em minutos. Tudo em um só lugar.</p>
+      <div className="brand-panel-leaves brand-panel-leaves-top" aria-hidden="true" />
+      <div className="brand-panel-leaves brand-panel-leaves-side" aria-hidden="true" />
+      <div className="brand-panel-bird-wrap" aria-hidden="true">
+        <img className="brand-panel-bird" src="/assets/imagery/birds/great-tit-header-hd.webp" alt="" />
       </div>
-      <img className="brand-panel-bird" src="/images/auth-canary.webp" alt="" aria-hidden="true" />
+      <div className="brand-panel-copy">
+        <span className="brand-panel-rule" aria-hidden="true" />
+        <p>A avicultura<br />brasileira mais forte,<br />organizada e conectada.</p>
+      </div>
     </aside>
   );
 }
-

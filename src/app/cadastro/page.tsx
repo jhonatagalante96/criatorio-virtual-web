@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FormEvent, useRef, useState } from "react";
+import React, { FormEvent, useEffect, useRef, useState } from "react";
 import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../components/brand";
 
@@ -11,52 +11,23 @@ interface AccountRegistrationResponse {
 }
 
 function MailIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m4 7 8 6 8-6" />
-    </svg>
-  );
+  return <img src="/assets/icons/ui/mail.svg" alt="" aria-hidden="true" />;
 }
 
 function LockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="5" y="10" width="14" height="10" rx="2" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-    </svg>
-  );
+  return <img src="/assets/icons/ui/lock.svg" alt="" aria-hidden="true" />;
 }
 
-function UserIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="8" r="3.5" />
-      <path d="M5 20c.8-3.4 3.1-5.2 7-5.2s6.2 1.8 7 5.2" />
-    </svg>
-  );
+function BackIcon() {
+  return <img src="/assets/icons/ui/arrow-left.svg" alt="" aria-hidden="true" />;
 }
 
-function GoogleIcon() {
-  return <span className="google-icon" aria-hidden="true">G</span>;
+function EyeIcon() {
+  return <img src="/assets/icons/ui/eye.svg" alt="" aria-hidden="true" />;
 }
 
-function EyeIcon({ visible }: { visible: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-      <circle cx="12" cy="12" r="2.5" />
-      {!visible && <path d="m4 4 16 16" />}
-    </svg>
-  );
-}
-
-function validateForm(fullName: string, email: string, password: string, acceptedTerms: boolean): ValidationErrors {
+function validateForm(email: string, password: string, confirmPassword: string, acceptedTerms: boolean): ValidationErrors {
   const errors: ValidationErrors = {};
-
-  if (!fullName.trim()) {
-    errors.fullName = ["Informe seu nome completo."];
-  }
 
   if (!email.trim()) {
     errors.email = ["Informe seu e-mail."];
@@ -76,6 +47,12 @@ function validateForm(fullName: string, email: string, password: string, accepte
     errors.password = ["Use pelo menos 12 caracteres, com maiúscula, minúscula, número e símbolo."];
   }
 
+  if (!confirmPassword) {
+    errors.confirmPassword = ["Confirme sua senha."];
+  } else if (password !== confirmPassword) {
+    errors.confirmPassword = ["As senhas não coincidem."];
+  }
+
   if (!acceptedTerms) {
     errors.terms = ["Aceite os Termos de Uso e a Política de Privacidade para continuar."];
   }
@@ -88,29 +65,35 @@ function firstError(errors: ValidationErrors, field: string): string | undefined
 }
 
 export default function RegistrationPage() {
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [formError, setFormError] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registration, setRegistration] = useState<AccountRegistrationResponse | undefined>();
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | undefined>();
   const [resendError, setResendError] = useState<string | undefined>();
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
+  const confirmationHeading = useRef<HTMLHeadingElement>(null);
 
   if (!client.current) {
     client.current = createApiClient(() => csrfToken.current);
   }
 
+  useEffect(() => {
+    if (registration) confirmationHeading.current?.focus();
+  }, [registration]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedEmail = email.trim();
-    const validationErrors = validateForm(fullName, normalizedEmail, password, acceptedTerms);
+    const validationErrors = validateForm(normalizedEmail, password, confirmPassword, acceptedTerms);
     setErrors(validationErrors);
     setFormError(undefined);
 
@@ -177,9 +160,12 @@ export default function RegistrationPage() {
           <BrandPanel />
           <section className="auth-form-panel" aria-labelledby="titulo-confirmacao">
             <div className="auth-form-content confirmation-card" id="conteudo-cadastro">
-              <div className="auth-mobile-brand"><BrandLockup /></div>
-              <div className="confirmation-icon" aria-hidden="true"><MailIcon /></div>
-              <h1 id="titulo-confirmacao">{registration.emailConfirmationRequired ? "Verifique seu e-mail" : "Sua conta está pronta"}</h1>
+              <a className="auth-mobile-back" href="/" aria-label="Voltar para a página inicial"><BackIcon /></a>
+              <div className="auth-mobile-brand"><BrandLockup stacked /></div>
+              <div className="confirmation-icon" aria-hidden="true">
+                <img src="/assets/icons/ui/envelope-check.svg" alt="" />
+              </div>
+              <h1 id="titulo-confirmacao" ref={confirmationHeading} tabIndex={-1}>{registration.emailConfirmationRequired ? "Verifique seu e-mail" : "Sua conta está pronta"}</h1>
               <p className="lede">{registration.emailConfirmationRequired
                 ? <>Enviamos um link de confirmação para <strong>{registration.email}</strong>.</>
                 : <>Sua conta foi criada com o e-mail <strong>{registration.email}</strong>. Use o login para continuar.</>}</p>
@@ -188,10 +174,15 @@ export default function RegistrationPage() {
                 <div className="confirmation-notice">
                   <strong>Não recebeu o e-mail?</strong>
                   <span>Verifique sua caixa de spam ou lixo eletrônico.</span>
-                  <button className="secondary-action" disabled={isResending} onClick={handleResend} type="button">
+                </div>
+              )}
+              {registration.emailConfirmationRequired && (
+                <>
+                  <a className="primary-action confirmation-open-mail" href={`mailto:${registration.email}`}>Abrir meu e-mail</a>
+                  <button className="secondary-action confirmation-resend" disabled={isResending} onClick={handleResend} type="button">
                     {isResending ? "Reenviando…" : "Reenviar e-mail"}
                   </button>
-                </div>
+                </>
               )}
               {resendMessage && <p className="confirmation-feedback" role="status">{resendMessage}</p>}
               {resendError && <p className="confirmation-feedback confirmation-feedback-error" role="alert">{resendError}</p>}
@@ -203,44 +194,24 @@ export default function RegistrationPage() {
     );
   }
 
-  const fullNameError = firstError(errors, "fullName");
   const emailError = firstError(errors, "email");
   const passwordError = firstError(errors, "password");
   const termsError = firstError(errors, "terms");
 
   return (
-    <main className="auth-page">
+      <main className="auth-page">
       <a className="skip-link" href="#conteudo-cadastro">Pular para o conteúdo</a>
       <div className="auth-shell">
-          <BrandPanel />
+        <BrandPanel />
         <section className="auth-form-panel" aria-labelledby="titulo-cadastro">
           <div className="auth-form-content" id="conteudo-cadastro">
-            <div className="auth-mobile-brand"><BrandLockup /></div>
-            <h1 id="titulo-cadastro">Criar sua conta</h1>
-            <p className="lede">Preencha os dados para começar</p>
+            <a className="auth-mobile-back" href="/" aria-label="Voltar para a página inicial"><BackIcon /></a>
+            <div className="auth-mobile-brand"><BrandLockup stacked /></div>
+            <h1 id="titulo-cadastro">Crie sua conta</h1>
+            <p className="lede">É rápido e o primeiro passo para um criatório mais organizado.</p>
 
             <form onSubmit={handleSubmit} noValidate>
               {formError && <div className="form-error" role="alert">{formError}</div>}
-
-              <div className="field-group">
-                <label htmlFor="fullName">Nome completo</label>
-                <div className="field-control">
-                  <span className="field-icon"><UserIcon /></span>
-                  <input
-                    autoComplete="name"
-                    id="fullName"
-                    name="fullName"
-                    onChange={(event) => setFullName(event.target.value)}
-                    placeholder="Seu nome"
-                    type="text"
-                    value={fullName}
-                    aria-describedby={fullNameError ? "full-name-error" : undefined}
-                    aria-invalid={Boolean(fullNameError)}
-                    disabled={isSubmitting}
-                  />
-                </div>
-                {fullNameError && <p className="field-error" id="full-name-error">{fullNameError}</p>}
-              </div>
 
               <div className="field-group">
                 <label htmlFor="email">E-mail</label>
@@ -251,7 +222,7 @@ export default function RegistrationPage() {
                     id="email"
                     name="email"
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="seu@email.com"
+                    placeholder="Seu e-mail"
                     type="email"
                     value={email}
                     aria-describedby={emailError ? "email-error" : undefined}
@@ -271,7 +242,7 @@ export default function RegistrationPage() {
                     id="password"
                     name="password"
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Mínimo de 12 caracteres"
+                    placeholder="Crie uma senha"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     aria-describedby={passwordError ? "password-error" : undefined}
@@ -285,10 +256,39 @@ export default function RegistrationPage() {
                     onClick={() => setShowPassword((visible) => !visible)}
                     type="button"
                   >
-                    <EyeIcon visible={showPassword} />
+                    <EyeIcon />
                   </button>
                 </div>
                 {passwordError && <p className="field-error" id="password-error">{passwordError}</p>}
+              </div>
+
+              <div className="field-group">
+                <label htmlFor="confirmPassword">Confirmar senha</label>
+                <div className="field-control">
+                  <span className="field-icon"><LockIcon /></span>
+                  <input
+                    autoComplete="new-password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    placeholder="Confirme sua senha"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    aria-describedby={errors.confirmPassword ? "confirm-password-error" : undefined}
+                    aria-invalid={Boolean(errors.confirmPassword)}
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    aria-label={showConfirmPassword ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
+                    className="field-toggle"
+                    disabled={isSubmitting}
+                    onClick={() => setShowConfirmPassword((visible) => !visible)}
+                    type="button"
+                  >
+                    <EyeIcon />
+                  </button>
+                </div>
+                {errors.confirmPassword?.[0] && <p className="field-error" id="confirm-password-error">{errors.confirmPassword[0]}</p>}
               </div>
 
               <label className={`terms-control${termsError ? " terms-control-error" : ""}`}>
@@ -300,7 +300,7 @@ export default function RegistrationPage() {
                   onChange={(event) => setAcceptedTerms(event.target.checked)}
                   type="checkbox"
                 />
-                <span>Li e concordo com os <a href="/termos-de-uso">Termos de Uso</a> e a <a href="/politica-de-privacidade">Política de Privacidade</a>.</span>
+                <span>Li e aceito os <a href="/termos-de-uso">Termos de Uso</a> e a <a href="/politica-de-privacidade">Política de Privacidade</a>.</span>
               </label>
               {termsError && <p className="field-error terms-error" id="terms-error">{termsError}</p>}
 
@@ -309,12 +309,6 @@ export default function RegistrationPage() {
               </button>
             </form>
 
-            <div className="auth-divider"><span>ou continue com</span></div>
-            <a className="google-action" href={new URL("api/auth/google", process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000").toString()}>
-              <GoogleIcon />
-              Criar conta com o Google
-            </a>
-
             <p className="auth-footer">Já tem uma conta? <a href="/login">Entrar</a></p>
           </div>
         </section>
@@ -322,4 +316,3 @@ export default function RegistrationPage() {
     </main>
   );
 }
-
