@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FormEvent, useRef, useState } from "react";
+import React, { FormEvent, useEffect, useRef, useState } from "react";
 import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../components/brand";
 
@@ -89,10 +89,15 @@ export default function RegistrationPage() {
   const [resendError, setResendError] = useState<string | undefined>();
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
+  const confirmationHeading = useRef<HTMLHeadingElement>(null);
 
   if (!client.current) {
     client.current = createApiClient(() => csrfToken.current);
   }
+
+  useEffect(() => {
+    if (registration) confirmationHeading.current?.focus();
+  }, [registration]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -177,7 +182,7 @@ export default function RegistrationPage() {
               <div className="confirmation-icon" aria-hidden="true">
                 <img src="/assets/icons/ui/envelope-check.svg" alt="" />
               </div>
-              <h1 id="titulo-confirmacao">{registration.emailConfirmationRequired ? "Verifique seu e-mail" : "Sua conta está pronta"}</h1>
+              <h1 id="titulo-confirmacao" ref={confirmationHeading} tabIndex={-1}>{registration.emailConfirmationRequired ? "Verifique seu e-mail" : "Sua conta está pronta"}</h1>
               <p className="lede">{registration.emailConfirmationRequired
                 ? <>Enviamos um link de confirmação para <strong>{registration.email}</strong>.</>
                 : <>Sua conta foi criada com o e-mail <strong>{registration.email}</strong>. Use o login para continuar.</>}</p>
