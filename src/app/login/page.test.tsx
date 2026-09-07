@@ -5,6 +5,7 @@ import LoginPage from "./page";
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -33,6 +34,57 @@ describe("LoginPage", () => {
     expect(screen.getByText("Informe sua senha.")).toBeTruthy();
     expect(screen.getByLabelText("E-mail").getAttribute("aria-invalid")).toBe("true");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts Google authentication in a popup and confirms the server session", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(authenticatedSession());
+    const popup = { close: vi.fn(), closed: false } as unknown as Window;
+    const openMock = vi.spyOn(window, "open").mockReturnValue(popup);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+
+    expect(openMock).toHaveBeenCalledWith(
+      "http://localhost:5000/api/auth/google",
+      "criatorio-google-authentication",
+      "popup,width=520,height=680,resizable=yes,scrollbars=yes"
+    );
+    expect(screen.getByRole("status").textContent).toContain("Conclua a entrada");
+
+    fireEvent.click(screen.getByRole("button", { name: "Verificar sessão" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
+    expect(popup.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a recoverable error when Google does not authenticate the session", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(unauthenticatedResponse());
+    vi.spyOn(window, "open").mockReturnValue({ close: vi.fn(), closed: false } as unknown as Window);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+    fireEvent.click(screen.getByRole("button", { name: "Verificar sessão" }));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Não foi possível concluir a entrada com Google"));
+    expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy();
+  });
+
+  it("explains when the Google popup is blocked", async () => {
+    vi.spyOn(window, "open").mockReturnValue(null);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(unauthenticatedResponse()));
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+
+    expect(screen.getByRole("alert").textContent).toContain("Permita pop-ups");
   });
 
   it("logs in with a fresh antiforgery token and renders the restored session", async () => {

@@ -2,6 +2,7 @@
 
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
+import { getApiUrl } from "../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../components/brand";
 
 interface LoginFieldErrors {
@@ -23,6 +24,10 @@ function BackIcon() {
 
 function EyeIcon() {
   return <img src="/assets/icons/ui/eye.svg" alt="" aria-hidden="true" />;
+}
+
+function GoogleMark() {
+  return <span aria-hidden="true" className="google-mark">G</span>;
 }
 
 function validateForm(email: string, password: string): LoginFieldErrors {
@@ -138,11 +143,47 @@ function LogoutDialog({ onCancel, onConfirm }: Readonly<{ onCancel: () => void; 
 }
 
 function LoginForm() {
-  const { clearError, error, login, status } = useAuth();
+  const { clearError, error, login, refresh, status } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<LoginFieldErrors>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [googleError, setGoogleError] = useState<string | undefined>();
+  const [isGooglePending, setIsGooglePending] = useState(false);
+  const googleWindow = useRef<Window | null>(null);
+
+  useEffect(() => () => googleWindow.current?.close(), []);
+
+  async function verifyGoogleSession() {
+    setGoogleError(undefined);
+    const authenticated = await refresh({ showLoading: false });
+    if (authenticated) {
+      googleWindow.current?.close();
+      googleWindow.current = null;
+      setIsGooglePending(false);
+      return;
+    }
+
+    setGoogleError("Não foi possível concluir a entrada com Google. Tente novamente.");
+  }
+
+  function startGoogleAuthentication() {
+    clearError();
+    setGoogleError(undefined);
+    const popup = window.open(
+      getApiUrl("api/auth/google"),
+      "criatorio-google-authentication",
+      "popup,width=520,height=680,resizable=yes,scrollbars=yes"
+    );
+
+    if (!popup) {
+      setGoogleError("Não foi possível abrir a janela do Google. Permita pop-ups e tente novamente.");
+      return;
+    }
+
+    googleWindow.current = popup;
+    setIsGooglePending(true);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -218,6 +259,19 @@ function LoginForm() {
           {isSubmitting ? "Entrando…" : "Entrar"}
         </button>
       </form>
+
+      <div aria-label="outras opções de entrada" className="auth-divider" role="separator"><span>ou</span></div>
+      <button className="google-action" disabled={isSubmitting || isGooglePending} onClick={startGoogleAuthentication} type="button">
+        <GoogleMark />
+        {isGooglePending ? "Aguardando Google…" : "Continuar com Google"}
+      </button>
+      {googleError && <div className="form-error google-error" role="alert">{googleError}</div>}
+      {isGooglePending && (
+        <div className="google-pending" role="status">
+          <p>Conclua a entrada na janela do Google e depois confirme sua sessão aqui.</p>
+          <button className="auth-secondary-action" onClick={() => void verifyGoogleSession()} type="button">Verificar sessão</button>
+        </div>
+      )}
 
       <p className="auth-footer">Ainda não tem uma conta? <a href="/cadastro">Criar conta</a></p>
     </div>

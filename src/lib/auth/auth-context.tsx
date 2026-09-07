@@ -21,7 +21,7 @@ interface AuthContextValue {
   error: string | undefined;
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<AuthResult>;
-  refresh: () => Promise<void>;
+  refresh: (options?: { showLoading?: boolean }) => Promise<boolean>;
   session: AccountSession | undefined;
   status: AuthStatus;
 }
@@ -55,23 +55,25 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     setSession(undefined);
   }, []);
 
-  const refresh = useCallback(async () => {
-    setStatus("loading");
+  const refresh = useCallback(async ({ showLoading = true }: { showLoading?: boolean } = {}): Promise<boolean> => {
+    if (showLoading) setStatus("loading");
     setError(undefined);
 
     try {
       const currentSession = await client.current!.request<AccountSession>("api/auth/session");
       setSession(currentSession);
       setStatus("authenticated");
+      return true;
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
         clearSession();
         setStatus("unauthenticated");
-        return;
+        return false;
       }
 
       setStatus(requestError instanceof ApiError && requestError.status === 403 ? "forbidden" : "error");
       setError(messageForFailure(requestError, "session"));
+      return false;
     }
   }, [clearSession]);
 
