@@ -1,5 +1,7 @@
 export type ApiMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
 
+export const ANTIFORGERY_HEADER = "X-XSRF-TOKEN";
+
 export type ValidationErrors = Record<string, string[]>;
 
 export interface ApiRequestOptions {
@@ -96,7 +98,7 @@ export class ApiClient {
 
     if (isMutation(method)) {
       const token = this.csrfToken();
-      if (token) headers.set("x-csrf-token", token);
+      if (token) headers.set(ANTIFORGERY_HEADER, token);
     }
 
     const requestVersion = this.tenantVersion;
@@ -117,6 +119,22 @@ export class ApiClient {
 
     if (method === "GET") this.cache.set(cacheKey, data);
     return data;
+  }
+
+  async fetchAntiforgeryToken(path = "antiforgery/token"): Promise<string> {
+    const url = new URL(path, this.endpoint).toString();
+    const response = await fetch(url, {
+      credentials: "include",
+      headers: { accept: "application/json" },
+      method: "GET"
+    });
+
+    if (!response.ok) throw await toApiError(response);
+
+    const token = response.headers.get(ANTIFORGERY_HEADER);
+    if (!token) throw new Error("O token de segurança não foi disponibilizado.");
+
+    return token;
   }
 }
 

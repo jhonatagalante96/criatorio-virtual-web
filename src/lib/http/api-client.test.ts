@@ -52,7 +52,22 @@ describe("ApiClient", () => {
     });
 
     const [, request] = fetchMock.mock.calls[0];
-    expect(new Headers(request.headers).get("x-csrf-token")).toBe("csrf-token");
+    expect(new Headers(request.headers).get("x-xsrf-token")).toBe("csrf-token");
+  });
+
+  it("gets the antiforgery token from the API response header", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, {
+      headers: { "X-XSRF-TOKEN": "csrf-token" },
+      status: 204
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("http://localhost:5000");
+
+    await expect(client.fetchAntiforgeryToken()).resolves.toBe("csrf-token");
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:5000/antiforgery/token", expect.objectContaining({
+      credentials: "include",
+      method: "GET"
+    }));
   });
 
   it("preserves a 403 response without session side effects", async () => {
