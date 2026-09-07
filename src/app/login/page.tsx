@@ -87,16 +87,43 @@ function SessionPanel({ logoutButtonRef, onRequestLogout }: Readonly<{ logoutBut
 }
 
 function LogoutDialog({ onCancel, onConfirm }: Readonly<{ onCancel: () => void; onConfirm: () => void }>) {
+  const dialogRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const { status } = useAuth();
 
   useEffect(() => {
     headingRef.current?.focus();
-  }, []);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancel();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusableElements = Array.from(dialogRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+      const firstFocusableElement = focusableElements[0];
+      const lastFocusableElement = focusableElements[focusableElements.length - 1];
+      if (!firstFocusableElement || !lastFocusableElement) return;
+
+      if (event.shiftKey && document.activeElement === firstFocusableElement) {
+        event.preventDefault();
+        lastFocusableElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastFocusableElement) {
+        event.preventDefault();
+        firstFocusableElement.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onCancel]);
 
   return (
     <div className="logout-dialog-backdrop">
-      <section aria-labelledby="titulo-confirmacao-saida" aria-modal="true" className="logout-dialog" role="dialog">
+      <section aria-labelledby="titulo-confirmacao-saida" aria-modal="true" className="logout-dialog" ref={dialogRef} role="dialog">
         <h2 id="titulo-confirmacao-saida" ref={headingRef} tabIndex={-1}>Sair da sua conta?</h2>
         <p>Sua sessão será encerrada neste dispositivo. Você poderá entrar novamente quando quiser.</p>
         <div className="logout-dialog-actions">
