@@ -326,7 +326,7 @@ h1, h2 { line-height: 1.08; }
 .confirmation-back { display: inline-block; font-size: .74rem; margin-top: .4rem; padding: .4rem; text-decoration: underline; }
 
 .brand-panel { background: linear-gradient(180deg, #f4fbfa 0%, #e7f6f3 68%, #d3eee4 100%); grid-column: 2; grid-row: 1; min-height: 100%; overflow: hidden; position: relative; }
-.brand-panel::after { background: linear-gradient(180deg, transparent 48%, rgb(230 247 243 / 60%) 69%, #d9f0e9 88%); content: ""; inset: 0; pointer-events: none; position: absolute; z-index: 2; }
+.brand-panel::after { background: linear-gradient(180deg, transparent 0 72%, rgb(217 240 233 / 18%) 100%); content: ""; inset: 0; pointer-events: none; position: absolute; z-index: 2; }
 .brand-panel-leaves { background: #5dab4f; border-radius: 100% 0 100% 0; opacity: .52; position: absolute; z-index: 1; }
 .brand-panel-leaves-top { height: 8rem; right: 3.4rem; top: -4rem; transform: rotate(48deg); width: 2.4rem; }
 .brand-panel-leaves-top::before, .brand-panel-leaves-top::after { background: inherit; border-radius: inherit; content: ""; height: 5.3rem; position: absolute; width: 1.6rem; }
