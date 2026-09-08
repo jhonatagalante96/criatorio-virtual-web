@@ -5,6 +5,7 @@ import LoginPage from "./page";
 
 afterEach(() => {
   cleanup();
+  window.history.replaceState({}, "", "/");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -98,6 +99,16 @@ describe("LoginPage", () => {
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Esta conta Google já está cadastrada"));
     expect(screen.queryByText("Raw API title")).toBeNull();
     expect(screen.queryByText("Raw API detail")).toBeNull();
+  });
+
+  it("reads the Google error code from the callback URL and removes it from the address", async () => {
+    window.history.replaceState({}, "", "/login?googleError=google_account_already_exists");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(unauthenticatedResponse()));
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Esta conta Google já está cadastrada"));
+    expect(window.location.search).toBe("");
+    expect(screen.queryByText("google_account_already_exists")).toBeNull();
   });
 
   it("explains when the Google popup is blocked", async () => {

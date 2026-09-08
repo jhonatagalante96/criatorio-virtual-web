@@ -164,6 +164,16 @@ function LoginForm() {
 
   useEffect(() => () => googleWindow.current?.close(), []);
 
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("googleError");
+    if (!code) return;
+
+    setGoogleError(messageForGoogleFailure(code));
+    const url = new URL(window.location.href);
+    url.searchParams.delete("googleError");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, []);
+
   async function verifyGoogleSession() {
     setGoogleError(undefined);
     const result = await refresh({ showLoading: false });
