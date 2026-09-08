@@ -5,11 +5,20 @@ import LoginPage from "./page";
 
 afterEach(() => {
   cleanup();
+  window.history.replaceState({}, "", "/");
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
 function unauthenticatedResponse(): Response {
   return new Response(null, { status: 401 });
+}
+
+function apiErrorResponse(status: number, code: string): Response {
+  return new Response(JSON.stringify({ code, detail: "Raw API detail", title: "Raw API title" }), {
+    headers: { "content-type": "application/problem+json" },
+    status
+  });
 }
 
 function authenticatedSession(): Response {
@@ -33,6 +42,105 @@ describe("LoginPage", () => {
     expect(screen.getByText("Informe sua senha.")).toBeTruthy();
     expect(screen.getByLabelText("E-mail").getAttribute("aria-invalid")).toBe("true");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts Google authentication in a popup and confirms the server session", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(authenticatedSession());
+    const popup = { close: vi.fn(), closed: false } as unknown as Window;
+    const openMock = vi.spyOn(window, "open").mockReturnValue(popup);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+
+    expect(openMock).toHaveBeenCalledWith(
+      "https://localhost:58016/api/auth/google",
+      "criatorio-google-authentication",
+      "popup,width=520,height=680,resizable=yes,scrollbars=yes"
+    );
+    expect(screen.getByRole("status").textContent).toContain("Conclua a entrada");
+
+    fireEvent.click(screen.getByRole("button", { name: "Verificar sessão" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
+    expect(popup.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a recoverable error when Google does not authenticate the session", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(unauthenticatedResponse());
+    vi.spyOn(window, "open").mockReturnValue({ close: vi.fn(), closed: false } as unknown as Window);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+    fireEvent.click(screen.getByRole("button", { name: "Verificar sessão" }));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Não foi possível concluir a entrada com Google"));
+    expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy();
+  });
+
+  it("maps the Google API code to a friendly message instead of rendering the payload", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(apiErrorResponse(409, "google_account_already_exists"));
+    vi.spyOn(window, "open").mockReturnValue({ close: vi.fn(), closed: false } as unknown as Window);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+    fireEvent.click(screen.getByRole("button", { name: "Verificar sessão" }));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Esta conta Google já está cadastrada"));
+    expect(screen.queryByText("Raw API title")).toBeNull();
+    expect(screen.queryByText("Raw API detail")).toBeNull();
+  });
+
+  it("reads the Google error code from the callback URL and removes it from the address", async () => {
+    window.history.replaceState({}, "", "/login?googleError=google_account_already_exists");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(unauthenticatedResponse()));
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Esta conta Google já está cadastrada"));
+    expect(window.location.search).toBe("");
+    expect(screen.queryByText("google_account_already_exists")).toBeNull();
+  });
+
+  it("receives callback errors from the Google popup and restores the login state", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(unauthenticatedResponse());
+    const popup = { close: vi.fn(), closed: false } as unknown as Window;
+    vi.spyOn(window, "open").mockReturnValue(popup);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+    expect(screen.getByRole("status")).toBeTruthy();
+
+    window.dispatchEvent(new MessageEvent("message", {
+      data: { code: "google_authentication_failed", status: "error", type: "criatorio-google-authentication" },
+      origin: window.location.origin
+    }));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Não foi possível autenticar com Google"));
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(popup.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("explains when the Google popup is blocked", async () => {
+    vi.spyOn(window, "open").mockReturnValue(null);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(unauthenticatedResponse()));
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+
+    expect(screen.getByRole("alert").textContent).toContain("Permita pop-ups");
   });
 
   it("logs in with a fresh antiforgery token and renders the restored session", async () => {

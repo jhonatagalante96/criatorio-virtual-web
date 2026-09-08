@@ -12,6 +12,7 @@ export interface AccountSession {
 export type AuthStatus = "authenticated" | "authenticating" | "error" | "forbidden" | "loading" | "signing-out" | "unauthenticated";
 
 export interface AuthResult {
+  code?: string;
   error?: string;
   ok: boolean;
 }
@@ -21,7 +22,7 @@ interface AuthContextValue {
   error: string | undefined;
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<AuthResult>;
-  refresh: () => Promise<void>;
+  refresh: (options?: { showLoading?: boolean }) => Promise<AuthResult>;
   session: AccountSession | undefined;
   status: AuthStatus;
 }
@@ -55,23 +56,31 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     setSession(undefined);
   }, []);
 
-  const refresh = useCallback(async () => {
-    setStatus("loading");
+  const refresh = useCallback(async ({ showLoading = true }: { showLoading?: boolean } = {}): Promise<AuthResult> => {
+    if (showLoading) setStatus("loading");
     setError(undefined);
 
     try {
       const currentSession = await client.current!.request<AccountSession>("api/auth/session");
       setSession(currentSession);
       setStatus("authenticated");
+      return { ok: true };
     } catch (requestError) {
+      const code = requestError instanceof ApiError ? requestError.code : undefined;
+      const message = messageForFailure(requestError, "session");
+
       if (requestError instanceof ApiError && requestError.status === 401) {
         clearSession();
-        setStatus("unauthenticated");
-        return;
+        if (showLoading) setStatus("unauthenticated");
+        return { code, error: message, ok: false };
       }
 
-      setStatus(requestError instanceof ApiError && requestError.status === 403 ? "forbidden" : "error");
-      setError(messageForFailure(requestError, "session"));
+      if (showLoading) {
+        setStatus(requestError instanceof ApiError && requestError.status === 403 ? "forbidden" : "error");
+        setError(message);
+      }
+
+      return { code, error: message, ok: false };
     }
   }, [clearSession]);
 
