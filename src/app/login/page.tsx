@@ -43,6 +43,7 @@ const googleErrorMessages: Record<string, string> = {
   google_authentication_failed: "Não foi possível autenticar com Google. Tente novamente.",
   google_authentication_unavailable: "A entrada com Google está indisponível no momento. Tente novamente mais tarde."
 };
+const googleAuthenticationMessageType = "criatorio-google-authentication";
 
 function messageForGoogleFailure(code?: string): string {
   return (code && googleErrorMessages[code]) ?? "Não foi possível concluir a entrada com Google. Tente novamente.";
@@ -165,8 +166,33 @@ function LoginForm() {
   useEffect(() => () => googleWindow.current?.close(), []);
 
   useEffect(() => {
+    function handleGoogleAuthenticationMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return;
+      if (!event.data || typeof event.data !== "object") return;
+      if (event.data.type !== googleAuthenticationMessageType || event.data.status !== "error") return;
+
+      const code = typeof event.data.code === "string" ? event.data.code : undefined;
+      setGoogleError(messageForGoogleFailure(code));
+      setIsGooglePending(false);
+      googleWindow.current?.close();
+      googleWindow.current = null;
+    }
+
+    window.addEventListener("message", handleGoogleAuthenticationMessage);
+    return () => window.removeEventListener("message", handleGoogleAuthenticationMessage);
+  }, []);
+
+  useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("googleError");
     if (!code) return;
+
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage(
+        { code, status: "error", type: googleAuthenticationMessageType },
+        window.location.origin
+      );
+      window.close();
+    }
 
     setGoogleError(messageForGoogleFailure(code));
     const url = new URL(window.location.href);

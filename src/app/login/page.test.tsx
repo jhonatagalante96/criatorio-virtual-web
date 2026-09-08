@@ -57,7 +57,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
 
     expect(openMock).toHaveBeenCalledWith(
-      "http://localhost:5000/api/auth/google",
+      "https://localhost:58016/api/auth/google",
       "criatorio-google-authentication",
       "popup,width=520,height=680,resizable=yes,scrollbars=yes"
     );
@@ -109,6 +109,27 @@ describe("LoginPage", () => {
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Esta conta Google já está cadastrada"));
     expect(window.location.search).toBe("");
     expect(screen.queryByText("google_account_already_exists")).toBeNull();
+  });
+
+  it("receives callback errors from the Google popup and restores the login state", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(unauthenticatedResponse());
+    const popup = { close: vi.fn(), closed: false } as unknown as Window;
+    vi.spyOn(window, "open").mockReturnValue(popup);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+    expect(screen.getByRole("status")).toBeTruthy();
+
+    window.dispatchEvent(new MessageEvent("message", {
+      data: { code: "google_authentication_failed", status: "error", type: "criatorio-google-authentication" },
+      origin: window.location.origin
+    }));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Não foi possível autenticar com Google"));
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(popup.close).toHaveBeenCalledTimes(1);
   });
 
   it("explains when the Google popup is blocked", async () => {

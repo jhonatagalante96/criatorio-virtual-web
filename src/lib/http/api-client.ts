@@ -143,10 +143,10 @@ export class ApiClient {
 }
 
 export function getApiUrl(path: string): string {
-  return new URL(path, process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000").toString();
+  return new URL(path, process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:58016").toString();
 }
 
 export function createApiClient(csrfToken?: () => string | undefined): ApiClient {
-  return new ApiClient(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000", csrfToken);
+  return new ApiClient(process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:58016", csrfToken);
 }
 
