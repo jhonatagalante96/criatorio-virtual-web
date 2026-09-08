@@ -5,3 +5,4 @@ coverage/
 
 # Local environment files
 .env*.local
+certificates/

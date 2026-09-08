@@ -12,6 +12,7 @@ export interface ApiRequestOptions {
 }
 
 interface ProblemDetailsPayload {
+  code?: string;
   detail?: string;
   errors?: ValidationErrors;
   status?: number;
@@ -19,13 +20,15 @@ interface ProblemDetailsPayload {
 }
 
 export class ApiError extends Error {
+  readonly code: string | undefined;
   readonly details: string | undefined;
   readonly fields: ValidationErrors;
   readonly status: number;
 
-  constructor(status: number, title: string, details?: string, fields: ValidationErrors = {}) {
+  constructor(status: number, title: string, details?: string, fields: ValidationErrors = {}, code?: string) {
     super(title);
     this.name = "ApiError";
+    this.code = code;
     this.status = status;
     this.details = details;
     this.fields = fields;
@@ -58,7 +61,8 @@ async function toApiError(response: Response): Promise<ApiError> {
     response.status,
     payload.title ?? fallbackTitle,
     payload.detail,
-    readValidationErrors(payload)
+    readValidationErrors(payload),
+    payload.code
   );
 }
 
@@ -138,7 +142,11 @@ export class ApiClient {
   }
 }
 
+export function getApiUrl(path: string): string {
+  return new URL(path, process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:58016").toString();
+}
+
 export function createApiClient(csrfToken?: () => string | undefined): ApiClient {
-  return new ApiClient(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000", csrfToken);
+  return new ApiClient(process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:58016", csrfToken);
 }
 

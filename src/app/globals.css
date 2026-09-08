@@ -305,7 +305,16 @@ h1, h2 { line-height: 1.08; }
 .submit-action:disabled { cursor: wait; opacity: .68; }
 .auth-footer { color: #738a95; font-size: .68rem; margin: 1rem 0 0; text-align: center; }
 .auth-footer a:hover, .text-action:hover { color: #0c4f7c; }
-.auth-divider, .google-action { display: none; }
+.auth-divider { align-items: center; color: #8197a1; display: flex; font-size: .65rem; gap: .65rem; margin: 1rem 0 .7rem; }
+.auth-divider::before, .auth-divider::after { background: #e1ecef; content: ""; flex: 1; height: 1px; }
+.google-action { align-items: center; background: #fff; border: 1px solid #d5e4e8; border-radius: .45rem; color: var(--ink); cursor: pointer; display: flex; font-size: .78rem; font-weight: 700; gap: .6rem; justify-content: center; min-height: 2.7rem; padding: .55rem 1rem; transition: background .18s ease, border-color .18s ease, box-shadow .18s ease; width: 100%; }
+.google-action:hover { background: #f8ffff; border-color: #a8cfd2; box-shadow: 0 .35rem .8rem rgb(6 58 86 / 8%); }
+.google-action:disabled { cursor: wait; opacity: .68; }
+.google-mark { align-items: center; border: 1px solid #d5e4e8; border-radius: 50%; color: #4285f4; display: inline-flex; font-family: Arial, sans-serif; font-size: .9rem; font-weight: 800; height: 1.35rem; justify-content: center; line-height: 1; width: 1.35rem; }
+.google-error { margin-top: .7rem; }
+.google-pending { background: #f0f8fa; border: 1px solid #e0edef; border-radius: .5rem; color: #637d8b; font-size: .68rem; margin-top: .7rem; padding: .7rem .8rem; text-align: center; }
+.google-pending p { margin: 0; }
+.google-pending .auth-secondary-action { margin-top: .55rem; width: 100%; }
 
 .confirmation-card { text-align: center; }
 .confirmation-card .auth-mobile-brand { margin-bottom: 1.45rem; }
