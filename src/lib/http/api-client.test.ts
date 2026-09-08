@@ -55,6 +55,21 @@ describe("ApiClient", () => {
     expect(new Headers(request.headers).get("x-xsrf-token")).toBe("csrf-token");
   });
 
+  it("preserves the API error code without exposing the response payload", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      code: "google_account_already_exists",
+      detail: "Sign in using the existing account or recover access before linking Google.",
+      title: "A Google account is already registered."
+    }), { headers: { "content-type": "application/problem+json" }, status: 409 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("http://localhost:5000");
+
+    await expect(client.request("api/auth/google/callback")).rejects.toMatchObject({
+      code: "google_account_already_exists",
+      status: 409
+    });
+  });
+
   it("gets the antiforgery token from the API response header", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, {
       headers: { "X-XSRF-TOKEN": "csrf-token" },

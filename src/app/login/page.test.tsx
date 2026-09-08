@@ -13,6 +13,13 @@ function unauthenticatedResponse(): Response {
   return new Response(null, { status: 401 });
 }
 
+function apiErrorResponse(status: number, code: string): Response {
+  return new Response(JSON.stringify({ code, detail: "Raw API detail", title: "Raw API title" }), {
+    headers: { "content-type": "application/problem+json" },
+    status
+  });
+}
+
 function authenticatedSession(): Response {
   return new Response(JSON.stringify({
     email: "owner@example.com",
@@ -74,6 +81,23 @@ describe("LoginPage", () => {
 
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Não foi possível concluir a entrada com Google"));
     expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy();
+  });
+
+  it("maps the Google API code to a friendly message instead of rendering the payload", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(apiErrorResponse(409, "google_account_already_exists"));
+    vi.spyOn(window, "open").mockReturnValue({ close: vi.fn(), closed: false } as unknown as Window);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+    fireEvent.click(screen.getByRole("button", { name: "Verificar sessão" }));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Esta conta Google já está cadastrada"));
+    expect(screen.queryByText("Raw API title")).toBeNull();
+    expect(screen.queryByText("Raw API detail")).toBeNull();
   });
 
   it("explains when the Google popup is blocked", async () => {

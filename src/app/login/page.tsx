@@ -38,6 +38,16 @@ function validateForm(email: string, password: string): LoginFieldErrors {
   return errors;
 }
 
+const googleErrorMessages: Record<string, string> = {
+  google_account_already_exists: "Esta conta Google já está cadastrada. Entre com e-mail e senha ou recupere seu acesso.",
+  google_authentication_failed: "Não foi possível autenticar com Google. Tente novamente.",
+  google_authentication_unavailable: "A entrada com Google está indisponível no momento. Tente novamente mais tarde."
+};
+
+function messageForGoogleFailure(code?: string): string {
+  return (code && googleErrorMessages[code]) ?? "Não foi possível concluir a entrada com Google. Tente novamente.";
+}
+
 function AuthState({
   heading,
   message,
@@ -156,15 +166,15 @@ function LoginForm() {
 
   async function verifyGoogleSession() {
     setGoogleError(undefined);
-    const authenticated = await refresh({ showLoading: false });
-    if (authenticated) {
+    const result = await refresh({ showLoading: false });
+    if (result.ok) {
       googleWindow.current?.close();
       googleWindow.current = null;
       setIsGooglePending(false);
       return;
     }
 
-    setGoogleError("Não foi possível concluir a entrada com Google. Tente novamente.");
+    setGoogleError(messageForGoogleFailure(result.code));
   }
 
   function startGoogleAuthentication() {
