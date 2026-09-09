@@ -17,7 +17,7 @@ function MailIcon() {
 function ConfirmationIcon({ variant }: Readonly<{ variant: "error" | "success" }>) {
   return (
     <div aria-hidden="true" className={`confirmation-icon confirmation-icon-${variant}`}>
-      <img src="/assets/icons/ui/envelope-check.svg" alt="" />
+      {variant === "success" ? <img src="/assets/icons/ui/envelope-check.svg" alt="" /> : <span className="confirmation-error-mark">!</span>}
     </div>
   );
 }
@@ -87,7 +87,7 @@ function ResendForm() {
   return (
     <div className="confirmation-resend-block">
       <h2>Solicite um novo link</h2>
-      <p>Informe o e-mail usado no cadastro para receber outra mensagem de confirmação.</p>
+      <p className="confirmation-resend-description">Informe o e-mail usado no cadastro para receber outra mensagem de confirmação.</p>
       <form aria-label="Solicitar novo link de confirmação" className="confirmation-resend-form" noValidate onSubmit={handleSubmit}>
         <div className="field-group">
           <label htmlFor="confirmation-email">E-mail cadastrado</label>
