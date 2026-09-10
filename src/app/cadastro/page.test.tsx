@@ -151,6 +151,31 @@ describe("RegistrationPage", () => {
     expect(screen.getByRole("link", { name: "Entrar" }).getAttribute("href")).toBe("/login");
   });
 
+  it("offers confirmation recovery for an existing unconfirmed account", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, {
+        headers: { "X-XSRF-TOKEN": "csrf-token" },
+        status: 204
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        code: "email_confirmation_required",
+        title: "Email confirmation is required."
+      }), { headers: { "content-type": "application/problem+json" }, status: 409 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<RegistrationPage />);
+
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
+
+    await waitFor(() => expect(screen.getByText(/Esta conta já foi criada/)).toBeTruthy());
+    expect(screen.getByRole("link", { name: "Reenviar e-mail de confirmação" }).getAttribute("href"))
+      .toBe("/auth/confirm-email?email=owner%40example.com");
+    expect(screen.getByRole("button", { name: "Criar conta" })).toBeTruthy();
+  });
+
   it("disables the form while the request is pending", () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
     render(<RegistrationPage />);

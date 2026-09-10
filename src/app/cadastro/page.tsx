@@ -76,6 +76,7 @@ export default function RegistrationPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [confirmationRequiredEmail, setConfirmationRequiredEmail] = useState<string | undefined>();
   const [resendMessage, setResendMessage] = useState<string | undefined>();
   const [resendError, setResendError] = useState<string | undefined>();
   const csrfToken = useRef<string | undefined>(undefined);
@@ -96,6 +97,7 @@ export default function RegistrationPage() {
     const validationErrors = validateForm(normalizedEmail, password, confirmPassword, acceptedTerms);
     setErrors(validationErrors);
     setFormError(undefined);
+    setConfirmationRequiredEmail(undefined);
 
     if (Object.keys(validationErrors).length > 0) return;
 
@@ -114,6 +116,11 @@ export default function RegistrationPage() {
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(error.fields);
+        if (error.status === 409 && error.code === "email_confirmation_required") {
+          setConfirmationRequiredEmail(normalizedEmail);
+          return;
+        }
+
         setFormError(error.status === 409
           ? "Já existe uma conta com este e-mail. Se ela for sua, entre pela área de login."
           : error.status >= 500
@@ -212,6 +219,12 @@ export default function RegistrationPage() {
 
             <form onSubmit={handleSubmit} noValidate>
               {formError && <div className="form-error" role="alert">{formError}</div>}
+              {confirmationRequiredEmail && (
+                <div className="form-error" role="alert">
+                  Esta conta já foi criada, mas o e-mail ainda não foi confirmado. Confirme o endereço antes de entrar.
+                  <a className="text-action" href={`/auth/confirm-email?email=${encodeURIComponent(confirmationRequiredEmail)}`}>Reenviar e-mail de confirmação</a>
+                </div>
+              )}
 
               <div className="field-group">
                 <label htmlFor="email">E-mail</label>
@@ -221,7 +234,10 @@ export default function RegistrationPage() {
                     autoComplete="email"
                     id="email"
                     name="email"
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      setConfirmationRequiredEmail(undefined);
+                    }}
                     placeholder="Seu e-mail"
                     type="email"
                     value={email}

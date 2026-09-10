@@ -58,6 +58,18 @@ describe("ConfirmEmailPage", () => {
     expect(screen.getByRole("form", { name: "Solicitar novo link de confirmação" })).toBeTruthy();
   });
 
+  it("prefills the resend form from an email recovery link", async () => {
+    window.history.replaceState({}, "", "/auth/confirm-email?email=owner%40example.com");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ConfirmEmailPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Link inválido ou expirado" })).toBeTruthy());
+    expect((screen.getByLabelText("E-mail cadastrado") as HTMLInputElement).value).toBe("owner@example.com");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("maps an invalid API response to a friendly state without rendering the payload", async () => {
     window.history.replaceState({}, "", "/auth/confirm-email?userId=user-id&token=expired-token");
     const fetchMock = vi.fn()

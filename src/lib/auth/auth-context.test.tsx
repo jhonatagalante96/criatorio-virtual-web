@@ -101,4 +101,23 @@ describe("AuthProvider session security", () => {
     expect(screen.getByRole("alert").textContent).toContain("não está autorizado");
     expect(screen.queryByText("owner@example.com")).toBeNull();
   });
+
+  it("explains when valid credentials require email confirmation", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(antiforgeryResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        code: "email_confirmation_required",
+        title: "Email confirmation is required."
+      }), { headers: { "content-type": "application/problem+json" }, status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderAuthHarness();
+
+    await waitFor(() => expect(screen.getByTestId("status").textContent).toBe("unauthenticated"));
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => expect(screen.getByTestId("status").textContent).toBe("forbidden"));
+    expect(screen.getByRole("alert").textContent).toContain("Confirme seu e-mail antes de entrar");
+    expect(screen.getByRole("alert").textContent).not.toContain("E-mail ou senha inválidos");
+  });
 });

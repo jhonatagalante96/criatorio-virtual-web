@@ -35,6 +35,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function messageForFailure(error: unknown, action: "login" | "logout" | "session"): string {
   if (error instanceof ApiError) {
+    if (action === "login" && error.code === "email_confirmation_required") {
+      return "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada ou solicite um novo link de confirmação.";
+    }
     if (action === "login" && error.status === 401) return "E-mail ou senha inválidos.";
     if (error.status === 403) return "Seu acesso não está autorizado para esta ação.";
     if (error.status >= 500) return "O serviço está indisponível no momento. Tente novamente em instantes.";
