@@ -39,9 +39,16 @@ function validateForm(email: string, password: string): LoginFieldErrors {
 }
 
 const googleErrorMessages: Record<string, string> = {
+  account_provisioning_failed: "Não foi possível criar sua conta com Google. Tente novamente mais tarde.",
+  account_unavailable: "Sua conta está indisponível para entrada com Google no momento.",
+  email_conflict: "Esta conta Google já está cadastrada. Entre com e-mail e senha ou recupere seu acesso.",
+  email_missing: "O Google não retornou um e-mail válido. Tente novamente com outra conta.",
+  email_unverified: "O e-mail da sua conta Google precisa estar verificado para entrar.",
+  external_login_unavailable: "A entrada com Google está indisponível no momento. Tente novamente mais tarde.",
   google_account_already_exists: "Esta conta Google já está cadastrada. Entre com e-mail e senha ou recupere seu acesso.",
   google_authentication_failed: "Não foi possível autenticar com Google. Tente novamente.",
-  google_authentication_unavailable: "A entrada com Google está indisponível no momento. Tente novamente mais tarde."
+  google_authentication_unavailable: "A entrada com Google está indisponível no momento. Tente novamente mais tarde.",
+  remote_provider_failure: "Não foi possível concluir a autenticação com Google. Tente novamente."
 };
 const googleAuthenticationMessageType = "criatorio-google-authentication";
 
@@ -197,6 +204,7 @@ function LoginForm() {
     setGoogleError(messageForGoogleFailure(code));
     const url = new URL(window.location.href);
     url.searchParams.delete("googleError");
+    url.searchParams.delete("correlationId");
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   }, []);
 
