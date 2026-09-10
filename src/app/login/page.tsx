@@ -103,7 +103,7 @@ function SessionPanel({ logoutButtonRef, onRequestLogout }: Readonly<{ logoutBut
       <button className="auth-primary-action" disabled={status === "signing-out"} onClick={onRequestLogout} ref={logoutButtonRef} type="button">
         {status === "signing-out" ? "Saindo…" : "Sair da conta"}
       </button>
-      <a className="auth-primary-action onboarding-action" href="/onboarding/criatorio">Criar meu criatório</a>
+      <a className="auth-primary-action onboarding-action" href="/onboarding/criatorio/selecionar">Continuar onboarding</a>
       <a className="auth-secondary-action settings-action" href="/configuracoes">Configurações da conta</a>
       <a className="text-action" href="/">Voltar para a página inicial</a>
     </div>
