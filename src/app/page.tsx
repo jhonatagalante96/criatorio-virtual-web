@@ -1,5 +1,6 @@
 import React from "react";
 import { BrandLockup } from "./components/brand";
+import { GoogleAuthenticationCallback } from "./components/google-authentication-callback";
 
 const navigationItems = [
   { href: "#recursos", label: "Recursos" },
@@ -96,6 +97,7 @@ function DashboardPreview() {
 export default function Home() {
   return (
     <main className="landing-page" id="inicio">
+      <GoogleAuthenticationCallback />
       <a className="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
       <div className="landing-leaf landing-leaf-top" aria-hidden="true" />
       <div className="landing-leaf landing-leaf-bottom" aria-hidden="true" />
