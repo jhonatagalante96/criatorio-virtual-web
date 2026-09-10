@@ -10,6 +10,9 @@ export interface AccountSession {
 }
 
 export type AuthStatus = "authenticated" | "authenticating" | "error" | "forbidden" | "loading" | "signing-out" | "unauthenticated";
+export type AuthenticationProvider = "email" | "google";
+
+const authenticationProviderStorageKey = "criatorio-authentication-provider";
 
 export interface AuthResult {
   code?: string;
@@ -18,11 +21,12 @@ export interface AuthResult {
 }
 
 interface AuthContextValue {
+  authenticationProvider: AuthenticationProvider | undefined;
   clearError: () => void;
   error: string | undefined;
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<AuthResult>;
-  refresh: (options?: { showLoading?: boolean }) => Promise<AuthResult>;
+  refresh: (options?: { provider?: AuthenticationProvider; showLoading?: boolean }) => Promise<AuthResult>;
   session: AccountSession | undefined;
   status: AuthStatus;
 }
@@ -45,24 +49,46 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
   const [error, setError] = useState<string | undefined>();
+  const [authenticationProvider, setAuthenticationProvider] = useState<AuthenticationProvider | undefined>();
   const [session, setSession] = useState<AccountSession | undefined>();
   const [status, setStatus] = useState<AuthStatus>("loading");
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
 
+  const rememberAuthenticationProvider = useCallback((provider: AuthenticationProvider | undefined) => {
+    setAuthenticationProvider(provider);
+    if (typeof window === "undefined") return;
+
+    if (provider) {
+      window.sessionStorage.setItem(authenticationProviderStorageKey, provider);
+    } else {
+      window.sessionStorage.removeItem(authenticationProviderStorageKey);
+    }
+  }, []);
+
+  useEffect(() => {
+    const storedProvider = window.sessionStorage.getItem(authenticationProviderStorageKey);
+    if (storedProvider === "email" || storedProvider === "google") {
+      setAuthenticationProvider(storedProvider);
+    }
+  }, []);
+
   const clearSession = useCallback(() => {
     csrfToken.current = undefined;
     client.current?.clearCache();
+    rememberAuthenticationProvider(undefined);
     setSession(undefined);
-  }, []);
+  }, [rememberAuthenticationProvider]);
 
-  const refresh = useCallback(async ({ showLoading = true }: { showLoading?: boolean } = {}): Promise<AuthResult> => {
+  const refresh = useCallback(async ({ provider, showLoading = true }: { provider?: AuthenticationProvider; showLoading?: boolean } = {}): Promise<AuthResult> => {
     if (showLoading) setStatus("loading");
     setError(undefined);
+    client.current?.clearCache();
 
     try {
       const currentSession = await client.current!.request<AccountSession>("api/auth/session");
       setSession(currentSession);
+      if (provider) rememberAuthenticationProvider(provider);
       setStatus("authenticated");
       return { ok: true };
     } catch (requestError) {
@@ -82,7 +108,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
 
       return { code, error: message, ok: false };
     }
-  }, [clearSession]);
+  }, [clearSession, rememberAuthenticationProvider]);
 
   useEffect(() => {
     void refresh();
@@ -107,16 +133,18 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       client.current!.clearCache();
       const currentSession = await client.current!.request<AccountSession>("api/auth/session");
       setSession(currentSession);
+      rememberAuthenticationProvider("email");
       setStatus("authenticated");
       return { ok: true };
     } catch (requestError) {
+      rememberAuthenticationProvider(undefined);
       setSession(undefined);
       setStatus(requestError instanceof ApiError && requestError.status === 403 ? "forbidden" : "unauthenticated");
       const message = messageForFailure(requestError, "login");
       setError(message);
       return { error: message, ok: false };
     }
-  }, []);
+  }, [rememberAuthenticationProvider]);
 
   const logout = useCallback(async (): Promise<AuthResult> => {
     setStatus("signing-out");
@@ -148,7 +176,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
   const clearError = useCallback(() => setError(undefined), []);
 
   return (
-    <AuthContext.Provider value={{ clearError, error, login, logout, refresh, session, status }}>
+    <AuthContext.Provider value={{ authenticationProvider, clearError, error, login, logout, refresh, session, status }}>
       {children}
     </AuthContext.Provider>
   );

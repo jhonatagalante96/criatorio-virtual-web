@@ -103,6 +103,7 @@ function SessionPanel({ logoutButtonRef, onRequestLogout }: Readonly<{ logoutBut
       <button className="auth-primary-action" disabled={status === "signing-out"} onClick={onRequestLogout} ref={logoutButtonRef} type="button">
         {status === "signing-out" ? "Saindo…" : "Sair da conta"}
       </button>
+      <a className="auth-secondary-action settings-action" href="/configuracoes">Configurações da conta</a>
       <a className="text-action" href="/">Voltar para a página inicial</a>
     </div>
   );
@@ -240,7 +241,7 @@ function LoginForm() {
     googleSessionCheckInFlight.current = true;
     setGoogleError(undefined);
     try {
-      const result = await refresh({ showLoading: false });
+      const result = await refresh({ provider: "google", showLoading: false });
       if (result.ok) {
         finishGoogleAuthentication();
         return;
@@ -378,6 +379,8 @@ function LoginForm() {
           {isSubmitting ? "Entrando…" : "Entrar"}
         </button>
       </form>
+
+      <p className="password-recovery-link"><a href="/auth/forgot-password">Esqueci minha senha</a></p>
 
       <div aria-label="outras opções de entrada" className="auth-divider" role="separator"><span>ou</span></div>
       <button className="google-action" disabled={isSubmitting || isGooglePending} onClick={startGoogleAuthentication} type="button">

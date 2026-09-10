@@ -483,12 +483,70 @@ h1, h2 { line-height: 1.08; }
 .session-identity strong { color: var(--ink); font-size: .85rem; overflow-wrap: anywhere; }
 .session-identity span:last-child { color: #66808d; font-size: .68rem; }
 .session-card .auth-primary-action { width: 100%; }
+.session-card .settings-action { margin-top: .55rem; width: 100%; }
 .session-card .form-error { margin-bottom: .8rem; text-align: left; }
 .logout-dialog-backdrop { align-items: center; background: rgb(6 58 86 / 36%); display: flex; inset: 0; justify-content: center; padding: 1rem; position: fixed; z-index: 20; }
 .logout-dialog { background: #fff; border: 1px solid var(--line); border-radius: 1rem; box-shadow: 0 1.2rem 3rem rgb(6 58 86 / 23%); max-width: 25rem; padding: 1.4rem; width: 100%; }
 .logout-dialog h2 { color: var(--ink); font-size: 1.25rem; margin: 0; }
 .logout-dialog p { color: var(--muted); font-size: .8rem; margin: .6rem 0 1.2rem; }
 .logout-dialog-actions { display: grid; gap: .55rem; grid-template-columns: 1fr 1fr; }
+
+/* Password recovery and account settings */
+
+.password-recovery-link { font-size: .72rem; margin: .75rem 0 0; text-align: right; }
+.password-recovery-link a { color: #1769a0; font-weight: 700; }
+.password-recovery-link a:hover { color: #0c4f7c; }
+.password-recovery-card { text-align: left; }
+.password-recovery-card h1 { text-align: left; }
+.password-recovery-card h1:focus { outline: 0; }
+.password-recovery-card > .lede { max-width: 35ch; }
+.password-recovery-card > .confirmation-icon { margin-top: .6rem; }
+.password-recovery-card .confirmation-notice { text-align: left; }
+.password-recovery-card .confirmation-primary-action { width: 100%; }
+.password-recovery-card .confirmation-back { display: block; text-align: center; }
+.password-hint { color: #68818f; font-size: .65rem; line-height: 1.4; margin: .55rem 0 0; }
+
+.settings-page { background: linear-gradient(145deg, #f4ffff 0%, #e4f6f5 100%); min-height: 100svh; padding: clamp(1rem, 4vw, 3.25rem); }
+.settings-shell { background: #fff; border: 1px solid rgb(196 217 220 / 70%); border-radius: 1.6rem; box-shadow: 0 1.8rem 4rem rgb(21 88 91 / 15%); display: grid; grid-template-columns: minmax(15rem, .72fr) minmax(30rem, 1.28fr); margin: 0 auto; max-width: 68rem; min-height: min(44rem, calc(100svh - 4rem)); overflow: hidden; }
+.settings-shell .brand-panel { grid-column: 1; grid-row: 1; }
+.settings-content { grid-column: 2; grid-row: 1; min-width: 0; padding: 2rem clamp(1.5rem, 5vw, 4rem); }
+.settings-back { align-items: center; color: #355d71; display: inline-flex; font-size: .72rem; gap: .35rem; text-decoration: none; }
+.settings-back img { height: 1rem; width: 1rem; }
+.settings-back:hover { color: var(--green-dark); }
+.settings-header { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; margin: 2.25rem 0 1.5rem; }
+.settings-header h1 { color: var(--ink); font-size: clamp(1.65rem, 3vw, 2.3rem); letter-spacing: -.055em; margin: 0; }
+.settings-header p:not(.eyebrow) { color: #68818f; font-size: .78rem; margin: .45rem 0 0; }
+.settings-header > .brand-lockup { display: none; }
+.settings-grid { display: grid; gap: 1rem; grid-template-columns: minmax(10rem, .72fr) minmax(17rem, 1.28fr); }
+.settings-account-card, .settings-card { border: 1px solid #dcebed; border-radius: 1rem; min-width: 0; padding: 1.15rem; }
+.settings-account-card { background: linear-gradient(150deg, #f3fbfa, #e5f5f0); }
+.settings-avatar { align-items: center; background: #caeadc; border-radius: 50%; color: #087847; display: flex; font-size: 1.25rem; font-weight: 800; height: 3rem; justify-content: center; margin-bottom: 1rem; width: 3rem; }
+.settings-account-card .eyebrow { margin-bottom: .35rem; }
+.settings-account-card h2 { color: var(--ink); font-size: .86rem; margin: 0; overflow-wrap: anywhere; }
+.settings-account-card > p:not(.eyebrow) { color: #68818f; font-size: .68rem; margin: .35rem 0 0; }
+.settings-provider { align-items: center; border-top: 1px solid rgb(73 142 124 / 20%); display: flex; gap: .55rem; margin-top: 1.2rem; padding-top: 1rem; }
+.settings-provider-icon { align-items: center; background: #fff; border-radius: .35rem; color: #1769a0; display: flex; font-size: .78rem; font-weight: 800; height: 1.65rem; justify-content: center; width: 1.65rem; }
+.settings-provider span:last-child { display: grid; gap: .1rem; }
+.settings-provider strong { color: #355d71; font-size: .62rem; }
+.settings-provider small { color: #68818f; font-size: .64rem; }
+.settings-card { background: #fff; }
+.settings-card h2 { color: var(--ink); font-size: 1.05rem; letter-spacing: -.025em; margin: 0; }
+.settings-card-description { color: #68818f; font-size: .72rem; line-height: 1.4; margin: .4rem 0 1rem; max-width: 34ch; }
+.settings-password-form .field-group { margin-top: .65rem; }
+.settings-password-form .submit-action { margin-top: .95rem; }
+.settings-password-form .confirmation-feedback { margin: .2rem 0 .8rem; }
+.settings-provider-message { background: #f0f8fa; border: 1px solid #d9e9eb; border-radius: .6rem; color: #637d8b; font-size: .72rem; line-height: 1.45; margin-top: 1rem; padding: .8rem; }
+.settings-provider-message strong { color: var(--ink); display: block; font-size: .78rem; margin-bottom: .25rem; }
+.settings-provider-message p { margin: 0; }
+
+@media (max-width: 62rem) {
+  .settings-shell { grid-template-columns: minmax(13rem, .62fr) minmax(25rem, 1.38fr); }
+  .settings-content { padding-inline: 2.2rem; }
+  .settings-grid { grid-template-columns: 1fr; }
+  .settings-account-card { display: grid; grid-template-columns: auto 1fr; column-gap: .75rem; }
+  .settings-account-card .settings-avatar { grid-row: span 3; }
+  .settings-provider { grid-column: 1 / -1; }
+}
 
 @media (max-width: 47.99rem) {
   .auth-form-panel-content { max-width: 32rem; padding-top: .1rem; position: relative; width: 100%; z-index: 1; }
@@ -497,4 +555,21 @@ h1, h2 { line-height: 1.08; }
   .auth-state-card .brand-lockup,
   .session-card .brand-lockup { margin-bottom: 2rem; }
   .logout-dialog-actions { grid-template-columns: 1fr; }
+
+  .password-recovery-link { margin-top: .7rem; text-align: center; }
+  .password-recovery-card h1 { text-align: center; }
+  .password-recovery-card > .lede { margin-inline: auto; text-align: center; }
+  .password-recovery-card > .confirmation-icon { margin-top: 0; }
+
+  .settings-page { background: #fff; padding: 0; }
+  .settings-shell { border: 0; border-radius: 0; box-shadow: none; display: block; min-height: 100svh; }
+  .settings-shell .brand-panel { display: none; }
+  .settings-content { background: linear-gradient(#fff 0 72%, #f1faf8 100%); min-height: 100svh; overflow: hidden; padding: 1.1rem 1.25rem 2rem; position: relative; }
+  .settings-content::after { background: url("/assets/imagery/landscapes/mountain-landscape.png") center bottom / cover no-repeat; bottom: 0; content: ""; height: 7rem; left: 0; opacity: .4; pointer-events: none; position: absolute; right: 0; }
+  .settings-content > * { position: relative; z-index: 1; }
+  .settings-header { margin: 2rem 0 1.4rem; }
+  .settings-header > .brand-lockup { display: inline-flex; }
+  .settings-header > .brand-lockup img { width: 6.5rem; }
+  .settings-grid { gap: .75rem; }
+  .settings-account-card, .settings-card { border-radius: .8rem; padding: 1rem; }
 }
