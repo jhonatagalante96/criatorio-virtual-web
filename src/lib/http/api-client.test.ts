@@ -53,6 +53,7 @@ describe("ApiClient", () => {
 
     const [, request] = fetchMock.mock.calls[0];
     expect(new Headers(request.headers).get("x-xsrf-token")).toBe("csrf-token");
+    expect(request.credentials).toBe("include");
   });
 
   it("preserves the API error code without exposing the response payload", async () => {
