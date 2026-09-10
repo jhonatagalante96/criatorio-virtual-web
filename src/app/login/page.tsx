@@ -169,8 +169,31 @@ function LoginForm() {
   const [googleError, setGoogleError] = useState<string | undefined>();
   const [isGooglePending, setIsGooglePending] = useState(false);
   const googleWindow = useRef<Window | null>(null);
+  const googlePollTimer = useRef<number | undefined>(undefined);
+  const googleSessionCheckInFlight = useRef(false);
 
-  useEffect(() => () => googleWindow.current?.close(), []);
+  function stopGooglePolling() {
+    if (googlePollTimer.current === undefined) return;
+    window.clearInterval(googlePollTimer.current);
+    googlePollTimer.current = undefined;
+  }
+
+  function finishGoogleAuthentication() {
+    stopGooglePolling();
+    googleWindow.current?.close();
+    googleWindow.current = null;
+    setIsGooglePending(false);
+  }
+
+  function handleGoogleAuthenticationFailure(code?: string) {
+    setGoogleError(messageForGoogleFailure(code));
+    finishGoogleAuthentication();
+  }
+
+  useEffect(() => () => {
+    stopGooglePolling();
+    googleWindow.current?.close();
+  }, []);
 
   useEffect(() => {
     function handleGoogleAuthenticationMessage(event: MessageEvent) {
@@ -179,10 +202,7 @@ function LoginForm() {
       if (event.data.type !== googleAuthenticationMessageType || event.data.status !== "error") return;
 
       const code = typeof event.data.code === "string" ? event.data.code : undefined;
-      setGoogleError(messageForGoogleFailure(code));
-      setIsGooglePending(false);
-      googleWindow.current?.close();
-      googleWindow.current = null;
+      handleGoogleAuthenticationFailure(code);
     }
 
     window.addEventListener("message", handleGoogleAuthenticationMessage);
@@ -209,16 +229,45 @@ function LoginForm() {
   }, []);
 
   async function verifyGoogleSession() {
+    if (googleSessionCheckInFlight.current) return;
+
+    googleSessionCheckInFlight.current = true;
     setGoogleError(undefined);
-    const result = await refresh({ showLoading: false });
-    if (result.ok) {
-      googleWindow.current?.close();
-      googleWindow.current = null;
-      setIsGooglePending(false);
+    try {
+      const result = await refresh({ showLoading: false });
+      if (result.ok) {
+        finishGoogleAuthentication();
+        return;
+      }
+
+      setGoogleError(messageForGoogleFailure(result.code));
+    } finally {
+      googleSessionCheckInFlight.current = false;
+    }
+  }
+
+  function inspectGooglePopup(popup: Window) {
+    if (popup.closed) {
+      finishGoogleAuthentication();
+      setGoogleError("A janela do Google foi fechada antes da conclusão. Tente novamente.");
       return;
     }
 
-    setGoogleError(messageForGoogleFailure(result.code));
+    try {
+      const popupUrl = new URL(popup.location.href);
+      if (popupUrl.origin !== window.location.origin) return;
+
+      const callbackError = popupUrl.searchParams.get("googleError");
+      if (callbackError) {
+        handleGoogleAuthenticationFailure(callbackError);
+        return;
+      }
+
+      stopGooglePolling();
+      void verifyGoogleSession();
+    } catch {
+      // The popup is still on Google's origin, so its location is intentionally unreadable.
+    }
   }
 
   function startGoogleAuthentication() {
@@ -237,6 +286,7 @@ function LoginForm() {
 
     googleWindow.current = popup;
     setIsGooglePending(true);
+    googlePollTimer.current = window.setInterval(() => inspectGooglePopup(popup), 250);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -322,7 +372,7 @@ function LoginForm() {
       {googleError && <div className="form-error google-error" role="alert">{googleError}</div>}
       {isGooglePending && (
         <div className="google-pending" role="status">
-          <p>Conclua a entrada na janela do Google e depois confirme sua sessão aqui.</p>
+          <p>Conclua a entrada na janela do Google. A sessão será verificada automaticamente.</p>
           <button className="auth-secondary-action" onClick={() => void verifyGoogleSession()} type="button">Verificar sessão</button>
         </div>
       )}
