@@ -49,10 +49,10 @@ function renderAuthHarness() {
   );
 }
 
-function storageContents(): string[] {
+function storageContents(): string {
   return [window.localStorage, window.sessionStorage].flatMap((storage) =>
     Array.from({ length: storage.length }, (_, index) => storage.getItem(storage.key(index) ?? "") ?? "")
-  );
+  ).join("\n");
 }
 
 describe("AuthProvider session security", () => {
@@ -71,7 +71,7 @@ describe("AuthProvider session security", () => {
     await waitFor(() => expect(screen.getByText("owner@example.com")).toBeTruthy());
     expect(window.sessionStorage.getItem("criatorio-authentication-provider")).toBe("email");
     expect(storageContents()).not.toContain("StrongPassword!123");
-    expect(storageContents().join(" ")).not.toContain("owner@example.com");
+    expect(storageContents()).not.toContain("owner@example.com");
   });
 
   it("clears the provider marker when logout succeeds without managing the auth cookie in browser storage", async () => {
@@ -89,7 +89,7 @@ describe("AuthProvider session security", () => {
     await waitFor(() => expect(screen.getByTestId("status").textContent).toBe("unauthenticated"));
     expect(window.sessionStorage.getItem("criatorio-authentication-provider")).toBeNull();
     expect(storageContents()).not.toContain("StrongPassword!123");
-    expect(storageContents().join(" ")).not.toContain("owner@example.com");
+    expect(storageContents()).not.toContain("owner@example.com");
   });
 
   it("keeps a forbidden session out of the authenticated view", async () => {
