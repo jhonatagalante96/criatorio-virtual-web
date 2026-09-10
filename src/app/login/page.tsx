@@ -27,7 +27,7 @@ function EyeIcon() {
 }
 
 function GoogleMark() {
-  return <span aria-hidden="true" className="google-mark">G</span>;
+  return <img src="/assets/icons/ui/google.svg" alt="" aria-hidden="true" className="google-mark" />;
 }
 
 function validateForm(email: string, password: string): LoginFieldErrors {
