@@ -4,6 +4,7 @@ import React, { FormEvent, useEffect, useRef, useState } from "react";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
 import { getApiUrl } from "../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../components/brand";
+import { GoogleAuthenticationCallback, googleAuthenticationMessageType, googleAuthenticationWindowName } from "../components/google-authentication-callback";
 
 interface LoginFieldErrors {
   email?: string;
@@ -50,8 +51,6 @@ const googleErrorMessages: Record<string, string> = {
   google_authentication_unavailable: "A entrada com Google está indisponível no momento. Tente novamente mais tarde.",
   remote_provider_failure: "Não foi possível concluir a autenticação com Google. Tente novamente."
 };
-const googleAuthenticationMessageType = "criatorio-google-authentication";
-
 function messageForGoogleFailure(code?: string): string {
   return (code && googleErrorMessages[code]) ?? "Não foi possível concluir a entrada com Google. Tente novamente.";
 }
@@ -199,7 +198,14 @@ function LoginForm() {
     function handleGoogleAuthenticationMessage(event: MessageEvent) {
       if (event.origin !== window.location.origin) return;
       if (!event.data || typeof event.data !== "object") return;
-      if (event.data.type !== googleAuthenticationMessageType || event.data.status !== "error") return;
+      if (event.data.type !== googleAuthenticationMessageType) return;
+
+      if (event.data.status === "success") {
+        void verifyGoogleSession();
+        return;
+      }
+
+      if (event.data.status !== "error") return;
 
       const code = typeof event.data.code === "string" ? event.data.code : undefined;
       handleGoogleAuthenticationFailure(code);
@@ -275,7 +281,7 @@ function LoginForm() {
     setGoogleError(undefined);
     const popup = window.open(
       getApiUrl("api/auth/google"),
-      "criatorio-google-authentication",
+      googleAuthenticationWindowName,
       "popup,width=520,height=680,resizable=yes,scrollbars=yes"
     );
 
@@ -427,6 +433,7 @@ function LoginScreen() {
 export default function LoginPage() {
   return (
     <AuthProvider>
+      <GoogleAuthenticationCallback />
       <LoginScreen />
     </AuthProvider>
   );
