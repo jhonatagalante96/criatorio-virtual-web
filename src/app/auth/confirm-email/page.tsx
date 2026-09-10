@@ -49,6 +49,11 @@ function ResendForm() {
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
 
+  useEffect(() => {
+    const requestedEmail = new URLSearchParams(window.location.search).get("email");
+    if (requestedEmail) setEmail(requestedEmail.trim());
+  }, []);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedEmail = email.trim();
