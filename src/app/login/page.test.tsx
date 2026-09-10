@@ -54,6 +54,8 @@ describe("LoginPage", () => {
     render(<LoginPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Continuar com Google" }).querySelector("img")?.getAttribute("src"))
+      .toBe("/assets/icons/ui/google.svg");
     fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
 
     expect(openMock).toHaveBeenCalledWith(
