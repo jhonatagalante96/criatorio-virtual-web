@@ -246,6 +246,12 @@ function LoginForm() {
         return;
       }
 
+      if (googleWindow.current?.closed) {
+        finishGoogleAuthentication();
+        setGoogleError("A janela do Google foi fechada antes da conclusão. Tente novamente.");
+        return;
+      }
+
       setGoogleError(messageForGoogleFailure(result.code));
     } finally {
       googleSessionCheckInFlight.current = false;
@@ -254,8 +260,11 @@ function LoginForm() {
 
   function inspectGooglePopup(popup: Window) {
     if (popup.closed) {
-      finishGoogleAuthentication();
-      setGoogleError("A janela do Google foi fechada antes da conclusão. Tente novamente.");
+      stopGooglePolling();
+      // The callback posts the success message and closes the popup in the
+      // same turn. Verify the session before treating the close as a failure;
+      // otherwise the polling timer can win the race against message delivery.
+      void verifyGoogleSession();
       return;
     }
 

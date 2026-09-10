@@ -110,6 +110,44 @@ describe("LoginPage", () => {
     expect(popup.close).toHaveBeenCalledTimes(1);
   });
 
+  it("checks the session before reporting that the callback popup closed", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(authenticatedSession());
+    let popupClosed = false;
+    const popup = { close: vi.fn(), get closed() { return popupClosed; } } as unknown as Window;
+    vi.spyOn(window, "open").mockReturnValue(popup);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+    popupClosed = true;
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
+    expect(screen.queryByText("A janela do Google foi fechada antes da conclusão. Tente novamente.")).toBeNull();
+    expect(popup.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a manually closed callback popup when no authenticated session exists", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(unauthenticatedResponse());
+    let popupClosed = false;
+    const popup = { close: vi.fn(), get closed() { return popupClosed; } } as unknown as Window;
+    vi.spyOn(window, "open").mockReturnValue(popup);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+    popupClosed = true;
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent)
+      .toContain("A janela do Google foi fechada antes da conclusão"));
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
   it("shows a recoverable error when Google does not authenticate the session", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
