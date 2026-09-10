@@ -85,7 +85,7 @@ function SelectionPanelState({
   return (
     <div className="farm-selection-card onboarding-state-card">
       <div className="auth-mobile-brand"><BrandLockup stacked /></div>
-      <h1 ref={headingRef} tabIndex={-1}>{heading}</h1>
+      <h1 id="titulo-selecao-criatorio" ref={headingRef} tabIndex={-1}>{heading}</h1>
       <p className="lede">{message}</p>
       {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
       <a className="text-action" href="/login">Voltar para o login</a>
@@ -210,7 +210,8 @@ function BreedingFarmSelection() {
     try {
       const selection = await client.current!.request<BreedingFarmSelectionResponse>("api/breeding-farms");
       client.current!.setTenant(selection.selectedBreedingFarmId ?? undefined);
-      setSelectedId(selection.selectedBreedingFarmId ?? (selection.breedingFarms.length === 1 ? selection.breedingFarms[0].breedingFarmId : undefined));
+      const persistedFarm = selection.breedingFarms.find((farm) => farm.breedingFarmId === selection.selectedBreedingFarmId);
+      setSelectedId(persistedFarm?.breedingFarmId ?? (selection.breedingFarms.length === 1 ? selection.breedingFarms[0].breedingFarmId : undefined));
       setView(selection.breedingFarms.length === 0 ? { kind: "empty" } : { kind: "list", selection });
     } catch (error) {
       if (error instanceof ApiError && error.status === 401 && recoverSession) {
