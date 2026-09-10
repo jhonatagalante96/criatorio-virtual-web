@@ -70,6 +70,26 @@ describe("LoginPage", () => {
     expect(popup.close).toHaveBeenCalledTimes(1);
   });
 
+  it("automatically verifies the session when the Google popup returns to the frontend", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(authenticatedSession());
+    const popupLocation = { href: "https://accounts.google.com/o/oauth2/auth" };
+    const popup = { close: vi.fn(), closed: false, location: popupLocation } as unknown as Window;
+    vi.spyOn(window, "open").mockReturnValue(popup);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
+    popupLocation.href = `${window.location.origin}/`;
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(popup.close).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("shows a recoverable error when Google does not authenticate the session", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
