@@ -584,6 +584,13 @@ h1, h2 { line-height: 1.08; }
 .onboarding-state-card .text-action { display: block; }
 .session-card .onboarding-action { margin-top: .55rem; width: 100%; }
 
+/* Breeding farm settings */
+
+.farm-edit-shell { min-height: min(54rem, calc(100svh - 4rem)); }
+.farm-settings-form .confirmation-feedback { background: #eef9f1; border: 1px solid #c8e8d0; border-radius: .45rem; margin: 0; padding: .65rem .75rem; }
+.farm-settings-form .submit-action { margin-top: .1rem; }
+.farm-edit-page .auth-footer { max-width: 44ch; }
+
 @media (max-width: 62rem) {
   .onboarding-shell { grid-template-columns: minmax(13rem, .62fr) minmax(25rem, 1.38fr); }
   .onboarding-form-panel { padding-inline: 2.2rem; }
