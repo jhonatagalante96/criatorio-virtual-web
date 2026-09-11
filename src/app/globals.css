@@ -781,6 +781,115 @@ h1, h2 { line-height: 1.08; }
 .bird-pagination span { color: #68818f; font-size: .67rem; white-space: nowrap; }
 .bird-list-page .auth-footer { max-width: 46ch; }
 
+/* Bird listing inside the authenticated dashboard shell */
+.bird-list-view { display: grid; gap: 1.15rem; min-width: 0; }
+.bird-list-breadcrumb { align-items: center; color: #53667f; display: flex; font-size: .72rem; gap: .6rem; }
+.bird-list-breadcrumb a { color: #617086; text-decoration: none; }
+.bird-list-breadcrumb a:hover, .bird-list-breadcrumb a:focus-visible { color: var(--green-dark); text-decoration: underline; }
+.bird-list-breadcrumb span:last-child { color: var(--ink); font-weight: 700; }
+.bird-list-header { align-items: flex-start; margin: 0; }
+.bird-list-header h1 { font-size: clamp(2rem, 4vw, 2.55rem); letter-spacing: -.065em; line-height: 1; }
+.bird-list-header .lede { color: #5b6d86; font-size: .95rem; margin: .55rem 0 0 !important; max-width: none; }
+.bird-list-header-side { display: grid; gap: .8rem; justify-items: end; min-width: min(22.5rem, 100%); }
+.bird-list-register-action { align-items: center; display: inline-flex; font-size: .82rem; gap: .35rem; justify-content: center; min-height: 2.7rem; padding: .55rem 1.2rem; }
+.bird-list-register-action > span { font-size: 1.25rem; font-weight: 400; line-height: 1; }
+.bird-list-summary { align-items: flex-start; background: linear-gradient(135deg, #f1fbf5, #fbfefd); border: 1px solid #d9ebdf; border-radius: .7rem; display: flex; gap: .75rem; max-width: 22.5rem; padding: .72rem .85rem; width: 100%; }
+.bird-list-summary-icon { align-items: center; background: #d9f3dd; border-radius: 50%; color: var(--green-dark); display: flex; flex: 0 0 auto; height: 2.4rem; justify-content: center; width: 2.4rem; }
+.bird-list-summary-icon .dashboard-icon { height: 1.3rem; width: 1.3rem; }
+.bird-list-summary strong { color: var(--ink); display: block; font-size: .76rem; }
+.bird-list-summary p { color: #5f7188; font-size: .68rem; line-height: 1.45; margin: .22rem 0 0; }
+.bird-list-toolbar { gap: .55rem; margin-top: .15rem; }
+.bird-list-search-form { gap: 0; }
+.bird-list-search-control { display: block; }
+.bird-list-search-control input { border-color: #d8e0e7; border-radius: .45rem; font-size: .8rem; min-height: 2.7rem; padding-left: 2.6rem; padding-right: 3.2rem; }
+.bird-list-search-icon { color: #65758b; left: .75rem; position: absolute; top: .7rem; z-index: 1; }
+.bird-list-search-icon .dashboard-icon { height: 1.05rem; width: 1.05rem; }
+.bird-list-search-submit { align-items: center; background: transparent; color: #526780; display: flex; height: 2rem; justify-content: center; padding: 0; position: absolute; right: .35rem; top: .35rem; width: 2rem; }
+.bird-list-search-submit:hover { background: #eef6f2; color: var(--green-dark); }
+.bird-list-search-submit .dashboard-icon { height: 1.05rem; width: 1.05rem; }
+.bird-list-search-form > p { display: none; }
+.bird-filter-panel { background: transparent; border: 0; border-radius: 0; padding: 0; }
+.bird-filter-panel > summary { display: none; }
+.bird-filter-grid { border-top: 0; gap: .65rem; grid-template-columns: repeat(4, minmax(8rem, 1fr)); padding: .15rem 0 .3rem; }
+.bird-filter-sort-control { display: none; }
+.bird-filter-select select { background: #fff; min-height: 2.45rem; }
+.bird-species-filter-selected { background: #fff; min-height: 2.45rem; }
+.bird-clear-filters { justify-self: end; margin-top: .05rem; }
+.bird-list-results { background: #fff; border: 1px solid #e4eaef; border-radius: .65rem; box-shadow: 0 .4rem 1.3rem rgb(23 32 57 / 4%); margin-top: .35rem; overflow: hidden; }
+.bird-list-results-heading { align-items: center; border-bottom: 1px solid #edf1f3; margin: 0; padding: .8rem 1.15rem; }
+.bird-list-results-heading > div { display: grid; gap: .18rem; }
+.bird-list-results-heading h2 { font-size: 1rem; margin: 0; }
+.bird-list-results-heading > div > span { color: #718198; font-size: .68rem; }
+.bird-list-inline-sort { align-items: center; color: #66758b; display: flex; font-size: .7rem; gap: .45rem; white-space: nowrap; }
+.bird-list-inline-sort select { background: #fff; border: 1px solid #d8e0e7; border-radius: .4rem; color: var(--ink); font-size: .72rem; min-height: 2.25rem; padding: .35rem 1.7rem .35rem .55rem; }
+.bird-list-table-heading, .bird-list-card { align-items: center; column-gap: .6rem; display: grid; grid-template-columns: 2.35rem minmax(7rem, 1.35fr) minmax(5rem, .8fr) minmax(7rem, 1.15fr) minmax(4.7rem, .75fr) minmax(6rem, .85fr) minmax(6rem, .9fr) 2.25rem; }
+.bird-list-table-heading { color: #5e6d83; font-size: .66rem; font-weight: 800; padding: .55rem 1.15rem; }
+.bird-list-results .bird-list-cards { gap: 0; grid-template-columns: 1fr; }
+.bird-list-cards > li { border-top: 1px solid #edf1f3; }
+.bird-list-card { border: 0; border-radius: 0; box-shadow: none; min-height: 3.8rem; padding: .52rem 1.15rem; }
+.bird-list-card-link:hover .bird-list-card, .bird-list-card-link:focus-visible .bird-list-card { background: #fbfdfc; border-color: transparent; box-shadow: none; }
+.bird-list-card-avatar { align-items: center; background: #e5f5d9; border-radius: .55rem; color: #1e7a4f; display: flex; height: 2.45rem; justify-content: center; width: 2.45rem; }
+.bird-list-card-avatar .dashboard-icon { height: 1.35rem; width: 1.35rem; }
+.bird-list-card-name { min-width: 0; }
+.bird-list-card-name h2 { font-size: .75rem; letter-spacing: -.01em; margin: 0; overflow-wrap: anywhere; }
+.bird-list-card-mobile-species { color: #708097; display: none; font-size: .64rem; margin-top: .12rem; overflow-wrap: anywhere; }
+.bird-list-card-sex, .bird-list-card-species, .bird-list-card-ring, .bird-list-card-birth { color: #53667f; font-size: .68rem; overflow-wrap: anywhere; }
+.bird-list-card-sex { color: #235fb5; font-weight: 700; }
+.bird-list-card-species { color: #617086; }
+.bird-list-card-ring, .bird-list-card-birth { font-variant-numeric: tabular-nums; }
+.bird-status-badge { align-items: center; background: transparent; display: inline-flex; gap: .35rem; padding: 0; }
+.bird-status-badge > span { background: #1e9b52; border-radius: 50%; height: .45rem; width: .45rem; }
+.bird-status-badge { color: #56667d; font-size: .68rem; font-weight: 500; }
+.bird-status-archived > span, .bird-status-transferred > span { background: #8090a4; }
+.bird-status-deceased > span, .bird-status-escaped > span { background: #dc5c50; }
+.bird-identification { display: none; }
+.bird-list-card-action { align-items: center; color: #1a2740; display: flex; font-size: .68rem; justify-content: center; margin: 0; }
+.bird-list-card-action > span:first-child { clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+.bird-list-card-action > span:last-child { font-size: 1.15rem; letter-spacing: .08em; line-height: 1; }
+.bird-list-state { border: 0; border-radius: 0; min-height: 14rem; }
+.bird-pagination { border-top: 1px solid #edf1f3; justify-content: flex-end; margin: 0; padding: .75rem 1.15rem; }
+
+@media (max-width: 67rem) and (min-width: 48rem) {
+  .bird-list-table-heading, .bird-list-card { grid-template-columns: 2.35rem minmax(6.5rem, 1.3fr) minmax(4.7rem, .75fr) minmax(6rem, 1fr) minmax(4.3rem, .7fr) minmax(5.5rem, .8fr) minmax(5.5rem, .8fr) 2rem; }
+  .bird-list-card-sex, .bird-list-table-heading span:nth-child(3) { display: none; }
+}
+
+@media (max-width: 47.99rem) {
+  .bird-list-view { gap: .95rem; }
+  .bird-list-header { gap: .8rem; }
+  .bird-list-header h1 { font-size: 2rem; }
+  .bird-list-header .lede { font-size: .82rem; }
+  .bird-list-header-side { justify-items: stretch; min-width: 0; }
+  .bird-list-register-action { width: 100%; }
+  .bird-list-summary { max-width: none; }
+  .bird-filter-panel > summary { display: flex; }
+  .bird-filter-grid { grid-template-columns: 1fr; padding-top: .75rem; }
+  .bird-filter-sort-control { display: grid; }
+  .bird-clear-filters { justify-self: start; }
+  .bird-list-results { margin-inline: -.1rem; }
+  .bird-list-results-heading { align-items: flex-start; flex-direction: column; gap: .65rem; padding: .85rem .9rem; }
+  .bird-list-inline-sort { width: 100%; }
+  .bird-list-inline-sort select { flex: 1; }
+  .bird-list-table-heading { display: none; }
+  .bird-list-cards { gap: .65rem; padding: .7rem; }
+  .bird-list-cards > li { border: 0; }
+  .bird-list-card { border: 1px solid #e0e9e9; border-radius: .65rem; box-shadow: 0 .25rem .7rem rgb(23 32 57 / 4%); grid-template-columns: 2.35rem minmax(0, 1fr) auto; min-height: 0; padding: .8rem; row-gap: .55rem; }
+  .bird-list-card-link:hover .bird-list-card, .bird-list-card-link:focus-visible .bird-list-card { border-color: #72b98d; box-shadow: 0 .35rem 1rem rgb(6 58 86 / 8%); }
+  .bird-list-card-avatar { grid-column: 1; grid-row: 1; }
+  .bird-list-card-name { align-self: center; grid-column: 2; grid-row: 1; }
+  .bird-list-card-mobile-species { display: block; }
+  .bird-list-card-sex, .bird-list-card-species, .bird-list-card-ring, .bird-list-card-birth { display: none; }
+  .bird-status-badge { align-self: start; grid-column: 3; grid-row: 1; margin-top: .25rem; }
+  .bird-identification { border-top: 1px solid #edf1f3; display: flex; grid-column: 1 / -1; padding-top: .55rem; }
+  .bird-list-card-action { border-top: 1px solid #edf1f3; grid-column: 1 / -1; justify-content: space-between; padding-top: .55rem; }
+  .bird-list-card-action > span:first-child { clip: auto; clip-path: none; height: auto; overflow: visible; position: static; white-space: normal; width: auto; }
+  .bird-list-card-action > span:last-child { font-size: 1rem; letter-spacing: 0; }
+  .bird-list-card-action > span:last-child::after { content: "→"; }
+  .bird-list-card-action > span:last-child { font-size: 0; }
+  .bird-list-card-action > span:last-child::after { font-size: 1rem; }
+  .bird-pagination { justify-content: center; padding: .75rem .9rem; }
+}
+
 @media (min-width: 48rem) {
   .bird-list-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

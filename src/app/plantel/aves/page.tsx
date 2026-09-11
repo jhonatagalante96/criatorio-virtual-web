@@ -4,6 +4,8 @@ import React, { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../../components/brand";
+import { AuthenticatedShell } from "../../components/authenticated-shell";
+import { DashboardIcon } from "../../components/dashboard-icons";
 import { SpeciesSummary } from "../../components/species-selector";
 
 interface BreedingFarmSummary {
@@ -203,19 +205,11 @@ function AccessState({
   );
 }
 
-function BirdListLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+function BirdListLayout({ children, email, farmName }: Readonly<{ children: React.ReactNode; email: string; farmName: string }>) {
   return (
-    <main className="auth-page onboarding-page bird-list-page">
-      <a className="skip-link" href="#conteudo-lista-aves">Pular para o conteúdo</a>
-      <div className="auth-shell onboarding-shell bird-list-shell">
-        <BrandPanel />
-        <section aria-labelledby="titulo-lista-aves" className="auth-form-panel onboarding-form-panel">
-          <div className="onboarding-form-content" id="conteudo-lista-aves">
-            {children}
-          </div>
-        </section>
-      </div>
-    </main>
+    <AuthenticatedShell activeNav="birds" email={email} farmName={farmName}>
+      <div className="bird-list-view">{children}</div>
+    </AuthenticatedShell>
   );
 }
 
@@ -356,6 +350,7 @@ function SpeciesFilter({
 }
 
 function BirdFilterSelect({
+  className = "",
   disabled,
   id,
   label,
@@ -363,6 +358,7 @@ function BirdFilterSelect({
   options,
   value
 }: Readonly<{
+  className?: string;
   disabled: boolean;
   id: string;
   label: string;
@@ -371,7 +367,7 @@ function BirdFilterSelect({
   value: string;
 }>) {
   return (
-    <label className="bird-filter-select" htmlFor={id}>
+    <label className={`bird-filter-select${className ? ` ${className}` : ""}`} htmlFor={id}>
       <span>{label}</span>
       <select disabled={disabled} id={id} onChange={(event) => onChange(event.target.value)} value={value}>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -385,26 +381,21 @@ function BirdCard({ bird }: Readonly<{ bird: BirdListItem }>) {
     <li>
       <a aria-label={`Abrir ficha de ${bird.name}`} className="bird-list-card-link" href={`/plantel/aves/${bird.birdId}`}>
         <article aria-label={`Ave ${bird.name}`} className="bird-list-card">
-          <div className="bird-list-card-heading">
-            <div>
-              <h2>{bird.name}</h2>
-              <p>{bird.speciesPopularName}</p>
-              <em>{bird.speciesScientificName}</em>
-            </div>
-            <span className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}>{statusLabel(bird.status)}</span>
+          <span aria-hidden="true" className="bird-list-card-avatar"><DashboardIcon name="bird" /></span>
+          <div className="bird-list-card-name">
+            <h2>{bird.name}</h2>
+            <span className="bird-list-card-mobile-species">{bird.speciesPopularName}</span>
           </div>
-
-          <dl className="bird-list-card-details">
-            <div><dt>Sexo</dt><dd>{sexLabel(bird.sex)}</dd></div>
-            <div><dt>Nascimento</dt><dd>{formatDate(bird.birthDate)}</dd></div>
-            <div><dt>Idade</dt><dd>{bird.ageInYears === null ? "Não informado" : `${bird.ageInYears} ${bird.ageInYears === 1 ? "ano" : "anos"}`}</dd></div>
-          </dl>
-
-          <div className={`bird-identification${bird.identificationPending ? " is-pending" : ""}`}>
+          <span aria-label={`Sexo: ${sexLabel(bird.sex)}`} className="bird-list-card-sex">{sexLabel(bird.sex)}</span>
+          <span aria-label={`Espécie ou raça: ${bird.speciesPopularName}`} className="bird-list-card-species">{bird.speciesPopularName}</span>
+          <span aria-label={`Anilha: ${bird.identificationPending ? "pendente" : bird.ringNumber ?? "não informada"}`} className="bird-list-card-ring">{bird.identificationPending ? "—" : bird.ringNumber ?? "—"}</span>
+          <span aria-label={`Status: ${statusLabel(bird.status)}`} className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}><span aria-hidden="true" />{statusLabel(bird.status)}</span>
+          <span aria-label={`Nascimento: ${formatDate(bird.birthDate)}`} className="bird-list-card-birth">{formatDate(bird.birthDate)}</span>
+          <span className={`bird-identification${bird.identificationPending ? " is-pending" : ""}`}>
             <span aria-hidden="true">{bird.identificationPending ? "!" : "#"}</span>
             <strong>{bird.identificationPending ? "Identificação pendente" : `Anilha ${bird.ringNumber}`}</strong>
-          </div>
-          <span className="bird-list-card-action">Abrir ficha <span aria-hidden="true">→</span></span>
+          </span>
+          <span className="bird-list-card-action"><span>Abrir ficha</span><span aria-hidden="true">⋯</span></span>
         </article>
       </a>
     </li>
@@ -475,14 +466,14 @@ function BirdPagination({
 }
 
 function BirdListPage() {
-  const { refresh } = useAuth();
+  const { refresh, session } = useAuth();
   const [birds, setBirds] = useState<BirdListItem[]>([]);
   const [farmError, setFarmError] = useState<string>();
   const [farmName, setFarmName] = useState<string>();
   const [farmState, setFarmState] = useState<FarmState>("loading");
   const [filters, setFilters] = useState<BirdFilters>(defaultFilters);
   const [filtersReady, setFiltersReady] = useState(false);
-  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
   const [listError, setListError] = useState<string>();
   const [listState, setListState] = useState<ListState>("loading");
   const [searchDraft, setSearchDraft] = useState("");
@@ -646,24 +637,39 @@ function BirdListPage() {
 
   const resultLabel = totalCount === 1 ? "1 ave encontrada" : `${totalCount} aves encontradas`;
 
+  if (!session) return null;
+
   return (
-    <BirdListLayout>
-      <a className="auth-mobile-back" href="/" aria-label="Voltar para o início">←</a>
-      <div className="auth-mobile-brand"><BrandLockup stacked /></div>
-      <div className="bird-list-header">
+    <BirdListLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
+      <nav aria-label="Navegação estrutural" className="bird-list-breadcrumb">
+        <a href="/dashboard">Dashboard</a>
+        <span aria-hidden="true">›</span>
+        <span aria-current="page">Aves</span>
+      </nav>
+
+      <header className="bird-list-header">
         <div>
-          <p className="eyebrow">Plantel{farmName ? ` · ${farmName}` : ""}</p>
-          <h1 id="titulo-lista-aves">Aves do criatório</h1>
-          <p className="lede">Encontre rapidamente seus registros e acompanhe as pendências de identificação.</p>
+          <h1 id="titulo-lista-aves">Aves</h1>
+          <p className="lede">Gerencie as aves cadastradas no seu criatório.</p>
         </div>
-        <a className="auth-primary-action bird-list-register-action" href="/plantel/aves/novo">Cadastrar ave</a>
-      </div>
+        <div className="bird-list-header-side">
+          <a className="auth-primary-action bird-list-register-action" href="/plantel/aves/novo"><span aria-hidden="true">＋</span> Cadastrar ave</a>
+          <aside aria-label="Resumo do plantel" className="bird-list-summary">
+            <span aria-hidden="true" className="bird-list-summary-icon"><DashboardIcon name="bird" /></span>
+            <div>
+              <strong>{totalCount} {totalCount === 1 ? "ave cadastrada" : "aves cadastradas"}</strong>
+              <p>Organize, acompanhe e mantenha o histórico do seu plantel sempre atualizado.</p>
+            </div>
+          </aside>
+        </div>
+      </header>
 
       <section aria-labelledby="titulo-busca-aves" className="bird-list-toolbar">
         <h2 className="sr-only" id="titulo-busca-aves">Buscar e filtrar aves</h2>
         <form className="bird-list-search-form" onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); commitFilters({ ...filters, page: 1, search: searchDraft.trim() }); }}>
-          <label htmlFor="bird-list-search">Buscar ave</label>
+          <label className="sr-only" htmlFor="bird-list-search">Buscar ave</label>
           <div className="bird-list-search-control">
+            <span aria-hidden="true" className="bird-list-search-icon"><DashboardIcon name="search" /></span>
             <input
               aria-describedby="bird-list-search-help"
               id="bird-list-search"
@@ -674,7 +680,7 @@ function BirdListPage() {
               value={searchDraft}
             />
             {searchDraft && <button aria-label="Limpar busca" className="bird-list-search-clear" onClick={() => { setSearchDraft(""); commitFilters({ ...filters, page: 1, search: "" }); }} type="button">×</button>}
-            <button className="bird-list-search-submit" type="submit">Buscar</button>
+            <button aria-label="Buscar" className="bird-list-search-submit" type="submit"><DashboardIcon name="search" /><span className="sr-only">Buscar</span></button>
           </div>
           <p id="bird-list-search-help">A busca consulta nome, anilha e espécie no criatório selecionado.</p>
         </form>
@@ -726,6 +732,7 @@ function BirdListPage() {
               label="Ordenar por"
               onChange={(value) => changeFilter("sortBy", value)}
               options={birdSortFields}
+              className="bird-filter-sort-control"
               value={filters.sortBy}
             />
             <BirdFilterSelect
@@ -734,6 +741,7 @@ function BirdListPage() {
               label="Direção"
               onChange={(value) => changeFilter("sortDirection", value)}
               options={[{ label: "Crescente", value: "asc" }, { label: "Decrescente", value: "desc" }]}
+              className="bird-filter-sort-control"
               value={filters.sortDirection}
             />
           </div>
@@ -743,9 +751,33 @@ function BirdListPage() {
 
       <section aria-labelledby="titulo-resultados-aves" className="bird-list-results" aria-busy={listState === "loading"}>
         <div className="bird-list-results-heading">
-          <h2 id="titulo-resultados-aves">Meu plantel</h2>
-          <span aria-live="polite">{listState === "ready" ? resultLabel : ""}</span>
+          <div>
+            <h2 id="titulo-resultados-aves">{listState === "ready" ? resultLabel : "Aves cadastradas"}</h2>
+            <span>Registros do criatório selecionado</span>
+          </div>
+          <label className="bird-list-inline-sort" htmlFor="bird-inline-sort">Ordenar por
+            <select
+              disabled={listState === "loading"}
+              id="bird-inline-sort"
+              onChange={(event) => changeFilter("sortBy", event.target.value)}
+              value={filters.sortBy}
+            >
+              {birdSortFields.map((field) => <option key={field.value} value={field.value}>{field.label}</option>)}
+            </select>
+          </label>
         </div>
+        {listState === "ready" && birds.length > 0 && (
+          <div className="bird-list-table-heading">
+            <span />
+            <span>Nome</span>
+            <span>Sexo</span>
+            <span>Espécie/Raça</span>
+            <span>Anilha</span>
+            <span>Status</span>
+            <span>Nascimento</span>
+            <span>Ações</span>
+          </div>
+        )}
         {listState === "ready" && birds.length > 0
           ? <ul aria-label="Aves cadastradas" className="bird-list-cards">{birds.map((bird) => <BirdCard bird={bird} key={bird.birdId} />)}</ul>
           : <BirdListState error={listError} hasActiveFilters={hasActiveFilters()} onClearFilters={clearFilters} onRetry={() => setReloadVersion((value) => value + 1)} state={listState} />}
