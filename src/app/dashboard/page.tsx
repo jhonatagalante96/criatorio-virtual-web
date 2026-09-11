@@ -177,7 +177,7 @@ function AccessState({
 function DashboardMetric({ label, value, detail, tone = "green" }: Readonly<{
   detail: string;
   label: string;
-  tone?: "green" | "orange" | "blue";
+  tone?: "green" | "orange" | "blue" | "rose";
   value: number;
 }>) {
   return (
@@ -198,9 +198,9 @@ function PendingSection({ pending }: Readonly<{ pending: DashboardPending[] }>) 
       <div className="dashboard-section-heading">
         <div>
           <p className="eyebrow">Atenção</p>
-          <h2 id="titulo-pendencias">Pendências do criatório</h2>
+          <h2 id="titulo-pendencias">Pendências <span className="dashboard-heading-badge">{pending.length}</span></h2>
         </div>
-        <span className="dashboard-section-count">{pending.length > 0 ? formatCount(pending.length, "tipo", "tipos") : "Nenhuma pendência"}</span>
+        <a className="dashboard-section-action" href="/plantel/aves?identificationPending=true">Ver todas <span aria-hidden="true">›</span></a>
       </div>
       {pending.length === 0 ? (
         <div className="dashboard-empty-state">
@@ -245,7 +245,7 @@ function ActivitiesSection({ activities }: Readonly<{ activities: DashboardActiv
           <p className="eyebrow">Acompanhe de perto</p>
           <h2 id="titulo-atividades">Atividades recentes</h2>
         </div>
-        <span className="dashboard-section-count">Últimos registros</span>
+        <a className="dashboard-section-action" href="/dashboard">Ver mais <span aria-hidden="true">›</span></a>
       </div>
       {activities.length === 0 ? (
         <div className="dashboard-empty-state">
@@ -259,14 +259,22 @@ function ActivitiesSection({ activities }: Readonly<{ activities: DashboardActiv
         <ol className="dashboard-activity-list">
           {activities.map((activity, index) => {
             const href = activityHref(activity);
+            const activityTone = activity.activityType === "BirdRegistered"
+              ? "green"
+              : activity.activityType === "ReproductionRegistered"
+                ? "rose"
+                : "blue";
             const activityContent = (
               <>
-                <span aria-hidden="true" className="dashboard-activity-line" />
+                <span aria-hidden="true" className={`dashboard-activity-icon dashboard-activity-icon-${activityTone}`}>
+                  {activityTone === "green" ? "♧" : activityTone === "rose" ? "♡" : "↔"}
+                </span>
                 <span className="dashboard-activity-copy">
                   <strong>{activity.title}</strong>
-                  <span>{formatActivityType(activity.activityType)} · {formatActivityDate(activity.occurredAtUtc)}</span>
+                  <span>{formatActivityType(activity.activityType)}</span>
                 </span>
-                {href && <span aria-hidden="true" className="dashboard-card-arrow">→</span>}
+                <time dateTime={activity.occurredAtUtc}>{formatActivityDate(activity.occurredAtUtc)}</time>
+                {href && <span aria-hidden="true" className="dashboard-card-arrow">›</span>}
               </>
             );
 
@@ -278,6 +286,72 @@ function ActivitiesSection({ activities }: Readonly<{ activities: DashboardActiv
           })}
         </ol>
       )}
+    </section>
+  );
+}
+
+function QuickActionsSection() {
+  const quickActions = [
+    {
+      description: "Adicione uma nova ave ao seu criatório",
+      href: "/plantel/aves/novo",
+      icon: "♧",
+      title: "Cadastrar ave",
+      tone: "green"
+    },
+    {
+      description: "Acompanhe as aves cadastradas",
+      href: "/plantel/aves",
+      icon: "⌁",
+      title: "Ver plantel",
+      tone: "blue"
+    },
+    {
+      description: "Gerencie outro criatório",
+      href: "/onboarding/criatorio/selecionar",
+      icon: "↔",
+      title: "Trocar criatório",
+      tone: "purple"
+    }
+  ];
+
+  return (
+    <section aria-labelledby="titulo-atalhos" className="dashboard-quick-actions dashboard-section">
+      <div className="dashboard-section-heading">
+        <div>
+          <p className="eyebrow">Acesso rápido</p>
+          <h2 id="titulo-atalhos">Atalhos rápidos</h2>
+          <p className="dashboard-section-lede">Acesse as principais funcionalidades do sistema.</p>
+        </div>
+        <span aria-hidden="true" className="dashboard-quick-action-symbol">ϟ</span>
+      </div>
+      <div className="dashboard-quick-action-grid">
+        {quickActions.map((action) => (
+          <a className={`dashboard-quick-action dashboard-quick-action-${action.tone}`} href={action.href} key={action.href}>
+            <span aria-hidden="true" className="dashboard-quick-action-icon">{action.icon}</span>
+            <span className="dashboard-quick-action-copy">
+              <strong>{action.title}</strong>
+              <span>{action.description}</span>
+            </span>
+            <span aria-hidden="true" className="dashboard-card-arrow">›</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function InspirationSection() {
+  return (
+    <section aria-label="Mensagem do Criatório Virtual" className="dashboard-inspiration">
+      <div className="dashboard-inspiration-image" aria-hidden="true">
+        <img alt="" src="/assets/imagery/birds/great-tit-header-hd.webp" />
+      </div>
+      <div className="dashboard-inspiration-copy">
+        <strong>Paixão que se organiza,<br />resultados que se multiplicam.</strong>
+        <span>— Criatório Virtual</span>
+      </div>
+      <blockquote>“Cuidar de aves é preservar histórias, cores e gerações.”</blockquote>
     </section>
   );
 }
@@ -327,14 +401,17 @@ function DashboardContent({
         <div className="dashboard-metrics-grid">
           <DashboardMetric detail={formatCount(activeBirdCount, "ave ativa", "aves ativas")} label="Aves ativas" value={activeBirdCount} />
           <DashboardMetric detail={formatCount(pendingIdentificationCount, "ave aguardando", "aves aguardando")} label="Identificação pendente" tone="orange" value={pendingIdentificationCount} />
-          <DashboardMetric detail={formatCount(activeReproductionCount, "registro ativo", "registros ativos")} label="Reproduções ativas" tone="blue" value={activeReproductionCount} />
+          <DashboardMetric detail={formatCount(activeReproductionCount, "registro ativo", "registros ativos")} label="Reproduções ativas" tone="rose" value={activeReproductionCount} />
+          <DashboardMetric detail={formatCount(dashboard.activities.length, "registro recente", "registros recentes")} label="Atividades recentes" tone="blue" value={dashboard.activities.length} />
         </div>
       </section>
 
+      <QuickActionsSection />
       <div className="dashboard-secondary-grid">
         <PendingSection pending={dashboard.pending} />
         <ActivitiesSection activities={dashboard.activities} />
       </div>
+      <InspirationSection />
     </AuthenticatedShell>
   );
 }

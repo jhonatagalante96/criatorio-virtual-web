@@ -137,6 +137,10 @@ describe("DashboardPage", () => {
     expect(document.querySelector('a[href="/plantel/aves/bird-a"]')).toBeTruthy();
     expect(document.querySelector('a[href*="reproduction"]')).toBeNull();
 
+    expect(screen.getByRole("heading", { name: "Atalhos rápidos" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Cadastrar ave/ }).getAttribute("href")).toBe("/plantel/aves/novo");
+    expect(screen.getByText("Atividades recentes", { selector: "span" })).toBeTruthy();
+
     expect(screen.getAllByRole("link", { name: /^Dashboard$/ })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: /^Plantel de aves$/ })).toHaveLength(2);
     expect(screen.queryByText("Relatórios")).toBeNull();
