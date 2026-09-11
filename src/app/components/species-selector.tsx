@@ -105,7 +105,7 @@ export function SpeciesSelector({ onSessionExpired, onSelected }: Readonly<Speci
         <p className="lede">Pesquise pelo nome popular ou científico e escolha uma espécie existente no catálogo.</p>
       </div>
 
-      <form className="species-search-form" role="search" onSubmit={(event) => event.preventDefault()}>
+      <div className="species-search-form" role="search">
         <label htmlFor="species-search">Pesquisar espécie</label>
         <div className="species-search-control">
           <input
@@ -123,7 +123,7 @@ export function SpeciesSelector({ onSessionExpired, onSelected }: Readonly<Speci
           {query && <button aria-label="Limpar busca" className="species-search-clear" onClick={() => setQuery("")} type="button">×</button>}
         </div>
         <p className="species-search-help" id="species-search-help">A seleção precisa ser feita a partir de um item do catálogo.</p>
-      </form>
+      </div>
 
       <div aria-live="polite" className="species-results-region" id="species-results">
         {searchState === "loading" && (
