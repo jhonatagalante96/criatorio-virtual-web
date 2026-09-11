@@ -624,9 +624,8 @@ h1, h2 { line-height: 1.08; }
 /* Species catalog selector */
 
 .species-selection-page { background: linear-gradient(145deg, #f4ffff 0%, #e4f6f5 100%); }
-.species-selection-shell { grid-template-columns: minmax(15rem, .7fr) minmax(30rem, 1.3fr); max-width: 68rem; min-height: min(48rem, calc(100svh - 4rem)); }
-.species-selection-shell .brand-panel { grid-column: 1; grid-row: 1; }
-.species-selection-panel { align-items: flex-start; grid-column: 2; grid-row: 1; overflow-y: auto; padding-block: 2.6rem; }
+.species-selection-shell { display: block; max-width: 58rem; min-height: min(48rem, calc(100svh - 4rem)); }
+.species-selection-panel { align-items: flex-start; min-height: min(48rem, calc(100svh - 4rem)); overflow-y: auto; padding-block: 2.6rem; }
 .species-selection-panel .auth-form-content { max-width: 42rem; width: 100%; }
 .species-selector { width: 100%; }
 .species-search-header h2 { color: var(--ink); font-size: clamp(1.7rem, 3vw, 2.35rem); letter-spacing: -.055em; margin: 0; }
@@ -640,7 +639,7 @@ h1, h2 { line-height: 1.08; }
 .species-search-clear { align-items: center; background: transparent; border: 0; color: #66808d; cursor: pointer; display: flex; font-size: 1.35rem; height: 2.4rem; justify-content: center; line-height: 1; position: absolute; right: .3rem; top: .3rem; width: 2.4rem; }
 .species-search-clear:focus-visible { border-radius: .35rem; outline: 3px solid #e5a343; outline-offset: -2px; }
 .species-search-help { color: #78919a; font-size: .67rem; margin: .15rem 0 0; }
-.species-results-region { min-height: 10rem; }
+.species-results-region { min-height: 8rem; }
 .species-results { display: grid; gap: .65rem; list-style: none; margin: 1.1rem 0 0; padding: 0; }
 .species-option { align-items: center; background: #fff; border: 1px solid #dcebed; border-radius: .75rem; color: inherit; cursor: pointer; display: flex; gap: .75rem; min-height: 4.4rem; padding: .8rem .9rem; text-align: left; transition: background .18s ease, border-color .18s ease, box-shadow .18s ease; width: 100%; }
 .species-option:hover { background: #f8fdfc; border-color: #a8cfd2; }
@@ -652,9 +651,10 @@ h1, h2 { line-height: 1.08; }
 .species-option-copy em { color: #68818f; font-size: .7rem; overflow-wrap: anywhere; }
 .species-option-check { align-items: center; background: #c4eccf; border-radius: 50%; color: var(--green-dark); display: flex; font-size: .7rem; font-weight: 900; height: 1.35rem; justify-content: center; margin-left: auto; opacity: 0; width: 1.35rem; }
 .species-option.is-selected .species-option-check { opacity: 1; }
-.species-results-state { align-items: center; color: #67808d; display: flex; flex-direction: column; font-size: .75rem; gap: .35rem; justify-content: center; min-height: 10rem; text-align: center; }
+.species-results-state { align-items: center; color: #67808d; display: flex; flex-direction: column; font-size: .75rem; gap: .35rem; justify-content: center; min-height: 8rem; padding: 1rem; text-align: center; }
 .species-results-state strong { color: var(--ink); font-size: .85rem; }
 .species-results-state p { margin: 0; }
+.species-results-limit { color: #78919a; font-size: .67rem; line-height: 1.35; margin: .75rem auto 0; max-width: 42ch; text-align: center; }
 .species-results-error { color: #8f2b25; }
 .species-results-error .auth-secondary-action { margin-top: .3rem; }
 .species-loading-dot { animation: species-loading-pulse 1s ease-in-out infinite; background: var(--green); border-radius: 50%; height: .55rem; width: .55rem; }
@@ -701,14 +701,11 @@ h1, h2 { line-height: 1.08; }
   .farm-selection-empty, .farm-selection-success { padding-top: 2rem; }
   .species-selection-page { padding: 0; }
   .species-selection-shell { border: 0; border-radius: 0; box-shadow: none; display: block; min-height: 100svh; }
-  .species-selection-shell .brand-panel { display: none; }
-  .species-selection-panel { background: linear-gradient(#fff 0 72%, #f1faf8 100%); min-height: 100svh; overflow: hidden; padding: 1.1rem 1.25rem 2rem; position: relative; }
-  .species-selection-panel::after { background: url("/assets/imagery/landscapes/mountain-landscape.png") center bottom / cover no-repeat; bottom: 0; content: ""; height: 7rem; left: 0; opacity: .35; pointer-events: none; position: absolute; right: 0; }
-  .species-selection-panel > .auth-form-content { position: relative; z-index: 1; }
+  .species-selection-panel { background: linear-gradient(#fff 0 72%, #f1faf8 100%); min-height: 100svh; overflow: hidden; padding: 1.1rem 1.25rem 2rem; }
   .species-search-header h2 { font-size: clamp(1.55rem, 7.5vw, 2rem); text-align: center; }
   .species-search-header > .lede { margin: .45rem auto 1.55rem; max-width: 30ch; text-align: center; }
   .species-search-header .eyebrow { text-align: center; }
-  .species-results-region { min-height: 9rem; }
+  .species-results-region { min-height: 7rem; }
   .species-selected { align-items: flex-start; flex-direction: column; }
   .species-selected .text-action { align-self: flex-start; }
   .species-selection-success { padding-top: 2rem; }

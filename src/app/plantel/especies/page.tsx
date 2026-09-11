@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
-import { BrandLockup, BrandPanel } from "../../components/brand";
+import { BrandLockup } from "../../components/brand";
 import { SpeciesSelector, SpeciesSummary } from "../../components/species-selector";
 
 function SpeciesAccessState({
@@ -21,7 +21,6 @@ function SpeciesAccessState({
     <main className="auth-page species-selection-page">
       <a className="skip-link" href="#conteudo-selecao-especie">Pular para o conteúdo</a>
       <div className="auth-shell species-selection-shell">
-        <BrandPanel />
         <section aria-labelledby="titulo-selecao-especie-estado" className="auth-form-panel species-selection-panel">
           <div className="auth-form-content auth-state-card" id="conteudo-selecao-especie">
             <BrandLockup stacked />
@@ -82,7 +81,6 @@ function SpeciesSelectionScreen() {
       <main className="auth-page species-selection-page">
         <a className="skip-link" href="#conteudo-selecao-especie">Pular para o conteúdo</a>
         <div className="auth-shell species-selection-shell">
-          <BrandPanel />
           <section aria-labelledby="titulo-selecao-especie" className="auth-form-panel species-selection-panel">
             <div className="auth-form-content" id="conteudo-selecao-especie">
               <SpeciesSelectionSuccess onChange={() => { setConfirmedSpecies(undefined); setSelectedSpecies(undefined); }} species={confirmedSpecies} />
@@ -97,7 +95,6 @@ function SpeciesSelectionScreen() {
     <main className="auth-page species-selection-page">
       <a className="skip-link" href="#conteudo-selecao-especie">Pular para o conteúdo</a>
       <div className="auth-shell species-selection-shell">
-        <BrandPanel />
         <section aria-labelledby="titulo-seletor-especie" className="auth-form-panel species-selection-panel">
           <div className="auth-form-content" id="conteudo-selecao-especie">
             <a className="auth-mobile-back" href="/" aria-label="Voltar para o início">←</a>

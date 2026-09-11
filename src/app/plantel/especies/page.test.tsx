@@ -43,7 +43,6 @@ describe("SpeciesSelectionPage", () => {
   it("loads active species, searches by text and requires an existing selection", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(speciesResponse())
       .mockResolvedValueOnce(speciesResponse([{
         popularName: "Sabiá-laranjeira",
         scientificName: "Turdus rufiventris",
@@ -52,12 +51,14 @@ describe("SpeciesSelectionPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<SpeciesSelectionPage />);
 
-    await waitFor(() => expect(screen.getByRole("radio", { name: /Sabiá-laranjeira/ })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Selecione a espécie" })).toBeTruthy());
+    expect(screen.getByText("Comece sua busca")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect((screen.getByRole("button", { name: "Confirmar espécie" }) as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.change(screen.getByLabelText("Pesquisar espécie"), { target: { value: "sabia" } });
     await waitFor(() => expect(screen.getByRole("radio", { name: /Turdus rufiventris/ })).toBeTruthy());
-    expect(fetchMock.mock.calls[2][0]).toContain("/api/species?search=sabia");
+    expect(fetchMock.mock.calls[1][0]).toContain("/api/species?search=sabia");
 
     fireEvent.click(screen.getByRole("radio", { name: /Sabiá-laranjeira/ }));
     expect((screen.getByRole("button", { name: "Confirmar espécie" }) as HTMLButtonElement).disabled).toBe(false);
@@ -70,12 +71,11 @@ describe("SpeciesSelectionPage", () => {
   it("shows the empty state when the search has no matches", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(speciesResponse())
       .mockResolvedValueOnce(speciesResponse([]));
     vi.stubGlobal("fetch", fetchMock);
     render(<SpeciesSelectionPage />);
 
-    await waitFor(() => expect(screen.getByRole("radio", { name: /Sabiá-laranjeira/ })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Selecione a espécie" })).toBeTruthy());
     fireEvent.change(screen.getByLabelText("Pesquisar espécie"), { target: { value: "inexistente" } });
 
     await waitFor(() => expect(screen.getByText("Nenhuma espécie encontrada.")).toBeTruthy());
@@ -90,6 +90,8 @@ describe("SpeciesSelectionPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<SpeciesSelectionPage />);
 
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Selecione a espécie" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("Pesquisar espécie"), { target: { value: "sa" } });
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("indisponível"));
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
     await waitFor(() => expect(screen.getByRole("radio", { name: /Sabiá-laranjeira/ })).toBeTruthy());
@@ -103,6 +105,8 @@ describe("SpeciesSelectionPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<SpeciesSelectionPage />);
 
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Selecione a espécie" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("Pesquisar espécie"), { target: { value: "sa" } });
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("não tem permissão"));
     expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeTruthy();
   });
