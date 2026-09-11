@@ -1196,7 +1196,7 @@ h1, h2 { line-height: 1.08; }
 .dashboard-activity-icon-blue { background: #cbe4fa; color: #1769a0; }
 .dashboard-activity-list time { color: #738096; font-size: .58rem; margin-left: auto; white-space: nowrap; }
 .dashboard-partial-notice { background: #f0f8fa; border: 1px solid #cfe5eb; border-radius: .55rem; color: #4f7481; font-size: .68rem; line-height: 1.4; margin: -1rem 0 1.5rem; padding: .65rem .75rem; }
-.dashboard-inspiration { align-items: center; background: url("/assets/imagery/landscapes/dashboard-footer-final-cropped.png") center / 101% 104% no-repeat; border: 0; border-radius: .75rem; display: flex; gap: 1rem; height: 7rem; margin-top: 1.35rem; min-height: 7rem; overflow: hidden; padding: 0 1.25rem 0 0; position: relative; }
+.dashboard-inspiration { align-items: center; background: url("/assets/imagery/landscapes/dashboard-footer-final-cropped.png") center top / 101% 101% no-repeat; border: 0; border-radius: .75rem; display: flex; gap: 1rem; height: 7rem; margin-top: 1.35rem; min-height: 7rem; overflow: hidden; padding: 0 1.25rem 0 0; position: relative; }
 .dashboard-inspiration-image { display: none; }
 .dashboard-inspiration-copy, .dashboard-inspiration blockquote { opacity: 0; pointer-events: none; }
 .dashboard-inspiration-copy { display: grid; gap: .35rem; min-width: 12rem; }
