@@ -1196,9 +1196,9 @@ h1, h2 { line-height: 1.08; }
 .dashboard-activity-icon-blue { background: #cbe4fa; color: #1769a0; }
 .dashboard-activity-list time { color: #738096; font-size: .58rem; margin-left: auto; white-space: nowrap; }
 .dashboard-partial-notice { background: #f0f8fa; border: 1px solid #cfe5eb; border-radius: .55rem; color: #4f7481; font-size: .68rem; line-height: 1.4; margin: -1rem 0 1.5rem; padding: .65rem .75rem; }
-.dashboard-inspiration { align-items: center; background: linear-gradient(90deg, rgb(235 240 232 / 84%), rgb(248 244 236 / 72%)), url("/assets/imagery/landscapes/mountain-landscape.png") center / cover no-repeat; border: 1px solid #e5e6df; border-radius: .75rem; display: flex; gap: 1rem; height: 7rem; margin-top: 1.35rem; min-height: 7rem; overflow: hidden; padding: 0 1.25rem 0 0; position: relative; }
-.dashboard-inspiration-image { align-self: stretch; flex: 0 0 10rem; min-height: 0; overflow: hidden; }
-.dashboard-inspiration-image img { display: block; height: 100%; min-height: 0; object-fit: cover; object-position: 50% 38%; transform: scale(1.1); width: 100%; }
+.dashboard-inspiration { align-items: center; background: url("/assets/imagery/landscapes/dashboard-footer-mockup.png") center / cover no-repeat; border: 1px solid #e5e6df; border-radius: .75rem; display: flex; gap: 1rem; height: 6.25rem; margin-top: 1.35rem; min-height: 6.25rem; overflow: hidden; padding: 0 1.25rem 0 0; position: relative; }
+.dashboard-inspiration-image { display: none; }
+.dashboard-inspiration-copy, .dashboard-inspiration blockquote { opacity: 0; pointer-events: none; }
 .dashboard-inspiration-copy { display: grid; gap: .35rem; min-width: 12rem; }
 .dashboard-inspiration-copy strong { color: #172039; font-size: 1rem; line-height: 1.25; }
 .dashboard-inspiration-copy span { color: #6c7a83; font-size: .65rem; }
@@ -1253,7 +1253,9 @@ h1, h2 { line-height: 1.08; }
   .dashboard-pending-section, .dashboard-activities-section { padding: .85rem; }
   .dashboard-pending-list, .dashboard-activity-list { max-height: 17rem; }
   .dashboard-partial-notice { margin: -.55rem 0 1.2rem; }
-  .dashboard-inspiration { align-items: stretch; flex-direction: column; gap: 0; padding: 0 0 1rem; }
+  .dashboard-inspiration { align-items: stretch; background: linear-gradient(90deg, rgb(235 240 232 / 84%), rgb(248 244 236 / 72%)), url("/assets/imagery/landscapes/dashboard-footer-mobile.png") center bottom / cover no-repeat; flex-direction: column; gap: 0; height: auto; min-height: 6.25rem; padding: 0 0 1rem; }
+  .dashboard-inspiration-image { display: block; }
+  .dashboard-inspiration-copy, .dashboard-inspiration blockquote { opacity: 1; pointer-events: auto; }
   .dashboard-inspiration-image { flex-basis: 8rem; }
   .dashboard-inspiration-copy { padding: 1rem 1rem 0; }
   .dashboard-inspiration blockquote { margin: 1rem 1rem 0; max-width: none; }
