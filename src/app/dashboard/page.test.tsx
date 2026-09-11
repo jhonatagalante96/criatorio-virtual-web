@@ -76,7 +76,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Entre para consultar o dashboard" })).toBeTruthy());
-    expect(screen.queryByRole("heading", { name: "Olá, criador." })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Dashboard" })).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -118,15 +118,15 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, criador." })).toBeTruthy());
-    expect(screen.getByText(/resumo do que está acontecendo no Criatório Aurora/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    expect(screen.getByText("Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.")).toBeTruthy();
 
-    const activeBirdMetric = screen.getByText("Aves ativas").parentElement;
-    if (!activeBirdMetric) throw new Error("Indicador de aves ativas não encontrado.");
+    const activeBirdMetric = screen.getByText("Aves cadastradas").parentElement;
+    if (!activeBirdMetric) throw new Error("Indicador de aves cadastradas não encontrado.");
     expect(within(activeBirdMetric).getByText("3")).toBeTruthy();
 
-    const pendingMetric = screen.getByText("Identificação pendente").parentElement;
-    if (!pendingMetric) throw new Error("Indicador de identificação não encontrado.");
+    const pendingMetric = screen.getByText("Pendências", { selector: ".dashboard-metric-label" }).parentElement;
+    if (!pendingMetric) throw new Error("Indicador de pendências não encontrado.");
     expect(within(pendingMetric).getByText("1")).toBeTruthy();
     expect(screen.getByText("Aves aguardando identificação")).toBeTruthy();
     expect(screen.getByRole("link", { name: /Aves aguardando identificação/ }).getAttribute("href"))
@@ -139,12 +139,21 @@ describe("DashboardPage", () => {
 
     expect(screen.getByRole("heading", { name: "Atalhos rápidos" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Cadastrar ave/ }).getAttribute("href")).toBe("/plantel/aves/novo");
-    expect(screen.getByText("Atividades recentes", { selector: "span" })).toBeTruthy();
+    expect(screen.getByText("Registrar reprodução")).toBeTruthy();
+    expect(screen.getByText("Nova transferência")).toBeTruthy();
+    expect(screen.getByText("Registrar competição")).toBeTruthy();
+    expect(screen.getByText("Personalizar atalhos")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Atividades recentes" })).toBeTruthy();
+    expect(screen.getByText("Que tal fazer hoje um grande dia para o seu criatório?")).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Abrir menu de Owner"));
+    expect(screen.getAllByRole("link", { name: "Meu Criatório" }).filter((element) => element.closest(".authenticated-account-menu-panel"))).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Configurações" }).filter((element) => element.closest(".authenticated-account-menu-panel"))).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Gerenciar sessão" }).filter((element) => element.closest(".authenticated-account-menu-panel"))).toHaveLength(1);
 
     expect(screen.getAllByRole("link", { name: /^Dashboard$/ })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: /^Aves$/ })).toHaveLength(2);
     expect(screen.getAllByText("Reprodução")).toHaveLength(2);
-    expect(screen.getAllByText("Transferências")).toHaveLength(2);
+    expect(screen.getAllByText("Transferências").filter((element) => element.closest(".authenticated-nav-link"))).toHaveLength(2);
     expect(screen.getAllByText("Competições")).toHaveLength(2);
     expect(screen.getAllByText("Documentos")).toHaveLength(2);
     expect(screen.queryByLabelText("Notificações")).toBeNull();
@@ -204,7 +213,7 @@ describe("DashboardPage", () => {
     expect(screen.getByText(/dashboard está indisponível/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, criador." })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
@@ -219,7 +228,7 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, criador." })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
