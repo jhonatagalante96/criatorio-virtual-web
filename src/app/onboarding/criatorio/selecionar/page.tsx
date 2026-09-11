@@ -119,7 +119,7 @@ function SelectionSuccess({ farm }: Readonly<{ farm: BreedingFarmSummary }>) {
       <p className="eyebrow">Etapa retomada</p>
       <h1 id="titulo-selecao-criatorio" ref={headingRef} tabIndex={-1}>Você está em {farm.name}.</h1>
       <p className="lede">A escolha foi salva e será usada para manter seu onboarding no criatório correto.</p>
-      <a className="auth-primary-action" href="/">Continuar</a>
+      <a className="auth-primary-action" href="/dashboard">Ir para o dashboard</a>
       <a className="text-action" href="/onboarding/criatorio/selecionar">Trocar criatório</a>
     </div>
   );
