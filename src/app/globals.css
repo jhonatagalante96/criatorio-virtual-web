@@ -677,6 +677,95 @@ h1, h2 { line-height: 1.08; }
 .species-selection-success > .lede em { color: #557d6f; }
 .species-selection-success .auth-primary-action { width: 100%; }
 
+/* Bird registration */
+
+.bird-registration-shell { max-width: 68rem; min-height: min(56rem, calc(100svh - 4rem)); }
+.bird-registration-page .onboarding-form-panel { align-items: flex-start; overflow-y: auto; }
+.bird-registration-page .onboarding-form-content { max-width: 48rem; }
+.bird-registration-page h1 { color: var(--ink); font-size: clamp(1.7rem, 3vw, 2.35rem); letter-spacing: -.055em; margin: 0; }
+.bird-registration-page > .auth-shell > .onboarding-form-panel > .onboarding-form-content > .lede { color: #67808d; font-size: .8rem; line-height: 1.45; margin: .45rem 0 1.25rem; max-width: 42ch; }
+.bird-registration-form { gap: .8rem; }
+.bird-registration-form .onboarding-fieldset { display: grid; gap: .75rem; }
+.bird-registration-form .onboarding-fieldset > legend { margin-bottom: .1rem; }
+.bird-registration-form .bird-species-fieldset { gap: .35rem; }
+.bird-registration-form .bird-species-fieldset .species-selector { margin-top: -.15rem; }
+.bird-registration-form .bird-species-fieldset .species-search-header h2 { font-size: 1.05rem; letter-spacing: -.025em; }
+.bird-registration-form .bird-species-fieldset .species-search-header > .lede { font-size: .7rem; margin: .25rem 0 .8rem; max-width: 48ch; }
+.bird-registration-form .bird-species-fieldset .species-search-header .eyebrow { display: none; }
+.bird-registration-form .bird-species-fieldset .species-results-region { min-height: 5rem; }
+.bird-registration-form .bird-species-fieldset .species-results-state { min-height: 5rem; }
+.bird-registration-form .bird-species-fieldset .species-results { margin-top: .75rem; }
+.bird-registration-form .bird-species-fieldset .species-selected { margin-top: .65rem; }
+.bird-registration-form .bird-species-fieldset .field-error { margin-top: .1rem; }
+.bird-registration-form .bird-genealogy-fieldset { gap: 1rem; }
+.bird-registration-form .bird-genealogy-fieldset > legend { margin-bottom: -.45rem; }
+.bird-registration-form textarea { background: #fff; border: 1px solid #cfdee4; border-radius: .42rem; color: #173b53; font: inherit; font-size: .74rem; min-height: 5.5rem; padding: .6rem .7rem; resize: vertical; width: 100%; }
+.bird-registration-form textarea:focus { border-color: #1b9a61; box-shadow: 0 0 0 3px rgb(27 154 97 / 13%); outline: 0; }
+.bird-registration-form textarea:disabled { cursor: wait; opacity: .68; }
+.bird-registration-form textarea[aria-invalid="true"] { border-color: #b3261e; }
+.bird-registration-form .bird-field-help { color: #78919a; font-size: .67rem; margin: -.35rem 0 0; }
+.bird-field-label { color: #365f72; font-size: .68rem; font-weight: 700; }
+.bird-sex-field { display: grid; gap: .45rem; }
+.bird-sex-options { display: grid; gap: .55rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bird-sex-option { align-items: center; background: #fff; border: 1px solid #dcebed; border-radius: .55rem; color: #365f72; cursor: pointer; display: flex; gap: .45rem; min-height: 2.75rem; padding: .55rem .65rem; }
+.bird-sex-option:focus-within { border-color: #1b9a61; box-shadow: 0 0 0 3px rgb(27 154 97 / 13%); }
+.bird-sex-option.is-selected { background: #f0f8f5; border-color: #52ae7b; color: var(--ink); }
+.bird-sex-option input { accent-color: var(--green); flex: 0 0 auto; height: 1rem; margin: 0; width: 1rem; }
+.bird-sex-option span { font-size: .72rem; font-weight: 700; }
+.bird-section-help { color: #68818f; font-size: .7rem; margin: -.65rem 0 0; }
+.bird-parent-picker { border-top: 1px solid #edf3f3; display: grid; gap: .45rem; padding-top: .8rem; }
+.bird-parent-picker:first-of-type { border-top: 0; padding-top: 0; }
+.bird-parent-heading { align-items: flex-end; display: flex; gap: .75rem; justify-content: space-between; }
+.bird-parent-heading > div { min-width: 0; }
+.bird-parent-heading label span { color: #78919a; font-weight: 500; }
+.bird-parent-heading p { color: #78919a; font-size: .65rem; margin: .15rem 0 0; }
+.bird-parent-heading .text-action { background: transparent; border: 0; cursor: pointer; flex: 0 0 auto; font-size: .67rem; padding: .25rem 0; text-align: right; }
+.bird-parent-search-control { position: relative; }
+.bird-parent-search-control input { background: #fff; border: 1px solid #cfdee4; border-radius: .42rem; color: #173b53; font-size: .74rem; min-height: 2.7rem; padding: .6rem 2.6rem .6rem .7rem; width: 100%; }
+.bird-parent-search-control input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.bird-parent-search-control input:focus { border-color: #1b9a61; box-shadow: 0 0 0 3px rgb(27 154 97 / 13%); outline: 0; }
+.bird-parent-search-clear { align-items: center; background: transparent; border: 0; color: #66808d; cursor: pointer; display: flex; font-size: 1.25rem; height: 2.25rem; justify-content: center; line-height: 1; position: absolute; right: .2rem; top: .2rem; width: 2.25rem; }
+.bird-parent-search-clear:focus-visible { border-radius: .35rem; outline: 3px solid #e5a343; outline-offset: -2px; }
+.bird-parent-help { color: #78919a; font-size: .65rem; margin: 0; }
+.bird-parent-results { min-height: 2.05rem; }
+.bird-parent-results > p { color: #78919a; font-size: .68rem; margin: .2rem 0; }
+.bird-parent-options { background: #fff; border: 1px solid #dcebed; border-radius: .55rem; display: grid; gap: .3rem; list-style: none; margin: .1rem 0 0; padding: .3rem; }
+.bird-parent-options li { min-width: 0; }
+.bird-parent-options button { align-items: flex-start; background: transparent; border: 0; border-radius: .35rem; color: var(--ink); cursor: pointer; display: grid; gap: .05rem; padding: .55rem .6rem; text-align: left; width: 100%; }
+.bird-parent-options button:hover, .bird-parent-options button:focus-visible { background: var(--green-soft); outline: 0; }
+.bird-parent-options strong { font-size: .74rem; overflow-wrap: anywhere; }
+.bird-parent-options span { color: #68818f; font-size: .64rem; }
+.bird-parent-selected { align-items: center; background: #f0f8f5; border: 1px solid #bfe4cd; border-radius: .55rem; display: flex; gap: .75rem; justify-content: space-between; min-height: 3.15rem; padding: .55rem .7rem; }
+.bird-parent-selected-copy { display: grid; gap: .08rem; min-width: 0; }
+.bird-parent-selected-copy strong { color: var(--ink); font-size: .74rem; overflow-wrap: anywhere; }
+.bird-parent-selected-copy span { color: #557d6f; font-size: .64rem; }
+.bird-parent-selected .text-action { background: transparent; border: 0; cursor: pointer; flex: 0 0 auto; font-size: .67rem; padding: .25rem 0; }
+.bird-parent-error { align-items: flex-start; display: flex; gap: .65rem; justify-content: space-between; }
+.bird-parent-error p { color: #8f2b25; font-size: .68rem; margin: .2rem 0; }
+.bird-parent-error .auth-secondary-action { flex: 0 0 auto; font-size: .67rem; min-height: 2rem; padding: .35rem .6rem; }
+.bird-pending-feedback { background: #fff8ec; border: 1px solid #f1d9ae; border-radius: .55rem; color: #79521e; display: grid; font-size: .7rem; gap: .2rem; margin: 1rem auto .9rem; max-width: 30rem; padding: .75rem .85rem; text-align: left; }
+.bird-pending-feedback strong { color: #68430e; }
+.bird-registration-success { max-width: 35rem; text-align: center; width: 100%; }
+.bird-registration-success h1 { overflow-wrap: anywhere; }
+.bird-registration-success > .lede { color: #67808d; font-size: .82rem; margin: .55rem auto 1.4rem; max-width: 38ch; }
+.bird-registration-success .auth-primary-action { width: 100%; }
+.bird-registration-success .text-action { display: block; margin-top: .8rem; }
+
+@media (max-width: 47.99rem) {
+  .bird-registration-page { padding: 0; }
+  .bird-registration-shell { border: 0; border-radius: 0; box-shadow: none; display: block; min-height: 100svh; }
+  .bird-registration-page .onboarding-form-panel { background: linear-gradient(#fff 0 72%, #f1faf8 100%); min-height: 100svh; overflow: hidden; padding: 1.1rem 1.25rem 2rem; }
+  .bird-registration-page .onboarding-form-content { position: relative; z-index: 1; }
+  .bird-registration-page h1 { font-size: clamp(1.55rem, 7.5vw, 2rem); text-align: center; }
+  .bird-registration-page > .auth-shell > .onboarding-form-panel > .onboarding-form-content > .lede { margin: .45rem auto 1.55rem; max-width: 30ch; text-align: center; }
+  .bird-registration-form .onboarding-fields-grid { grid-template-columns: 1fr; }
+  .bird-sex-options { grid-template-columns: 1fr; }
+  .bird-sex-option { min-height: 2.65rem; }
+  .bird-parent-heading { align-items: flex-start; flex-direction: column; gap: .25rem; }
+  .bird-parent-heading .text-action { justify-self: start; text-align: left; }
+  .bird-registration-success { padding-top: 2rem; }
+}
+
 @media (max-width: 62rem) {
   .onboarding-shell { grid-template-columns: minmax(13rem, .62fr) minmax(25rem, 1.38fr); }
   .onboarding-form-panel { padding-inline: 2.2rem; }
