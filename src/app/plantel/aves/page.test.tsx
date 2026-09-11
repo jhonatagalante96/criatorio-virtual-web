@@ -184,6 +184,21 @@ describe("BirdListPage", () => {
     expect(listUrl(fetchMock, 4)).toContain("speciesId=species-a");
   });
 
+  it("explains when the species catalog is forbidden", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([bird()]))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Forbidden" }), { headers: { "content-type": "application/problem+json" }, status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openList(fetchMock);
+    fireEvent.click(screen.getByText("Filtros e ordenação"));
+    fireEvent.change(screen.getByRole("searchbox", { name: "Espécie" }), { target: { value: "sa" } });
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("não tem permissão"));
+  });
+
   it("shows a recoverable empty state and restores the list after clearing filters", async () => {
     window.history.pushState({}, "", "/plantel/aves?search=inexistente");
     const fetchMock = vi.fn()

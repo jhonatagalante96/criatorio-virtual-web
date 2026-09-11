@@ -269,6 +269,11 @@ function SpeciesFilter({
           onSessionExpired();
           return;
         }
+        if (error instanceof ApiError && error.status === 403) {
+          setErrorMessage("Sua conta não tem permissão para consultar o catálogo de espécies.");
+          setSearchState("error");
+          return;
+        }
         setErrorMessage(error instanceof ApiError && error.status >= 500
           ? "A busca de espécies está indisponível. Tente novamente em instantes."
           : "Não foi possível buscar espécies agora.");
