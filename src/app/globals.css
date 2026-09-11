@@ -584,6 +584,36 @@ h1, h2 { line-height: 1.08; }
 .onboarding-state-card .text-action { display: block; }
 .session-card .onboarding-action { margin-top: .55rem; width: 100%; }
 
+/* Breeding farm selection */
+
+.farm-selection-shell { max-width: 62rem; min-height: min(44rem, calc(100svh - 4rem)); }
+.farm-selection-card { max-width: 38rem; width: 100%; }
+.farm-selection-card h1 { color: var(--ink); font-size: clamp(1.7rem, 3vw, 2.35rem); letter-spacing: -.055em; margin: 0; }
+.farm-selection-card > .lede { color: #67808d; font-size: .8rem; line-height: 1.45; margin: .45rem 0 1.25rem; max-width: 42ch; }
+.farm-selection-card > .auth-primary-action { width: 100%; }
+.farm-selection-card > .text-action { display: block; margin-top: .8rem; text-align: center; }
+.farm-selection-empty, .farm-selection-success { margin-inline: auto; text-align: center; }
+.farm-selection-empty > .lede, .farm-selection-success > .lede { margin-inline: auto; }
+.farm-selection-empty .auth-primary-action, .farm-selection-success .auth-primary-action { margin-top: .35rem; }
+.farm-selection-success h1 { overflow-wrap: anywhere; }
+.farm-selection-form { display: grid; gap: 1rem; margin-top: 0 !important; }
+.farm-selection-form .form-error { margin-bottom: .1rem; }
+.farm-selection-fieldset { border: 0; margin: 0; min-width: 0; padding: 0; }
+.farm-selection-fieldset legend { color: var(--ink); font-size: .78rem; font-weight: 800; margin-bottom: .6rem; padding: 0; }
+.farm-selection-options { display: grid; gap: .7rem; }
+.farm-selection-option { align-items: center; background: #fff; border: 1px solid #dcebed; border-radius: .75rem; cursor: pointer; display: flex; gap: .75rem; min-height: 4.2rem; padding: .8rem .9rem; transition: border-color .18s ease, background .18s ease, box-shadow .18s ease; }
+.farm-selection-option:hover { background: #f8fdfc; border-color: #a8cfd2; }
+.farm-selection-option:focus-within { border-color: #1b9a61; box-shadow: 0 0 0 3px rgb(27 154 97 / 13%); }
+.farm-selection-option.is-selected { background: #f0f8f5; border-color: #52ae7b; box-shadow: 0 0 0 1px rgb(82 174 123 / 15%); }
+.farm-selection-option input { accent-color: var(--green); flex: 0 0 auto; height: 1rem; margin: 0; width: 1rem; }
+.farm-selection-option-copy { display: grid; gap: .2rem; min-width: 0; }
+.farm-selection-option-copy strong { color: var(--ink); font-size: .82rem; overflow-wrap: anywhere; }
+.farm-selection-option-copy span { color: #68818f; font-size: .68rem; overflow-wrap: anywhere; }
+.farm-selection-option-check { align-items: center; background: #c4eccf; border-radius: 50%; color: var(--green-dark); display: flex; font-size: .7rem; font-weight: 900; height: 1.35rem; justify-content: center; margin-left: auto; opacity: 0; width: 1.35rem; }
+.farm-selection-option.is-selected .farm-selection-option-check { opacity: 1; }
+.farm-selection-form .submit-action { margin-top: 0; }
+.farm-selection-page .onboarding-progress { margin-top: 0; }
+
 /* Breeding farm settings */
 
 .farm-edit-shell { min-height: min(54rem, calc(100svh - 4rem)); }
@@ -608,6 +638,12 @@ h1, h2 { line-height: 1.08; }
   .onboarding-address-help { margin-left: 0; }
   .onboarding-fieldset { padding: .85rem; }
   .onboarding-address { padding-inline: .85rem; }
+  .farm-selection-card { max-width: 32rem; }
+  .farm-selection-card h1 { font-size: clamp(1.55rem, 7.5vw, 2rem); text-align: center; }
+  .farm-selection-card > .lede { margin: .45rem auto 1.55rem; max-width: 30ch; text-align: center; }
+  .farm-selection-card .auth-mobile-back { display: flex; }
+  .farm-selection-card .auth-mobile-brand { display: flex; }
+  .farm-selection-empty, .farm-selection-success { padding-top: 2rem; }
 }
 
 @media (max-width: 62rem) {

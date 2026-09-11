@@ -240,7 +240,7 @@ describe("LoginPage", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
     expect(screen.getByText("owner@example.com")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Criar meu criatório" }).getAttribute("href")).toBe("/onboarding/criatorio");
+    expect(screen.getByRole("link", { name: "Continuar onboarding" }).getAttribute("href")).toBe("/onboarding/criatorio/selecionar");
     expect(fetchMock).toHaveBeenCalledTimes(4);
 
     const [, loginRequest] = fetchMock.mock.calls[2];

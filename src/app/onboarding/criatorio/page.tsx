@@ -195,7 +195,7 @@ function CreationSuccess() {
       <p className="eyebrow">Etapa concluída</p>
       <h1 id="titulo-onboarding" ref={headingRef} tabIndex={-1}>Seu criatório foi criado.</h1>
       <p className="lede">O vínculo de responsável foi configurado com segurança. Você já pode continuar para o Criatório Virtual.</p>
-      <a className="auth-primary-action" href="/">Ir para o início</a>
+      <a className="auth-primary-action" href="/onboarding/criatorio/selecionar">Continuar onboarding</a>
       <a className="text-action" href="/login">Voltar para a conta</a>
     </div>
   );
