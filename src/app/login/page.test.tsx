@@ -240,6 +240,7 @@ describe("LoginPage", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
     expect(screen.getByText("owner@example.com")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Abrir dashboard" }).getAttribute("href")).toBe("/dashboard");
     expect(screen.getByRole("link", { name: "Continuar onboarding" }).getAttribute("href")).toBe("/onboarding/criatorio/selecionar");
     expect(fetchMock).toHaveBeenCalledTimes(4);
 
