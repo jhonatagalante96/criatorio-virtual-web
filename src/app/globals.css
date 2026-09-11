@@ -704,7 +704,7 @@ h1, h2 { line-height: 1.08; }
 .bird-registration-form textarea:disabled { cursor: wait; opacity: .68; }
 .bird-registration-form textarea[aria-invalid="true"] { border-color: #b3261e; }
 .bird-registration-form .bird-field-help { color: #78919a; font-size: .67rem; margin: -.35rem 0 0; }
-.bird-field-label, .bird-parent-heading > div > label { color: #365f72; font-size: .68rem; font-weight: 700; }
+.bird-field-label { color: #365f72; font-size: .68rem; font-weight: 700; }
 .bird-sex-field { display: grid; gap: .45rem; }
 .bird-sex-options { display: grid; gap: .55rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .bird-sex-option { align-items: center; background: #fff; border: 1px solid #dcebed; border-radius: .55rem; color: #365f72; cursor: pointer; display: flex; gap: .45rem; min-height: 2.75rem; padding: .55rem .65rem; }

@@ -109,8 +109,10 @@ function AccessState({
   heading,
   message,
   onRetry,
-  retryLabel = "Tentar novamente"
-}: Readonly<{ heading: string; message: string; onRetry?: () => void; retryLabel?: string }>) {
+  retryLabel = "Tentar novamente",
+  actionHref = "/",
+  actionLabel = "Voltar para o início"
+}: Readonly<{ actionHref?: string; actionLabel?: string; heading: string; message: string; onRetry?: () => void; retryLabel?: string }>) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -128,7 +130,7 @@ function AccessState({
             <h1 id="titulo-estado-cadastro-ave" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href="/">Voltar para o início</a>
+            <a className="text-action" href={actionHref}>{actionLabel}</a>
           </div>
         </section>
       </div>
@@ -290,7 +292,7 @@ function ParentPicker({
     <div className="bird-parent-picker">
       <div className="bird-parent-heading">
         <div>
-          <label htmlFor={`${pickerId}-search`}>{label} <span>(opcional)</span></label>
+          <span className="bird-field-label" id={`${pickerId}-label`}>{label} <span>(opcional)</span></span>
           <p>Busque por nome ou anilha entre as aves ativas do criatório.</p>
         </div>
         {mode === "search"
@@ -323,11 +325,13 @@ function ParentPicker({
             <input
               aria-controls={`${pickerId}-options`}
               aria-describedby={`${pickerId}-help`}
+              aria-labelledby={`${pickerId}-label`}
               autoComplete="off"
               disabled={disabled}
               id={`${pickerId}-search`}
               maxLength={100}
               onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }}
               placeholder={`Ex.: ${sex === "Male" ? "Pai Azul ou 930001" : "Mãe Rubi ou 930002"}`}
               type="search"
               value={query}
@@ -384,7 +388,7 @@ function BirdRegistrationState({
     return <AccessState heading="Verificando o criatório" message={message ?? "Só um instante enquanto verificamos o criatório selecionado."} />;
   }
   if (farmState === "blocked") {
-    return <AccessState heading="Selecione um criatório" message={message ?? "Escolha um criatório antes de cadastrar uma ave."} />;
+    return <AccessState actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar criatório" heading="Selecione um criatório" message={message ?? "Escolha um criatório antes de cadastrar uma ave."} />;
   }
   return <AccessState heading="Não foi possível abrir o cadastro" message={message ?? "Tente novamente para continuar."} onRetry={onRetry} />;
 }
@@ -672,6 +676,7 @@ function BirdRegistrationForm() {
           <p className="bird-section-help">Vincule aves já cadastradas ou informe o nome de um pai sem cadastro.</p>
           <ParentPicker client={client.current!} disabled={isSubmitting} key={`father-${formVersion}`} label="Pai" onChange={setFather} onSessionExpired={handleSessionExpired} selection={father} sex="Male" />
           <ParentPicker client={client.current!} disabled={isSubmitting} key={`mother-${formVersion}`} label="Mãe" onChange={setMother} onSessionExpired={handleSessionExpired} selection={mother} sex="Female" />
+          {fieldError("parent") && <p className="field-error" role="alert">{fieldError("parent")}</p>}
         </fieldset>
 
         <fieldset className="onboarding-fieldset">

@@ -92,7 +92,7 @@ describe("BirdRegistrationPage", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Selecione um criatório" })).toBeTruthy());
     expect(screen.getByText("Selecione um criatório para continuar o cadastro.")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Voltar para o início" }).getAttribute("href")).toBe("/");
+    expect(screen.getByRole("link", { name: "Selecionar criatório" }).getAttribute("href")).toBe("/onboarding/criatorio/selecionar");
   });
 
   it("shows client validation and does not call the create endpoint for incomplete data", async () => {

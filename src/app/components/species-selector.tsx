@@ -116,6 +116,7 @@ export function SpeciesSelector({ onSessionExpired, onSelected }: Readonly<Speci
             maxLength={100}
             minLength={MIN_SEARCH_LENGTH}
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }}
             placeholder="Ex.: Sabiá ou Turdus"
             type="search"
             value={query}
