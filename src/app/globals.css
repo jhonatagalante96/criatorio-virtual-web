@@ -1063,14 +1063,14 @@ h1, h2 { line-height: 1.08; }
 .authenticated-context-label { color: rgb(230 245 237 / 62%); font-size: .58rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .authenticated-farm-context strong { color: #fff; font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .authenticated-nav-list { display: grid; gap: .35rem; list-style: none; margin: 0; padding: 0; }
-.authenticated-nav-link { align-items: center; border-radius: .5rem; color: rgb(239 251 244 / 82%); display: flex; font-size: .76rem; font-weight: 700; gap: .65rem; min-height: 2.7rem; padding: .55rem .65rem; text-decoration: none; transition: background .18s ease, color .18s ease; }
+.authenticated-nav-link { align-items: center; border-radius: .5rem; color: rgb(239 251 244 / 82%); display: flex; font-size: .76rem; font-weight: 500; gap: .65rem; min-height: 2.7rem; padding: .55rem .65rem; text-decoration: none; transition: background .18s ease, color .18s ease; }
 .authenticated-nav-link:hover { background: rgb(255 255 255 / 10%); color: #fff; }
 .authenticated-nav-link.is-active { background: rgb(112 164 122 / 42%); box-shadow: 0 .35rem .8rem rgb(0 0 0 / 15%); color: #fff; }
 .authenticated-nav-link.is-disabled { cursor: default; opacity: .92; }
 .authenticated-nav-link.is-disabled:hover { background: transparent; }
-.authenticated-nav-symbol { align-items: center; background: rgb(255 255 255 / 12%); border-radius: .35rem; color: #e7f3de; display: inline-flex; font-size: 1rem; height: 1.55rem; justify-content: center; line-height: 1; width: 1.55rem; }
+.authenticated-nav-symbol { align-items: center; color: #e7f3de; display: inline-flex; font-size: 1rem; height: 1.55rem; justify-content: center; line-height: 1; width: 1.55rem; }
 .authenticated-nav-symbol .dashboard-icon { height: 1.18rem; width: 1.18rem; }
-.authenticated-nav-link.is-active .authenticated-nav-symbol { background: rgb(255 255 255 / 20%); color: #fff; }
+.authenticated-nav-link.is-active .authenticated-nav-symbol { color: #fff; }
 .authenticated-sidebar-secondary-nav { border-top: 1px solid rgb(219 240 228 / 18%); margin-top: 1.5rem; padding: 1rem .2rem 0; }
 .authenticated-sidebar-account a, .authenticated-mobile-menu-links a { color: #d9eee0; font-size: .66rem; font-weight: 800; text-decoration: none; }
 .authenticated-sidebar-account a:hover, .authenticated-mobile-menu-links a:hover { color: #fff; text-decoration: underline; }
