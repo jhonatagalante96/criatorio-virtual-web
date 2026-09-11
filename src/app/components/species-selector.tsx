@@ -15,6 +15,8 @@ const MIN_SEARCH_LENGTH = 2;
 const VISIBLE_RESULTS_LIMIT = 8;
 
 interface SpeciesSelectorProps {
+  disabled?: boolean;
+  initialSpecies?: SpeciesSummary;
   onSessionExpired?: () => void;
   onSelected?: (species: SpeciesSummary | undefined) => void;
 }
@@ -31,10 +33,10 @@ function messageForSearchFailure(error: unknown): string {
   return "Verifique sua conexão e tente novamente.";
 }
 
-export function SpeciesSelector({ onSessionExpired, onSelected }: Readonly<SpeciesSelectorProps>) {
+export function SpeciesSelector({ disabled = false, initialSpecies, onSessionExpired, onSelected }: Readonly<SpeciesSelectorProps>) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SpeciesSummary[]>([]);
-  const [selectedSpecies, setSelectedSpecies] = useState<SpeciesSummary>();
+  const [selectedSpecies, setSelectedSpecies] = useState<SpeciesSummary | undefined>(initialSpecies);
   const [searchState, setSearchState] = useState<SearchState>("idle");
   const [errorMessage, setErrorMessage] = useState<string>();
   const [reloadVersion, setReloadVersion] = useState(0);
@@ -112,6 +114,7 @@ export function SpeciesSelector({ onSessionExpired, onSelected }: Readonly<Speci
             aria-controls="species-results"
             aria-describedby="species-search-help"
             autoComplete="off"
+            disabled={disabled}
             id="species-search"
             maxLength={100}
             minLength={MIN_SEARCH_LENGTH}
@@ -121,7 +124,7 @@ export function SpeciesSelector({ onSessionExpired, onSelected }: Readonly<Speci
             type="search"
             value={query}
           />
-          {query && <button aria-label="Limpar busca" className="species-search-clear" onClick={() => setQuery("")} type="button">×</button>}
+          {query && <button aria-label="Limpar busca" className="species-search-clear" disabled={disabled} onClick={() => setQuery("")} type="button">×</button>}
         </div>
         <p className="species-search-help" id="species-search-help">A seleção precisa ser feita a partir de um item do catálogo.</p>
       </div>
@@ -165,6 +168,7 @@ export function SpeciesSelector({ onSessionExpired, onSelected }: Readonly<Speci
                   >
                     <input
                       checked={selectedSpecies?.speciesId === species.speciesId}
+                      disabled={disabled}
                       name="speciesId"
                       onChange={() => selectSpecies(species)}
                       type="radio"
@@ -195,7 +199,7 @@ export function SpeciesSelector({ onSessionExpired, onSelected }: Readonly<Speci
             <strong>{selectedSpecies.popularName}</strong>
             <em>{selectedSpecies.scientificName}</em>
           </div>
-          <button className="text-action" onClick={clearSelection} type="button">Remover seleção</button>
+          <button className="text-action" disabled={disabled} onClick={clearSelection} type="button">Remover seleção</button>
         </div>
       )}
     </div>

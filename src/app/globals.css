@@ -813,8 +813,9 @@ h1, h2 { line-height: 1.08; }
 .bird-detail-header > div { min-width: 0; }
 .bird-detail-header .lede { margin-bottom: 0 !important; }
 .bird-detail-header .bird-status-badge { margin-top: .2rem; }
-.bird-detail-actions { display: flex; justify-content: flex-start; margin-bottom: 1rem; }
+.bird-detail-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .55rem; justify-content: flex-start; margin-bottom: 1rem; }
 .bird-detail-actions .auth-secondary-action { font-size: .67rem; min-height: 2.15rem; padding: .4rem .65rem; }
+.bird-detail-edit-action { font-size: .67rem; min-height: 2.15rem; padding: .4rem .65rem; }
 .bird-detail-summary { align-items: center; background: linear-gradient(135deg, #eef9f4, #f8fcfb); border: 1px solid #cce9da; border-radius: .8rem; display: flex; gap: .8rem; margin-bottom: .9rem; padding: .85rem 1rem; }
 .bird-detail-summary-mark { align-items: center; background: #c4eccf; border-radius: 50%; color: var(--green-dark); display: flex; flex: 0 0 auto; font-size: 1.05rem; font-weight: 900; height: 2.35rem; justify-content: center; width: 2.35rem; }
 .bird-detail-summary-mark + div { min-width: 0; }
@@ -948,6 +949,9 @@ h1, h2 { line-height: 1.08; }
 .bird-parent-error .auth-secondary-action { flex: 0 0 auto; font-size: .67rem; min-height: 2rem; padding: .35rem .6rem; }
 .bird-pending-feedback { background: #fff8ec; border: 1px solid #f1d9ae; border-radius: .55rem; color: #79521e; display: grid; font-size: .7rem; gap: .2rem; margin: 1rem auto .9rem; max-width: 30rem; padding: .75rem .85rem; text-align: left; }
 .bird-pending-feedback strong { color: #68430e; }
+.bird-edit-form .confirmation-feedback { background: #eef9f1; border: 1px solid #c8e8d0; border-radius: .45rem; margin: 0; padding: .65rem .75rem; }
+.bird-edit-actions { display: grid; gap: .65rem; }
+.bird-edit-actions .auth-secondary-action, .bird-edit-actions .submit-action { margin-top: 0; width: 100%; }
 .bird-registration-success { max-width: 35rem; text-align: center; width: 100%; }
 .bird-registration-success h1 { overflow-wrap: anywhere; }
 .bird-registration-success > .lede { color: #67808d; font-size: .82rem; margin: .55rem auto 1.4rem; max-width: 38ch; }
@@ -963,10 +967,15 @@ h1, h2 { line-height: 1.08; }
   .bird-registration-page > .auth-shell > .onboarding-form-panel > .onboarding-form-content > .lede { margin: .45rem auto 1.55rem; max-width: 30ch; text-align: center; }
   .bird-registration-form .onboarding-fields-grid { grid-template-columns: 1fr; }
   .bird-sex-options { grid-template-columns: 1fr; }
+  .bird-edit-actions { grid-template-columns: 1fr; }
   .bird-sex-option { min-height: 2.65rem; }
   .bird-parent-heading { align-items: flex-start; flex-direction: column; gap: .25rem; }
   .bird-parent-heading .text-action { justify-self: start; text-align: left; }
   .bird-registration-success { padding-top: 2rem; }
+}
+
+@media (min-width: 48rem) {
+  .bird-edit-actions { align-items: center; grid-template-columns: minmax(10rem, .65fr) minmax(14rem, 1fr); }
 }
 
 @media (max-width: 62rem) {

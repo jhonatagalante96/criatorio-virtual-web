@@ -110,6 +110,7 @@ describe("BirdDetailPage", () => {
     expect(screen.getByRole("heading", { name: "Dados cadastrais" })).toBeTruthy();
     expect(screen.getByText("Ave acompanhada desde o primeiro cadastro.")).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /Pai Azul/ }).some((link) => link.getAttribute("href") === "/plantel/aves/father-a")).toBe(true);
+    expect(screen.getByRole("link", { name: "Editar dados" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
     expect(screen.getByText("Árvore consultada")).toBeTruthy();
 
     const detailRequest = fetchMock.mock.calls[2];
