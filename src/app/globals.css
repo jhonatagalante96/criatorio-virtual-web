@@ -1080,8 +1080,8 @@ h1, h2 { line-height: 1.08; }
 .authenticated-sidebar-inspiration span { color: #afd896; display: block; line-height: 1; }
 .authenticated-sidebar-inspiration span .dashboard-icon { height: 1.45rem; width: 1.45rem; }
 .authenticated-sidebar-inspiration small { color: rgb(226 244 231 / 62%); font-size: .63rem; }
-.authenticated-main { background: #fff; grid-column: 2; min-width: 0; }
-.authenticated-topbar { align-items: center; background: #fff; border-bottom: 1px solid #edf1f3; display: flex; height: 4.5rem; justify-content: space-between; padding: 0 clamp(1.25rem, 2.05vw, 2rem); position: sticky; top: 0; z-index: 4; }
+.authenticated-main { background: #f8fafb; grid-column: 2; min-width: 0; }
+.authenticated-topbar { align-items: center; background: #fff; border-bottom: 1px solid #edf1f3; box-shadow: 0 2px 8px rgb(23 32 57 / 6%); display: flex; height: 4.5rem; justify-content: space-between; padding: 0 clamp(1.25rem, 2.05vw, 2rem); position: sticky; top: 0; z-index: 4; }
 .authenticated-search { align-items: center; background: #f8f9fb; border: 1px solid #dfe3e8; border-radius: .55rem; color: #8c96a5; display: flex; font-size: .77rem; gap: .55rem; min-height: 2.55rem; padding: .5rem .8rem; width: min(25rem, 42vw); }
 .authenticated-search > span:first-child { color: #748095; font-size: 1.35rem; line-height: 1; }
 .authenticated-topbar-actions { align-items: center; display: flex; gap: 1.25rem; }
@@ -1196,7 +1196,7 @@ h1, h2 { line-height: 1.08; }
 .dashboard-activity-icon-blue { background: #cbe4fa; color: #1769a0; }
 .dashboard-activity-list time { color: #738096; font-size: .58rem; margin-left: auto; white-space: nowrap; }
 .dashboard-partial-notice { background: #f0f8fa; border: 1px solid #cfe5eb; border-radius: .55rem; color: #4f7481; font-size: .68rem; line-height: 1.4; margin: -1rem 0 1.5rem; padding: .65rem .75rem; }
-.dashboard-inspiration { align-items: center; background: url("/assets/imagery/landscapes/dashboard-footer-final-cropped.png") center / 100% 100% no-repeat; border: 1px solid #e5e6df; border-radius: .75rem; display: flex; gap: 1rem; height: 7rem; margin-top: 1.35rem; min-height: 7rem; overflow: hidden; padding: 0 1.25rem 0 0; position: relative; }
+.dashboard-inspiration { align-items: center; background: url("/assets/imagery/landscapes/dashboard-footer-final-cropped.png") center / 101% 104% no-repeat; border: 0; border-radius: .75rem; display: flex; gap: 1rem; height: 7rem; margin-top: 1.35rem; min-height: 7rem; overflow: hidden; padding: 0 1.25rem 0 0; position: relative; }
 .dashboard-inspiration-image { display: none; }
 .dashboard-inspiration-copy, .dashboard-inspiration blockquote { opacity: 0; pointer-events: none; }
 .dashboard-inspiration-copy { display: grid; gap: .35rem; min-width: 12rem; }
