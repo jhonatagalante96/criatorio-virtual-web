@@ -388,9 +388,7 @@ function QuickActionsSection() {
 function InspirationSection() {
   return (
     <section aria-label="Mensagem do Criatório Virtual" className="dashboard-inspiration">
-      <div className="dashboard-inspiration-image" aria-hidden="true">
-        <img alt="" src="/assets/imagery/birds/great-tit-header-hd.webp" />
-      </div>
+      <div aria-hidden="true" className="dashboard-inspiration-image" />
       <div className="dashboard-inspiration-copy">
         <strong>Paixão que se organiza,<br />resultados que se multiplicam.</strong>
         <span>— Criatório Virtual</span>
