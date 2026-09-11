@@ -142,7 +142,12 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Atividades recentes", { selector: "span" })).toBeTruthy();
 
     expect(screen.getAllByRole("link", { name: /^Dashboard$/ })).toHaveLength(2);
-    expect(screen.getAllByRole("link", { name: /^Plantel de aves$/ })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /^Aves$/ })).toHaveLength(2);
+    expect(screen.getAllByText("Reprodução")).toHaveLength(2);
+    expect(screen.getAllByText("Transferências")).toHaveLength(2);
+    expect(screen.getAllByText("Competições")).toHaveLength(2);
+    expect(screen.getAllByText("Documentos")).toHaveLength(2);
+    expect(screen.queryByLabelText("Notificações")).toBeNull();
     expect(screen.queryByText("Relatórios")).toBeNull();
     expect(String(fetchMock.mock.calls[2][0])).toContain("api/dashboard");
   });

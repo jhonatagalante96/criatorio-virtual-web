@@ -1,5 +1,7 @@
 import React from "react";
 import { BrandLockup } from "./brand";
+import { DashboardIcon } from "./dashboard-icons";
+import type { DashboardIconName } from "./dashboard-icons";
 
 export type AuthenticatedNav = "dashboard" | "birds";
 
@@ -10,9 +12,26 @@ interface AuthenticatedShellProps {
   farmName: string;
 }
 
-const primaryNavigation: Array<{ href: string; id: AuthenticatedNav; label: string; symbol: string }> = [
-  { href: "/dashboard", id: "dashboard", label: "Dashboard", symbol: "⌂" },
-  { href: "/plantel/aves", id: "birds", label: "Plantel de aves", symbol: "♧" }
+interface NavigationItem {
+  href?: string;
+  icon: DashboardIconName;
+  id: string;
+  label: string;
+}
+
+const primaryNavigation: NavigationItem[] = [
+  { href: "/dashboard", icon: "home", id: "dashboard", label: "Dashboard" },
+  { href: "/plantel/aves", icon: "bird", id: "birds", label: "Aves" },
+  { icon: "heart", id: "reproduction", label: "Reprodução" },
+  { icon: "transfer", id: "transfers", label: "Transferências" },
+  { icon: "trophy", id: "competitions", label: "Competições" },
+  { icon: "document", id: "documents", label: "Documentos" }
+];
+
+const secondaryNavigation: NavigationItem[] = [
+  { href: "/configuracoes/criatorio", icon: "farm", id: "farm", label: "Meu Criatório" },
+  { icon: "crown", id: "subscription", label: "Assinatura" },
+  { href: "/configuracoes", icon: "settings", id: "settings", label: "Configurações" }
 ];
 
 function displayNameFromEmail(email: string): string {
@@ -34,21 +53,31 @@ function initialsFromName(name: string): string {
     .join("") || "CV";
 }
 
-function NavigationLinks({ activeNav }: Readonly<{ activeNav: AuthenticatedNav }>) {
+function NavigationLinks({ activeNav, items = primaryNavigation }: Readonly<{ activeNav: AuthenticatedNav; items?: NavigationItem[] }>) {
   return (
     <ul className="authenticated-nav-list">
-      {primaryNavigation.map((item) => (
-        <li key={item.id}>
-          <a
-            aria-current={activeNav === item.id ? "page" : undefined}
-            className={`authenticated-nav-link${activeNav === item.id ? " is-active" : ""}`}
-            href={item.href}
-          >
-            <span aria-hidden="true" className="authenticated-nav-symbol">{item.symbol}</span>
+      {items.map((item) => {
+        const content = (
+          <>
+            <span aria-hidden="true" className="authenticated-nav-symbol"><DashboardIcon name={item.icon} /></span>
             <span>{item.label}</span>
-          </a>
-        </li>
-      ))}
+          </>
+        );
+
+        return (
+          <li key={item.id}>
+            {item.href ? (
+              <a aria-current={activeNav === item.id ? "page" : undefined} className={`authenticated-nav-link${activeNav === item.id ? " is-active" : ""}`} href={item.href}>
+                {content}
+              </a>
+            ) : (
+              <span aria-disabled="true" className="authenticated-nav-link is-disabled" title="Módulo em desenvolvimento">
+                {content}
+              </span>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -71,13 +100,12 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
           <nav aria-label="Módulos disponíveis" className="authenticated-desktop-nav">
             <NavigationLinks activeNav={activeNav} />
           </nav>
-          <div className="authenticated-sidebar-links">
-            <a href="/onboarding/criatorio/selecionar">Trocar criatório</a>
-            <a href="/configuracoes">Configurações</a>
-          </div>
+          <nav aria-label="Conta e configurações" className="authenticated-sidebar-secondary-nav">
+            <NavigationLinks activeNav={activeNav} items={secondaryNavigation} />
+          </nav>
           <div className="authenticated-sidebar-inspiration" aria-label="Mensagem inspiradora">
             <p>“Grandes criatórios começam com boas histórias.”</p>
-            <span aria-hidden="true">✦</span>
+            <span aria-hidden="true"><DashboardIcon name="leaf" /></span>
             <small>Criatório Virtual</small>
           </div>
           <div className="authenticated-sidebar-account">
@@ -93,7 +121,6 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
               <span>Buscar no sistema...</span>
             </div>
             <div className="authenticated-topbar-actions">
-              <span aria-label="Notificações" className="authenticated-notifications" role="img">♧<i aria-hidden="true" /></span>
               <div className="authenticated-account-summary">
                 <span aria-hidden="true" className="authenticated-account-avatar">{initialsFromName(displayName)}</span>
                 <span className="authenticated-account-copy">
@@ -121,10 +148,9 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
                 <nav aria-label="Módulos disponíveis no celular">
                   <NavigationLinks activeNav={activeNav} />
                 </nav>
-                <div className="authenticated-mobile-menu-links">
-                  <a href="/onboarding/criatorio/selecionar">Trocar criatório</a>
-                  <a href="/configuracoes">Configurações</a>
-                </div>
+                <nav aria-label="Conta e configurações no celular" className="authenticated-mobile-menu-links">
+                  <NavigationLinks activeNav={activeNav} items={secondaryNavigation} />
+                </nav>
               </div>
             </details>
           </header>
