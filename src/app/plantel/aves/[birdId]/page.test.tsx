@@ -82,6 +82,20 @@ describe("BirdDetailPage", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("blocks the detail until a breeding farm is selected", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse(null));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<BirdDetailPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Selecione um criatório" })).toBeTruthy());
+    expect(screen.getByText("Selecione um criatório para consultar a ficha da ave.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Selecionar criatório" }).getAttribute("href")).toBe("/onboarding/criatorio/selecionar");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("loads the selected tenant, detail and genealogy with navigable parent data", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())

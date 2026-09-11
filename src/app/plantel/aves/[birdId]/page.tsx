@@ -167,7 +167,7 @@ function DetailLayout({ children }: Readonly<{ children: React.ReactNode }>) {
       <a className="skip-link" href="#conteudo-ficha-ave">Pular para o conteúdo</a>
       <div className="auth-shell onboarding-shell bird-detail-shell">
         <BrandPanel />
-        <section aria-labelledby="titulo-ficha-ave" className="auth-form-panel onboarding-form-panel">
+        <section aria-label="Ficha da ave" className="auth-form-panel onboarding-form-panel">
           <div className="onboarding-form-content" id="conteudo-ficha-ave">
             {children}
           </div>
