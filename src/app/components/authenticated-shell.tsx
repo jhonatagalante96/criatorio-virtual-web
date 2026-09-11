@@ -82,6 +82,33 @@ function NavigationLinks({ activeNav, items = primaryNavigation }: Readonly<{ ac
   );
 }
 
+function AccountMenu({ displayName, email, farmName }: Readonly<{ displayName: string; email: string; farmName: string }>) {
+  return (
+    <details className="authenticated-account-menu">
+      <summary aria-label={`Abrir menu de ${displayName}`} className="authenticated-account-summary">
+        <span aria-hidden="true" className="authenticated-account-avatar">{initialsFromName(displayName)}</span>
+        <span className="authenticated-account-copy">
+          <strong>{displayName}</strong>
+          <small>{farmName}</small>
+        </span>
+        <span aria-hidden="true" className="authenticated-account-chevron">⌄</span>
+      </summary>
+      <div className="authenticated-account-menu-panel">
+        <div className="authenticated-account-menu-heading">
+          <strong>{displayName}</strong>
+          <small>{email}</small>
+          <span>{farmName}</span>
+        </div>
+        <nav aria-label="Ações da conta" className="authenticated-account-menu-links">
+          <a href="/configuracoes/criatorio">Meu Criatório</a>
+          <a href="/configuracoes">Configurações</a>
+          <a href="/login">Gerenciar sessão</a>
+        </nav>
+      </div>
+    </details>
+  );
+}
+
 export function AuthenticatedShell({ activeNav, children, email, farmName }: Readonly<AuthenticatedShellProps>) {
   const displayName = displayNameFromEmail(email);
 
@@ -92,6 +119,7 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
         <aside aria-label="Navegação principal" className="authenticated-sidebar">
           <a aria-label="Ir para o dashboard" className="authenticated-brand" href="/dashboard">
             <BrandLockup />
+            <span className="authenticated-brand-tagline">Gestão com paixão</span>
           </a>
           <nav aria-label="Módulos disponíveis" className="authenticated-desktop-nav">
             <NavigationLinks activeNav={activeNav} />
@@ -104,10 +132,6 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
             <span aria-hidden="true"><DashboardIcon name="leaf" /></span>
             <small>Criatório Virtual</small>
           </div>
-          <div className="authenticated-sidebar-account">
-            <span>{email}</span>
-            <a href="/login">Gerenciar sessão</a>
-          </div>
         </aside>
 
         <div className="authenticated-main">
@@ -117,14 +141,7 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
               <span>Buscar no sistema...</span>
             </div>
             <div className="authenticated-topbar-actions">
-              <div className="authenticated-account-summary">
-                <span aria-hidden="true" className="authenticated-account-avatar">{initialsFromName(displayName)}</span>
-                <span className="authenticated-account-copy">
-                  <strong>{displayName}</strong>
-                  <small>{farmName}</small>
-                </span>
-                <span aria-hidden="true" className="authenticated-account-chevron">⌄</span>
-              </div>
+              <AccountMenu displayName={displayName} email={email} farmName={farmName} />
             </div>
           </header>
           <header className="authenticated-mobile-header">
@@ -147,6 +164,11 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
                 <nav aria-label="Conta e configurações no celular" className="authenticated-mobile-menu-links">
                   <NavigationLinks activeNav={activeNav} items={secondaryNavigation} />
                 </nav>
+                <div className="authenticated-mobile-account">
+                  <strong>{displayName}</strong>
+                  <small>{email}</small>
+                  <a href="/login">Gerenciar sessão</a>
+                </div>
               </div>
             </details>
           </header>

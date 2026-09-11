@@ -124,6 +124,15 @@ function formatActivityDate(value: string): string {
   }).format(date);
 }
 
+function formatDashboardDate(value = new Date()): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+    year: "numeric"
+  }).format(value);
+}
+
 function activityHref(activity: DashboardActivity): string | undefined {
   return activity.resourceType.toLowerCase() === "bird" && activity.resourceId
     ? `/plantel/aves/${encodeURIComponent(activity.resourceId)}`
@@ -186,9 +195,13 @@ function DashboardMetric({ detail, icon, label, value, tone = "green" }: Readonl
   return (
     <article className={`dashboard-metric dashboard-metric-${tone}`}>
       <span aria-hidden="true" className="dashboard-metric-icon"><DashboardIcon name={icon} /></span>
-      <div>
-        <span>{label}</span>
+      <div className="dashboard-metric-main">
         <strong>{value}</strong>
+        <span className="dashboard-metric-label">{label}</span>
+      </div>
+      <span aria-hidden="true" className="dashboard-metric-arrow">›</span>
+      <div className="dashboard-metric-trend">
+        <span aria-hidden="true">—</span>
         <small>{detail}</small>
       </div>
     </article>
@@ -202,6 +215,7 @@ function PendingSection({ pending }: Readonly<{ pending: DashboardPending[] }>) 
         <div>
           <p className="eyebrow">Atenção</p>
           <h2 id="titulo-pendencias">Pendências <span className="dashboard-heading-badge">{pending.length}</span></h2>
+          <p className="dashboard-section-lede">Itens que precisam da sua atenção.</p>
         </div>
         <a className="dashboard-section-action" href="/plantel/aves?identificationPending=true">Ver todas <span aria-hidden="true">›</span></a>
       </div>
@@ -247,6 +261,7 @@ function ActivitiesSection({ activities }: Readonly<{ activities: DashboardActiv
         <div>
           <p className="eyebrow">Acompanhe de perto</p>
           <h2 id="titulo-atividades">Atividades recentes</h2>
+          <p className="dashboard-section-lede">Últimas ações realizadas no seu criatório.</p>
         </div>
         <span className="dashboard-section-action">Ver mais <span aria-hidden="true">›</span></span>
       </div>
@@ -299,26 +314,36 @@ function ActivitiesSection({ activities }: Readonly<{ activities: DashboardActiv
 }
 
 function QuickActionsSection() {
-  const quickActions = [
+  const quickActions: Array<{
+    description: string;
+    href?: string;
+    icon: DashboardIconName;
+    title: string;
+    tone: "blue" | "green" | "purple" | "rose";
+  }> = [
     {
       description: "Adicione uma nova ave ao seu criatório",
       href: "/plantel/aves/novo",
-      icon: "bird" as DashboardIconName,
+      icon: "bird",
       title: "Cadastrar ave",
       tone: "green"
     },
     {
-      description: "Acompanhe as aves cadastradas",
-      href: "/plantel/aves",
-      icon: "bird" as DashboardIconName,
-      title: "Ver plantel",
+      description: "Acompanhe seus cruzamentos",
+      icon: "heart",
+      title: "Registrar reprodução",
+      tone: "rose"
+    },
+    {
+      description: "Registre entrada ou saída de aves",
+      icon: "transfer",
+      title: "Nova transferência",
       tone: "blue"
     },
     {
-      description: "Gerencie outro criatório",
-      href: "/onboarding/criatorio/selecionar",
-      icon: "transfer" as DashboardIconName,
-      title: "Trocar criatório",
+      description: "Adicione resultados de competições",
+      icon: "trophy",
+      title: "Registrar competição",
       tone: "purple"
     }
   ];
@@ -331,18 +356,29 @@ function QuickActionsSection() {
           <h2 id="titulo-atalhos">Atalhos rápidos</h2>
           <p className="dashboard-section-lede">Acesse as principais funcionalidades do sistema.</p>
         </div>
-        <span aria-hidden="true" className="dashboard-quick-action-symbol">ϟ</span>
+        <span className="dashboard-quick-action-customize"><DashboardIcon name="settings" /> Personalizar atalhos</span>
       </div>
       <div className="dashboard-quick-action-grid">
         {quickActions.map((action) => (
-          <a className={`dashboard-quick-action dashboard-quick-action-${action.tone}`} href={action.href} key={action.href}>
-            <span aria-hidden="true" className="dashboard-quick-action-icon"><DashboardIcon name={action.icon} /></span>
-            <span className="dashboard-quick-action-copy">
-              <strong>{action.title}</strong>
-              <span>{action.description}</span>
-            </span>
-            <span aria-hidden="true" className="dashboard-card-arrow">›</span>
-          </a>
+          action.href ? (
+            <a className={`dashboard-quick-action dashboard-quick-action-${action.tone}`} href={action.href} key={action.title}>
+              <span aria-hidden="true" className="dashboard-quick-action-icon"><DashboardIcon name={action.icon} /></span>
+              <span className="dashboard-quick-action-copy">
+                <strong>{action.title}</strong>
+                <span>{action.description}</span>
+              </span>
+              <span aria-hidden="true" className="dashboard-card-arrow">›</span>
+            </a>
+          ) : (
+            <div aria-disabled="true" className={`dashboard-quick-action dashboard-quick-action-${action.tone} is-disabled`} key={action.title} title="Módulo em desenvolvimento">
+              <span aria-hidden="true" className="dashboard-quick-action-icon"><DashboardIcon name={action.icon} /></span>
+              <span className="dashboard-quick-action-copy">
+                <strong>{action.title}</strong>
+                <span>{action.description}</span>
+              </span>
+              <span aria-hidden="true" className="dashboard-card-arrow">›</span>
+            </div>
+          )
         ))}
       </div>
     </section>
@@ -370,30 +406,26 @@ function InspirationSection() {
 function DashboardContent({
   dashboard,
   farm,
-  onRefresh,
-  refreshing,
   sessionEmail
 }: Readonly<{
   dashboard: DashboardData;
   farm: BreedingFarmSummary;
-  onRefresh: () => void;
-  refreshing: boolean;
   sessionEmail: string;
 }>) {
   const { activeBirdCount, activeReproductionCount, pendingIdentificationCount } = dashboard.indicators;
+  const transferCount = dashboard.activities.filter((activity) => activity.activityType.toLowerCase().includes("transfer")).length;
 
   return (
     <AuthenticatedShell activeNav="dashboard" email={sessionEmail} farmName={farm.name}>
       <header className="dashboard-page-header">
         <div>
-          <p className="eyebrow">Visão geral</p>
-          <h1>Olá, criador.</h1>
-          <p className="dashboard-lede">Aqui está um resumo do que está acontecendo no {farm.name}.</p>
+          <h1>Dashboard</h1>
+          <p className="dashboard-lede">Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.</p>
         </div>
-        <button aria-label="Atualizar dados do dashboard" className="dashboard-refresh-action" disabled={refreshing} onClick={onRefresh} type="button">
-          <span aria-hidden="true">↻</span>
-          {refreshing ? "Atualizando…" : "Atualizar"}
-        </button>
+        <div className="dashboard-page-context">
+          <p><DashboardIcon name="calendar" /> <span>{formatDashboardDate()}</span></p>
+          <p><DashboardIcon name="leaf" /> <span>Que tal fazer hoje um grande dia para o seu criatório?</span></p>
+        </div>
       </header>
 
       {dashboard.isPartial && (
@@ -403,17 +435,12 @@ function DashboardContent({
       )}
 
       <section aria-labelledby="titulo-indicadores" className="dashboard-section">
-        <div className="dashboard-section-heading">
-          <div>
-            <p className="eyebrow">Hoje no criatório</p>
-            <h2 id="titulo-indicadores">Indicadores principais</h2>
-          </div>
-        </div>
+        <h2 className="sr-only" id="titulo-indicadores">Indicadores principais</h2>
         <div className="dashboard-metrics-grid">
-          <DashboardMetric detail={formatCount(activeBirdCount, "ave ativa", "aves ativas")} icon="bird" label="Aves ativas" value={activeBirdCount} />
-          <DashboardMetric detail={formatCount(pendingIdentificationCount, "ave aguardando", "aves aguardando")} icon="alert" label="Identificação pendente" tone="orange" value={pendingIdentificationCount} />
-          <DashboardMetric detail={formatCount(activeReproductionCount, "registro ativo", "registros ativos")} icon="heart" label="Reproduções ativas" tone="rose" value={activeReproductionCount} />
-          <DashboardMetric detail={formatCount(dashboard.activities.length, "registro recente", "registros recentes")} icon="transfer" label="Atividades recentes" tone="blue" value={dashboard.activities.length} />
+          <DashboardMetric detail={formatCount(activeBirdCount, "ave ativa", "aves ativas")} icon="bird" label="Aves cadastradas" value={activeBirdCount} />
+          <DashboardMetric detail={formatCount(activeReproductionCount, "registro ativo", "registros ativos")} icon="heart" label="Reproduções registradas" tone="rose" value={activeReproductionCount} />
+          <DashboardMetric detail={formatCount(pendingIdentificationCount, "item pendente", "itens pendentes")} icon="alert" label="Pendências" tone="orange" value={pendingIdentificationCount} />
+          <DashboardMetric detail={formatCount(transferCount, "registro recente", "registros recentes")} icon="transfer" label="Transferências" tone="blue" value={transferCount} />
         </div>
       </section>
 
@@ -430,7 +457,6 @@ function DashboardContent({
 function DashboardScreen() {
   const { error, refresh, session, status } = useAuth();
   const [view, setView] = useState<DashboardView>({ kind: "loading" });
-  const [refreshing, setRefreshing] = useState(false);
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
 
@@ -497,13 +523,6 @@ function DashboardScreen() {
     void loadDashboard();
   }, [loadDashboard, status]);
 
-  async function handleRefresh() {
-    setRefreshing(true);
-    client.current?.clearCache();
-    await loadDashboard();
-    setRefreshing(false);
-  }
-
   if (status === "loading") return <AccessState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
   if (status === "error") return <AccessState heading="Não foi possível abrir o dashboard" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
   if (status === "forbidden") return <AccessState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar esta área."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
@@ -517,7 +536,7 @@ function DashboardScreen() {
   if (view.kind === "missing") return <AccessState actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar outro criatório" heading="Criatório indisponível" message="Não foi possível localizar o criatório selecionado. Escolha outro para continuar." onRetry={() => void loadDashboard()} />;
   if (!session) return null;
 
-  return <DashboardContent dashboard={view.dashboard} farm={view.farm} onRefresh={() => void handleRefresh()} refreshing={refreshing} sessionEmail={session.email} />;
+  return <DashboardContent dashboard={view.dashboard} farm={view.farm} sessionEmail={session.email} />;
 }
 
 export default function DashboardPage() {

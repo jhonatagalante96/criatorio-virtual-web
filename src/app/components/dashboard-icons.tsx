@@ -3,6 +3,7 @@ import React from "react";
 export type DashboardIconName =
   | "alert"
   | "bird"
+  | "calendar"
   | "crown"
   | "document"
   | "farm"
@@ -29,6 +30,10 @@ export function DashboardIcon({ name, className = "" }: Readonly<{ name: Dashboa
 
   if (name === "home") {
     return <svg {...props}><path d="m3.5 10.8 8.5-7.3 8.5 7.3" /><path d="M5.3 9.6v10.1h13.4V9.6M9.1 19.7v-5.4h5.8v5.4" /></svg>;
+  }
+
+  if (name === "calendar") {
+    return <svg {...props}><rect height="15" rx="2" width="17" x="3.5" y="5.5" /><path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17" /></svg>;
   }
 
   if (name === "bird") {
