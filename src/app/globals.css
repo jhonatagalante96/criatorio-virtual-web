@@ -1052,7 +1052,7 @@ h1, h2 { line-height: 1.08; }
 /* Authenticated application shell and dashboard */
 .authenticated-page { background: #f8fafb; min-height: 100svh; overflow-x: clip; padding: 0; }
 .authenticated-shell { background: #fff; display: grid; grid-template-columns: 16.5rem minmax(0, 1fr); min-height: 100svh; overflow: hidden; width: 100%; }
-.authenticated-sidebar { background: linear-gradient(180deg, rgb(14 45 37 / 97%), rgb(10 38 32 / 98%)), url("/assets/imagery/landscapes/mountain-landscape.png") center bottom / cover no-repeat; color: #fff; display: flex; flex-direction: column; min-width: 0; overflow: hidden; padding: 1.65rem 1rem 1.1rem; position: relative; }
+.authenticated-sidebar { background: linear-gradient(180deg, rgb(14 45 37 / 97%), rgb(10 38 32 / 98%)), url("/assets/imagery/landscapes/mountain-landscape.png") center bottom / cover no-repeat; color: #fff; display: flex; flex-direction: column; height: 100svh; min-width: 0; overflow: hidden; padding: 1.65rem 1rem 1.1rem; position: sticky; top: 0; }
 .authenticated-sidebar::after { background: linear-gradient(180deg, transparent 45%, rgb(7 29 25 / 70%) 100%); content: ""; inset: 0; pointer-events: none; position: absolute; }
 .authenticated-sidebar > * { position: relative; z-index: 1; }
 .authenticated-brand { display: inline-flex; text-decoration: none; }
