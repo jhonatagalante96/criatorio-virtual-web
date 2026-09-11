@@ -126,6 +126,7 @@ describe("BirdListPage", () => {
     expect(screen.getByText("Identificação pendente")).toBeTruthy();
     expect(screen.getByText("2 aves encontradas")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Cadastrar ave" }).getAttribute("href")).toBe("/plantel/aves/novo");
+    expect(screen.getByRole("link", { name: "Abrir ficha de Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a");
   });
 
   it("submits a search and keeps the query represented in the URL and API request", async () => {
