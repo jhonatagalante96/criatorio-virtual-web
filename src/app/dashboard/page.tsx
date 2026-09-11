@@ -245,7 +245,7 @@ function ActivitiesSection({ activities }: Readonly<{ activities: DashboardActiv
           <p className="eyebrow">Acompanhe de perto</p>
           <h2 id="titulo-atividades">Atividades recentes</h2>
         </div>
-        <a className="dashboard-section-action" href="/dashboard">Ver mais <span aria-hidden="true">›</span></a>
+        <span className="dashboard-section-action">Ver mais <span aria-hidden="true">›</span></span>
       </div>
       {activities.length === 0 ? (
         <div className="dashboard-empty-state">
