@@ -10,6 +10,7 @@ export type DashboardIconName =
   | "heart"
   | "home"
   | "leaf"
+  | "search"
   | "settings"
   | "transfer"
   | "trophy";
@@ -46,6 +47,10 @@ export function DashboardIcon({ name, className = "" }: Readonly<{ name: Dashboa
 
   if (name === "leaf") {
     return <svg {...props}><path d="M20.5 3.5C12.7 3.9 7.5 7.1 6.3 12.3c-.8 3.5 1.5 6.1 4.7 6.1 5.6 0 8.8-5.2 9.5-14.9Z" fill="currentColor" stroke="none" /><path d="M4 20c3.2-4.5 6.9-7.7 11.3-10.5" /></svg>;
+  }
+
+  if (name === "search") {
+    return <svg {...props}><circle cx="10.7" cy="10.7" r="6.2" /><path d="m15.4 15.4 5 5" /></svg>;
   }
 
   if (name === "transfer") {

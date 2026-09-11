@@ -69,7 +69,7 @@ function speciesResponse(): Response {
 
 async function openList(fetchMock: ReturnType<typeof vi.fn>, waitForBird = true) {
   render(<BirdListPage />);
-  await waitFor(() => expect(screen.getByRole("heading", { name: "Aves do criatório" })).toBeTruthy());
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Aves" })).toBeTruthy());
   if (waitForBird) {
     await waitFor(() => expect(screen.getByRole("article", { name: "Ave Aurora" })).toBeTruthy());
   } else {
@@ -120,7 +120,9 @@ describe("BirdListPage", () => {
 
     await openList(fetchMock);
 
-    expect(screen.getByText(/Plantel · Criatório Aurora/)).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Módulos disponíveis" })).toBeTruthy();
+    expect(within(screen.getByRole("navigation", { name: "Módulos disponíveis" })).getByRole("link", { name: "Aves" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("complementary", { name: "Resumo do plantel" }).textContent).toContain("aves cadastradas");
     expect(screen.getByRole("article", { name: "Ave Aurora" })).toBeTruthy();
     expect(screen.getByRole("article", { name: "Ave Sem Anilha" })).toBeTruthy();
     expect(screen.getByText("Identificação pendente")).toBeTruthy();
