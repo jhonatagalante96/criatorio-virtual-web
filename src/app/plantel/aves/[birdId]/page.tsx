@@ -417,7 +417,10 @@ function BirdDetailPage() {
         <span className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}>{statusLabel(bird.status)}</span>
       </header>
 
-      <div className="bird-detail-actions"><a className="auth-secondary-action" href="/plantel/aves">← Voltar ao plantel</a></div>
+      <div className="bird-detail-actions">
+        <a className="auth-secondary-action" href="/plantel/aves">← Voltar ao plantel</a>
+        <a className="auth-primary-action bird-detail-edit-action" href={`/plantel/aves/${encodeURIComponent(bird.birdId)}/editar`}>Editar dados</a>
+      </div>
 
       <section aria-labelledby="titulo-resumo-ave" className="bird-detail-summary">
         <div className="bird-detail-summary-mark" aria-hidden="true">{bird.identificationPending ? "!" : "#"}</div>
