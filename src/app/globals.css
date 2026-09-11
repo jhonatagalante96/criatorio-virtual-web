@@ -634,6 +634,7 @@ h1, h2 { line-height: 1.08; }
 .species-search-form label { color: #365f72; font-size: .72rem; font-weight: 800; }
 .species-search-control { position: relative; }
 .species-search-control input { background: #fff; border: 1px solid #cfdee4; border-radius: .5rem; color: #173b53; font-size: .82rem; min-height: 3rem; padding: .65rem 2.7rem .65rem .8rem; width: 100%; }
+.species-search-control input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
 .species-search-control input:focus { border-color: #1b9a61; box-shadow: 0 0 0 3px rgb(27 154 97 / 13%); outline: 0; }
 .species-search-control input::placeholder { color: #8199a6; }
 .species-search-clear { align-items: center; background: transparent; border: 0; color: #66808d; cursor: pointer; display: flex; font-size: 1.35rem; height: 2.4rem; justify-content: center; line-height: 1; position: absolute; right: .3rem; top: .3rem; width: 2.4rem; }

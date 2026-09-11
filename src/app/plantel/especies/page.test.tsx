@@ -82,6 +82,24 @@ describe("SpeciesSelectionPage", () => {
     expect(screen.queryByRole("radio", { name: /Sabiá-laranjeira/ })).toBeNull();
   });
 
+  it("clears the search with one accessible action", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(speciesResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SpeciesSelectionPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Selecione a espécie" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("Pesquisar espécie"), { target: { value: "sa" } });
+    await waitFor(() => expect(screen.getByRole("radio", { name: /Sabiá-laranjeira/ })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "Limpar busca" }));
+
+    expect((screen.getByLabelText("Pesquisar espécie") as HTMLInputElement).value).toBe("");
+    await waitFor(() => expect(screen.getByText("Comece sua busca")).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("recovers from a catalog failure with retry", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
