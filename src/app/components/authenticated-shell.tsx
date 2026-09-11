@@ -93,10 +93,6 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
           <a aria-label="Ir para o dashboard" className="authenticated-brand" href="/dashboard">
             <BrandLockup />
           </a>
-          <div className="authenticated-farm-context">
-            <span className="authenticated-context-label">Criatório selecionado</span>
-            <strong title={farmName}>{farmName}</strong>
-          </div>
           <nav aria-label="Módulos disponíveis" className="authenticated-desktop-nav">
             <NavigationLinks activeNav={activeNav} />
           </nav>
