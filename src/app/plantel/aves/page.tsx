@@ -383,27 +383,30 @@ function BirdFilterSelect({
 function BirdCard({ bird }: Readonly<{ bird: BirdListItem }>) {
   return (
     <li>
-      <article aria-label={`Ave ${bird.name}`} className="bird-list-card">
-        <div className="bird-list-card-heading">
-          <div>
-            <h2>{bird.name}</h2>
-            <p>{bird.speciesPopularName}</p>
-            <em>{bird.speciesScientificName}</em>
+      <a aria-label={`Abrir ficha de ${bird.name}`} className="bird-list-card-link" href={`/plantel/aves/${bird.birdId}`}>
+        <article aria-label={`Ave ${bird.name}`} className="bird-list-card">
+          <div className="bird-list-card-heading">
+            <div>
+              <h2>{bird.name}</h2>
+              <p>{bird.speciesPopularName}</p>
+              <em>{bird.speciesScientificName}</em>
+            </div>
+            <span className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}>{statusLabel(bird.status)}</span>
           </div>
-          <span className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}>{statusLabel(bird.status)}</span>
-        </div>
 
-        <dl className="bird-list-card-details">
-          <div><dt>Sexo</dt><dd>{sexLabel(bird.sex)}</dd></div>
-          <div><dt>Nascimento</dt><dd>{formatDate(bird.birthDate)}</dd></div>
-          <div><dt>Idade</dt><dd>{bird.ageInYears === null ? "Não informado" : `${bird.ageInYears} ${bird.ageInYears === 1 ? "ano" : "anos"}`}</dd></div>
-        </dl>
+          <dl className="bird-list-card-details">
+            <div><dt>Sexo</dt><dd>{sexLabel(bird.sex)}</dd></div>
+            <div><dt>Nascimento</dt><dd>{formatDate(bird.birthDate)}</dd></div>
+            <div><dt>Idade</dt><dd>{bird.ageInYears === null ? "Não informado" : `${bird.ageInYears} ${bird.ageInYears === 1 ? "ano" : "anos"}`}</dd></div>
+          </dl>
 
-        <div className={`bird-identification${bird.identificationPending ? " is-pending" : ""}`}>
-          <span aria-hidden="true">{bird.identificationPending ? "!" : "#"}</span>
-          <strong>{bird.identificationPending ? "Identificação pendente" : `Anilha ${bird.ringNumber}`}</strong>
-        </div>
-      </article>
+          <div className={`bird-identification${bird.identificationPending ? " is-pending" : ""}`}>
+            <span aria-hidden="true">{bird.identificationPending ? "!" : "#"}</span>
+            <strong>{bird.identificationPending ? "Identificação pendente" : `Anilha ${bird.ringNumber}`}</strong>
+          </div>
+          <span className="bird-list-card-action">Abrir ficha <span aria-hidden="true">→</span></span>
+        </article>
+      </a>
     </li>
   );
 }
