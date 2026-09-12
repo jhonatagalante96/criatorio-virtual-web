@@ -402,6 +402,7 @@ function LoginScreen() {
   const { error, refresh, status } = useAuth();
 
   if (status === "loading") return <AppLoadingState label="Carregando acesso" message="Um instante enquanto verificamos seu acesso." />;
+  if (status === "authenticating") return <AppLoadingState label="Entrando na conta" message="Um instante enquanto verificamos seus dados de acesso." />;
   if (status === "signing-out") return <AppLoadingState label="Encerrando sessão" message="Só um instante enquanto finalizamos seu acesso." />;
 
   const content = status === "error"
