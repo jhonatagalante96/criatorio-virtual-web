@@ -99,7 +99,7 @@ describe("BreedingFarmSelectionPage", () => {
     const [, request] = fetchMock.mock.calls[3];
     expect(new Headers(request.headers).get("x-xsrf-token")).toBe("csrf-token");
     expect(JSON.parse(request.body as string)).toEqual({ breedingFarmId: "farm-b" });
-    expect(screen.getByRole("link", { name: "Continuar" }).getAttribute("href")).toBe("/");
+    expect(screen.getByRole("link", { name: "Ir para o dashboard" }).getAttribute("href")).toBe("/dashboard");
   });
 
   it("preselects the only farm so the onboarding can be resumed directly", async () => {
