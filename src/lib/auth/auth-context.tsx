@@ -48,7 +48,7 @@ function messageForFailure(error: unknown, action: "login" | "logout" | "session
   return "Não foi possível restaurar sua sessão. Tente novamente.";
 }
 
-export function AuthProvider({ children }: Readonly<{ children: React.ReactNode }>) {
+function AuthProviderInner({ children }: Readonly<{ children: React.ReactNode }>) {
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
   const [error, setError] = useState<string | undefined>();
@@ -183,6 +183,12 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function AuthProvider({ children }: Readonly<{ children: React.ReactNode }>) {
+  const parentContext = useContext(AuthContext);
+  if (parentContext) return <>{children}</>;
+  return <AuthProviderInner>{children}</AuthProviderInner>;
 }
 
 export function useAuth(): AuthContextValue {

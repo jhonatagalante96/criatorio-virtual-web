@@ -15,8 +15,12 @@ export type DashboardIconName =
   | "leaf"
   | "search"
   | "settings"
+  | "shield"
   | "transfer"
-  | "trophy";
+  | "trophy"
+  | "user"
+  | "device"
+  | "logout";
 
 export function DashboardIcon({ name, className = "" }: Readonly<{ name: DashboardIconName; className?: string }>) {
   const props = {
@@ -90,6 +94,22 @@ export function DashboardIcon({ name, className = "" }: Readonly<{ name: Dashboa
 
   if (name === "settings") {
     return <svg {...props}><circle cx="12" cy="12" r="3.2" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.5 1.5-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-2.1v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-1.5-1.5.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H7v-2.1h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.5-1.5.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V5h2.1v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.5 1.5-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2V13h-.2a1.7 1.7 0 0 0-1.5 1Z" /></svg>;
+  }
+
+  if (name === "shield") {
+    return <svg {...props}><path d="M12 3.5 19 6v5.3c0 4.5-2.9 7.8-7 9.2-4.1-1.4-7-4.7-7-9.2V6l7-2.5Z" /><path d="m9 12 2 2 4-4" /></svg>;
+  }
+
+  if (name === "user") {
+    return <svg {...props}><circle cx="12" cy="8" r="3.3" /><path d="M5.2 20c.8-3.2 3.1-4.9 6.8-4.9s6 1.7 6.8 4.9" /></svg>;
+  }
+
+  if (name === "device") {
+    return <svg {...props}><rect height="16" rx="2" width="10" x="7" y="3" /><path d="M10.5 16.5h3M11 6h2" /></svg>;
+  }
+
+  if (name === "logout") {
+    return <svg {...props}><path d="M10 4H5.5a1.5 1.5 0 0 0-1.5 1.5v13A1.5 1.5 0 0 0 5.5 20H10" /><path d="M14 8l4 4-4 4M18 12H9" /></svg>;
   }
 
   return <svg {...props}><path d="m12 3 8.5 15H3.5z" /><path d="M12 8v4.6M12 16.1v.1" /></svg>;

@@ -2,13 +2,18 @@
 
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
-import { getApiUrl } from "../../lib/http/api-client";
+import { ApiClient, ApiError, createApiClient, getApiUrl } from "../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../components/brand";
 import { GoogleAuthenticationCallback, googleAuthenticationMessageType, googleAuthenticationWindowName } from "../components/google-authentication-callback";
 
 interface LoginFieldErrors {
   email?: string;
   password?: string;
+}
+
+interface BreedingFarmSelectionResponse {
+  breedingFarms: Array<{ breedingFarmId: string }>;
+  selectedBreedingFarmId: string | null;
 }
 
 function MailIcon() {
@@ -78,88 +83,63 @@ function AuthState({
   );
 }
 
-function SessionPanel({ logoutButtonRef, onRequestLogout }: Readonly<{ logoutButtonRef: React.RefObject<HTMLButtonElement | null>; onRequestLogout: () => void }>) {
-  const { error, session, status } = useAuth();
-  const headingRef = useRef<HTMLHeadingElement>(null);
+function LoginDestination() {
+  const { refresh, session } = useAuth();
+  const [message, setMessage] = useState("Só um instante enquanto abrimos o espaço certo para você.");
+  const [isRetrying, setIsRetrying] = useState(0);
+  const client = useRef<ApiClient | null>(null);
+  const hasRedirected = useRef(false);
+
+  if (!client.current) client.current = createApiClient(() => undefined);
 
   useEffect(() => {
-    headingRef.current?.focus();
-  }, []);
+    if (!session || hasRedirected.current) return;
+    let cancelled = false;
 
-  if (!session) return null;
+    async function openDestination() {
+      setMessage("Só um instante enquanto abrimos o espaço certo para você.");
+      try {
+        const selection = await client.current!.request<BreedingFarmSelectionResponse>("api/breeding-farms");
+        if (cancelled) return;
+        if (selection.breedingFarms.length === 0) {
+          hasRedirected.current = true;
+          window.location.assign("/onboarding/criatorio");
+          return;
+        }
+        if (selection.breedingFarms.length > 1 || !selection.selectedBreedingFarmId) {
+          hasRedirected.current = true;
+          window.location.assign("/onboarding/criatorio/selecionar");
+          return;
+        }
 
-  return (
-    <div className="session-card">
-      <BrandLockup stacked />
-      <p className="eyebrow">Sessão restaurada</p>
-      <h1 ref={headingRef} tabIndex={-1}>Olá, você está conectado.</h1>
-      <p className="lede">Sua conta está pronta para continuar no Criatório Virtual.</p>
-      <div className="session-identity">
-        <span className="session-identity-label">Conta conectada</span>
-        <strong>{session.email}</strong>
-        <span>{session.emailConfirmed ? "E-mail confirmado" : "E-mail ainda não confirmado"}</span>
-      </div>
-      {error && <p className="form-error" role="alert">{error}</p>}
-      <button className="auth-primary-action" disabled={status === "signing-out"} onClick={onRequestLogout} ref={logoutButtonRef} type="button">
-        {status === "signing-out" ? "Saindo…" : "Sair da conta"}
-      </button>
-      <a className="auth-primary-action onboarding-action" href="/dashboard">Abrir dashboard</a>
-      <a className="auth-secondary-action settings-action" href="/onboarding/criatorio/selecionar">Continuar onboarding</a>
-      <a className="auth-secondary-action settings-action" href="/configuracoes">Configurações da conta</a>
-      <a className="text-action" href="/">Voltar para a página inicial</a>
-    </div>
-  );
-}
-
-function LogoutDialog({ onCancel, onConfirm }: Readonly<{ onCancel: () => void; onConfirm: () => void }>) {
-  const dialogRef = useRef<HTMLElement>(null);
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const { status } = useAuth();
-
-  useEffect(() => {
-    headingRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onCancel();
-        return;
-      }
-
-      if (event.key !== "Tab") return;
-
-      const focusableElements = Array.from(dialogRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
-      const firstFocusableElement = focusableElements[0];
-      const lastFocusableElement = focusableElements[focusableElements.length - 1];
-      if (!firstFocusableElement || !lastFocusableElement) return;
-
-      if (event.shiftKey && document.activeElement === firstFocusableElement) {
-        event.preventDefault();
-        lastFocusableElement.focus();
-      } else if (!event.shiftKey && document.activeElement === lastFocusableElement) {
-        event.preventDefault();
-        firstFocusableElement.focus();
+        const onlyFarmId = selection.breedingFarms[0].breedingFarmId;
+        if (selection.selectedBreedingFarmId !== onlyFarmId) {
+          hasRedirected.current = true;
+          window.location.assign("/onboarding/criatorio/selecionar");
+          return;
+        }
+        if (cancelled) return;
+        hasRedirected.current = true;
+        window.location.assign("/dashboard");
+      } catch (error) {
+        if (cancelled) return;
+        if (error instanceof ApiError && error.status === 401) {
+          const result = await refresh();
+          if (result.ok) setIsRetrying((current) => current + 1);
+          else setMessage(result.error ?? "Sua sessão expirou. Entre novamente para continuar.");
+          return;
+        }
+        setMessage(error instanceof ApiError && error.status >= 500
+          ? "O serviço está indisponível no momento. Tente novamente em instantes."
+          : "Não foi possível continuar automaticamente. Tente novamente.");
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
+    void openDestination();
+    return () => { cancelled = true; };
+  }, [isRetrying, refresh, session]);
 
-  return (
-    <div className="logout-dialog-backdrop">
-      <section aria-labelledby="titulo-confirmacao-saida" aria-modal="true" className="logout-dialog" ref={dialogRef} role="dialog">
-        <h2 id="titulo-confirmacao-saida" ref={headingRef} tabIndex={-1}>Sair da sua conta?</h2>
-        <p>Sua sessão será encerrada neste dispositivo. Você poderá entrar novamente quando quiser.</p>
-        <div className="logout-dialog-actions">
-          <button className="auth-secondary-action" disabled={status === "signing-out"} onClick={onCancel} type="button">Cancelar</button>
-          <button className="auth-primary-action" disabled={status === "signing-out"} onClick={onConfirm} type="button">
-            {status === "signing-out" ? "Saindo…" : "Confirmar saída"}
-          </button>
-        </div>
-      </section>
-    </div>
-  );
+  return <AuthState heading="Abrindo seu espaço" message={message} onRetry={() => setIsRetrying((current) => current + 1)} />;
 }
 
 function LoginForm() {
@@ -403,15 +383,7 @@ function LoginForm() {
 }
 
 function LoginScreen() {
-  const { clearError, error, logout, refresh, session, status } = useAuth();
-  const logoutButtonRef = useRef<HTMLButtonElement>(null);
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-
-  async function confirmLogout() {
-    await logout();
-    setLogoutDialogOpen(false);
-    logoutButtonRef.current?.focus();
-  }
+  const { error, refresh, status } = useAuth();
 
   const content = status === "loading"
     ? <AuthState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />
@@ -419,8 +391,10 @@ function LoginScreen() {
       ? <AuthState heading="Não foi possível restaurar sua sessão" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />
       : status === "forbidden"
         ? <AuthState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar esta área."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />
-        : status === "authenticated" || status === "signing-out"
-          ? <SessionPanel logoutButtonRef={logoutButtonRef} onRequestLogout={() => setLogoutDialogOpen(true)} />
+        : status === "authenticated"
+          ? <LoginDestination />
+          : status === "signing-out"
+            ? <AuthState heading="Encerrando sua sessão" message="Só um instante enquanto finalizamos seu acesso." />
           : <LoginForm />;
 
   return (
@@ -434,12 +408,6 @@ function LoginScreen() {
           </div>
         </section>
       </div>
-      {logoutDialogOpen && session && (
-        <LogoutDialog
-          onCancel={() => { clearError(); setLogoutDialogOpen(false); logoutButtonRef.current?.focus(); }}
-          onConfirm={() => void confirmLogout()}
-        />
-      )}
     </main>
   );
 }

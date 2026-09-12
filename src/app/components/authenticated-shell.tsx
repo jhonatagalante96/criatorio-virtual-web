@@ -1,9 +1,10 @@
 import React from "react";
+import Link from "next/link";
 import { BrandLockup } from "./brand";
 import { DashboardIcon } from "./dashboard-icons";
 import type { DashboardIconName } from "./dashboard-icons";
 
-export type AuthenticatedNav = "dashboard" | "birds" | "farm";
+export type AuthenticatedNav = "dashboard" | "birds" | "farm" | "settings";
 
 interface AuthenticatedShellProps {
   activeNav: AuthenticatedNav;
@@ -67,9 +68,9 @@ function NavigationLinks({ activeNav, items = primaryNavigation }: Readonly<{ ac
         return (
           <li key={item.id}>
             {item.href ? (
-              <a aria-current={activeNav === item.id ? "page" : undefined} className={`authenticated-nav-link${activeNav === item.id ? " is-active" : ""}`} href={item.href}>
+              <Link aria-current={activeNav === item.id ? "page" : undefined} className={`authenticated-nav-link${activeNav === item.id ? " is-active" : ""}`} href={item.href}>
                 {content}
-              </a>
+              </Link>
             ) : (
               <span aria-disabled="true" className="authenticated-nav-link is-disabled" title="Módulo em desenvolvimento">
                 {content}
@@ -102,9 +103,9 @@ function AccountMenu({ displayName, email, farmName }: Readonly<{ displayName: s
           <span>{farmName}</span>
         </div>
         <nav aria-label="Ações da conta" className="authenticated-account-menu-links">
-          <a href="/configuracoes/criatorio">Meu Criatório</a>
-          <a href="/configuracoes">Configurações</a>
-          <a href="/login">Gerenciar sessão</a>
+          <Link href="/configuracoes/criatorio">Meu Criatório</Link>
+          <Link href="/configuracoes">Configurações</Link>
+          <Link href="/configuracoes?section=session">Gerenciar sessão</Link>
         </nav>
       </div>
     </details>
@@ -119,9 +120,9 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
       <a className="skip-link" href="#conteudo-autenticado">Pular para o conteúdo</a>
       <div className="authenticated-shell">
         <aside aria-label="Navegação principal" className="authenticated-sidebar">
-          <a aria-label="Ir para o dashboard" className="authenticated-brand" href="/dashboard">
+          <Link aria-label="Ir para o dashboard" className="authenticated-brand" href="/dashboard">
             <BrandLockup />
-          </a>
+          </Link>
           <nav aria-label="Módulos disponíveis" className="authenticated-desktop-nav">
             <NavigationLinks activeNav={activeNav} />
           </nav>
@@ -146,9 +147,9 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
             </div>
           </header>
           <header className="authenticated-mobile-header">
-            <a aria-label="Ir para o dashboard" className="authenticated-brand" href="/dashboard">
+            <Link aria-label="Ir para o dashboard" className="authenticated-brand" href="/dashboard">
               <BrandLockup />
-            </a>
+            </Link>
             <details className="authenticated-mobile-menu">
               <summary>
                 <img alt="" aria-hidden="true" src="/assets/icons/ui/menu.svg" />
@@ -168,7 +169,7 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
                 <div className="authenticated-mobile-account">
                   <strong>{displayName}</strong>
                   <small>{email}</small>
-                  <a href="/login">Gerenciar sessão</a>
+                  <Link href="/configuracoes?section=session">Gerenciar sessão</Link>
                 </div>
               </div>
             </details>
