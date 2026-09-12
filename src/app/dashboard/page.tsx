@@ -72,6 +72,10 @@ function countValue(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
 }
 
+function sameTenantId(left: string, right: string): boolean {
+  return left.trim().toLowerCase() === right.trim().toLowerCase();
+}
+
 function normalizeDashboard(value: unknown): DashboardData {
   const root = isRecord(value) ? value : {};
   const rawIndicators = isRecord(root.indicators) ? root.indicators : undefined;
@@ -459,14 +463,20 @@ function DashboardScreen() {
   const [view, setView] = useState<DashboardView>({ kind: "loading" });
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
+  const loadRequestId = useRef(0);
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
 
-  const loadDashboard = useCallback(async (recoverSession = true) => {
+  const loadDashboard = useCallback(async (recoverSession = true, staleRetry = 0) => {
+    const requestId = ++loadRequestId.current;
+    const isCurrentRequest = () => loadRequestId.current === requestId;
+
     setView({ kind: "loading" });
 
     try {
       const selection = await client.current!.request<BreedingFarmSelectionResponse>("api/breeding-farms");
+      if (!isCurrentRequest()) return;
+
       client.current!.setTenant(selection.selectedBreedingFarmId ?? undefined);
 
       if (selection.breedingFarms.length === 0) {
@@ -481,13 +491,23 @@ function DashboardScreen() {
       }
 
       const dashboard = normalizeDashboard(await client.current!.request<unknown>("api/dashboard"));
-      if (dashboard.breedingFarmId !== selectedFarm.breedingFarmId) {
+      if (!isCurrentRequest()) return;
+      if (!sameTenantId(dashboard.breedingFarmId, selectedFarm.breedingFarmId)) {
         throw new StaleTenantResponseError();
       }
       setView({ dashboard, farm: selectedFarm, kind: "ready" });
     } catch (requestError) {
+      if (!isCurrentRequest()) return;
+
+      if (requestError instanceof StaleTenantResponseError && staleRetry < 1) {
+        client.current!.clearCache();
+        await loadDashboard(false, staleRetry + 1);
+        return;
+      }
+
       if (requestError instanceof ApiError && requestError.status === 401 && recoverSession) {
         const refreshResult = await refresh();
+        if (!isCurrentRequest()) return;
         if (refreshResult.ok) await loadDashboard(false);
         return;
       }
@@ -521,6 +541,9 @@ function DashboardScreen() {
   useEffect(() => {
     if (status !== "authenticated") return;
     void loadDashboard();
+    return () => {
+      loadRequestId.current += 1;
+    };
   }, [loadDashboard, status]);
 
   if (status === "loading" || status === "authenticating" || status === "signing-out") {

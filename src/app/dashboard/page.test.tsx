@@ -270,9 +270,26 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Indicadores principais")).toBeNull();
   });
 
+  it("retries a transient tenant mismatch without showing the access error", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(dashboardResponse({ breedingFarmId: "foreign-farm" }))
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(dashboardResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DashboardPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    expect(screen.queryByRole("heading", { name: "Não foi possível carregar o dashboard" })).toBeNull();
+  });
+
   it("does not render a payload that belongs to another farm", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(dashboardResponse({ breedingFarmId: "foreign-farm" }))
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(dashboardResponse({ breedingFarmId: "foreign-farm" }));
     vi.stubGlobal("fetch", fetchMock);
