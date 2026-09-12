@@ -1248,6 +1248,29 @@ h1, h2 { line-height: 1.08; }
 .bird-status-history-notice > span { align-items: center; background: #dfe9ed; border-radius: 50%; color: #4f6b78; display: inline-flex; flex: 0 0 auto; font-size: .63rem; font-weight: 900; height: 1.1rem; justify-content: center; width: 1.1rem; }
 .bird-status-history-notice-deceased, .bird-status-history-notice-escaped { background: #fff8f6; border-color: #f0d4d0; color: #7e4843; }
 .bird-status-history-notice-deceased > span, .bird-status-history-notice-escaped > span { background: #f7d7d2; color: #a53a32; }
+.bird-eligibility-panel { background: #fffaf0; border: 1px solid #f0dfbd; border-radius: .65rem; display: grid; gap: .7rem; padding: .85rem 1rem; }
+.bird-eligibility-panel.is-eligible { background: #f2faf5; border-color: #cfe8d8; }
+.bird-eligibility-heading { align-items: center; display: flex; gap: .8rem; justify-content: space-between; }
+.bird-eligibility-heading .eyebrow { margin: 0 0 .12rem; }
+.bird-eligibility-heading h2 { color: var(--ink); font-size: .92rem; }
+.bird-eligibility-badge { background: #f5dcae; border-radius: 999px; color: #79521e; font-size: .6rem; font-weight: 800; padding: .32rem .55rem; white-space: nowrap; }
+.bird-eligibility-badge.is-eligible { background: #d2f2d0; color: #137541; }
+.bird-eligibility-panel .bird-detail-substate { min-height: 2.2rem; }
+.bird-eligibility-summary { align-items: flex-start; display: flex; gap: .55rem; }
+.bird-eligibility-mark, .bird-eligibility-issue-mark { align-items: center; border-radius: 50%; display: inline-flex; flex: 0 0 auto; font-size: .68rem; font-weight: 900; height: 1.25rem; justify-content: center; width: 1.25rem; }
+.bird-eligibility-mark { background: #ccebd2; color: #167145; }
+.bird-eligibility-summary strong, .bird-eligibility-issues strong { color: var(--ink); font-size: .7rem; }
+.bird-eligibility-summary p, .bird-eligibility-issues p, .bird-eligibility-intro { color: #6a6b58; font-size: .65rem; line-height: 1.45; margin: .16rem 0 0; }
+.bird-eligibility-intro { margin: 0; }
+.bird-eligibility-issues { display: grid; gap: .55rem; list-style: none; margin: 0; padding: 0; }
+.bird-eligibility-issues li { align-items: flex-start; display: flex; gap: .55rem; }
+.bird-eligibility-issue-mark { background: #f5dcae; color: #79521e; }
+.bird-eligibility-action { color: #075bb3; display: inline-block; font-size: .63rem; font-weight: 800; margin-top: .35rem; text-decoration: none; }
+.bird-eligibility-action:hover, .bird-eligibility-action:focus-visible { color: #145f4f; text-decoration: underline; }
+.bird-eligibility-feedback { color: #79521e; font-size: .67rem; line-height: 1.45; }
+.bird-eligibility-feedback strong { color: #68430e; display: block; font-size: .7rem; }
+.bird-eligibility-feedback p { margin: .2rem 0 .35rem; }
+.bird-eligibility-feedback .text-action { background: transparent; border: 0; cursor: pointer; font-size: .65rem; padding: .15rem 0; }
 .bird-detail-tabs { border-bottom: 1px solid #dce7e9; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
 .bird-detail-tabs ul { display: flex; gap: 1rem; list-style: none; margin: 0; min-width: max-content; padding: 0 .15rem; }
 .bird-detail-tabs li { display: flex; }
@@ -1310,6 +1333,9 @@ h1, h2 { line-height: 1.08; }
   .bird-detail-profile-actions { justify-content: flex-start; }
   .bird-detail-profile-actions > a, .bird-detail-profile-actions > button { min-height: 2.45rem; }
   .bird-detail-profile-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bird-eligibility-panel { padding: .8rem .85rem; }
+  .bird-eligibility-heading { align-items: flex-start; }
+  .bird-eligibility-badge { margin-top: .05rem; }
   .bird-detail-side-column { grid-template-columns: 1fr; }
   .bird-detail-side-column .bird-detail-quick-actions { grid-column: auto; }
   .bird-detail-activities li { grid-template-columns: 1.5rem minmax(0, 1fr) minmax(6rem, auto); }
