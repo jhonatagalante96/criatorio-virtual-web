@@ -951,6 +951,41 @@ h1, h2 { line-height: 1.08; }
 .bird-row-action.is-danger { color: #c92e35; }
 .bird-row-action.is-danger:disabled { color: #c92e35; }
 .bird-row-action-divider { background: #edf1f3; height: 1px; margin: .25rem .45rem; }
+.bird-status-dialog-backdrop { align-items: center; background: rgb(17 43 55 / 46%); display: flex; inset: 0; overflow-y: auto; padding: 1rem; position: fixed; z-index: 30; }
+.bird-status-dialog { background: #fff; border: 1px solid #d6e3e2; border-radius: .85rem; box-shadow: 0 1.2rem 3rem rgb(17 43 55 / 24%); margin: auto; max-height: calc(100svh - 2rem); max-width: 35rem; overflow-y: auto; padding: 1.15rem; width: 100%; }
+.bird-status-dialog-heading { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; }
+.bird-status-dialog-heading .eyebrow { margin: 0 0 .2rem; }
+.bird-status-dialog-heading h2 { color: var(--ink); font-size: 1.18rem; letter-spacing: -.035em; margin: 0; overflow-wrap: anywhere; }
+.bird-status-dialog-close { align-items: center; background: transparent; border: 0; border-radius: .35rem; color: #64768a; cursor: pointer; display: flex; font-size: 1.45rem; height: 2rem; justify-content: center; line-height: 1; width: 2rem; }
+.bird-status-dialog-close:hover, .bird-status-dialog-close:focus-visible { background: #eef6f2; color: #145f4f; outline: 0; }
+.bird-status-dialog-form { display: grid; gap: .9rem; margin-top: 1rem; }
+.bird-status-dialog-intro { color: #5f7188; font-size: .7rem; line-height: 1.5; margin: 0; }
+.bird-status-options { border: 0; display: grid; gap: .45rem; margin: 0; padding: 0; }
+.bird-status-options legend { color: var(--ink); font-size: .72rem; font-weight: 800; margin-bottom: .15rem; padding: 0; }
+.bird-status-option { align-items: flex-start; background: #fbfdfc; border: 1px solid #dce9e4; border-radius: .55rem; cursor: pointer; display: flex; gap: .6rem; padding: .65rem .7rem; }
+.bird-status-option:hover, .bird-status-option:has(input:focus-visible) { border-color: #76b991; }
+.bird-status-option.is-selected { background: #f0f9f3; border-color: #72b98d; box-shadow: 0 0 0 1px rgb(114 185 141 / 16%); }
+.bird-status-option input { accent-color: #1e7a4f; flex: 0 0 auto; margin: .15rem 0 0; }
+.bird-status-option span { display: grid; gap: .16rem; }
+.bird-status-option strong { color: var(--ink); font-size: .72rem; }
+.bird-status-option small { color: #6b7d8f; font-size: .63rem; line-height: 1.4; }
+.bird-status-dialog-field { display: grid; gap: .28rem; }
+.bird-status-dialog-field label { color: var(--ink); font-size: .7rem; font-weight: 800; }
+.bird-status-dialog-field label span { color: #78919a; font-size: .62rem; font-weight: 500; }
+.bird-status-dialog-field input, .bird-status-dialog-field textarea { background: #fff; border: 1px solid #cfdee4; border-radius: .42rem; color: var(--ink); font: inherit; font-size: .72rem; min-height: 2.55rem; padding: .55rem .65rem; width: 100%; }
+.bird-status-dialog-field textarea { min-height: 5rem; resize: vertical; }
+.bird-status-dialog-field input:focus, .bird-status-dialog-field textarea:focus { border-color: #1b9a61; box-shadow: 0 0 0 3px rgb(27 154 97 / 13%); outline: 0; }
+.bird-status-dialog-field input[aria-invalid="true"], .bird-status-dialog-field textarea[aria-invalid="true"] { border-color: #d45a51; }
+.bird-status-confirmation { align-items: flex-start; color: #53667f; display: flex; font-size: .68rem; gap: .55rem; line-height: 1.45; }
+.bird-status-confirmation input { accent-color: #1e7a4f; flex: 0 0 auto; margin-top: .15rem; }
+.bird-status-confirmation strong { color: var(--ink); }
+.bird-status-dialog-actions { display: flex; flex-wrap: wrap; gap: .55rem; justify-content: flex-end; }
+.bird-status-dialog-actions .auth-primary-action, .bird-status-dialog-actions .auth-secondary-action { min-height: 2.35rem; padding: .5rem .75rem; }
+.bird-status-dialog-success { align-items: flex-start; display: grid; gap: .7rem; grid-template-columns: 2.2rem minmax(0, 1fr); margin-top: 1rem; }
+.bird-status-dialog-success-mark { align-items: center; background: #d8f3ca; border-radius: 50%; color: #17804b; display: flex; font-size: 1.1rem; font-weight: 900; height: 2.2rem; justify-content: center; width: 2.2rem; }
+.bird-status-dialog-success h3 { color: var(--ink); font-size: .9rem; margin: .12rem 0 .25rem; }
+.bird-status-dialog-success p { color: #5f7188; font-size: .7rem; line-height: 1.45; margin: 0 0 .3rem; }
+.bird-status-dialog-success .auth-primary-action { grid-column: 1 / -1; justify-self: end; min-height: 2.35rem; padding: .5rem .85rem; }
 .bird-list-state { border: 0; border-radius: 0; min-height: 14rem; }
 .bird-pagination { border-top: 1px solid #edf1f3; justify-content: flex-end; margin: 0; padding: .75rem 1.15rem; }
 
@@ -1192,6 +1227,10 @@ h1, h2 { line-height: 1.08; }
 .bird-detail-outline-action { background: #fff; border: 1px solid #cfdde2; color: #173b53; }
 .bird-detail-outline-action:hover, .bird-detail-outline-action:focus-visible { border-color: #1b9a61; color: #145f4f; }
 .bird-detail-profile-actions > button { background: #1e7a4f; border: 1px solid #1e7a4f; color: #fff; cursor: not-allowed; opacity: .62; }
+.bird-detail-profile-actions > .bird-detail-status-action { cursor: pointer; opacity: 1; }
+.bird-detail-status-action { align-items: center; background: #fff7f5; border: 1px solid #f0c9c4; border-radius: .4rem; color: #a53a32; cursor: pointer; display: inline-flex; font: inherit; font-size: .64rem; font-weight: 800; gap: .3rem; min-height: 2.15rem; padding: .42rem .65rem; }
+.bird-detail-status-action:hover, .bird-detail-status-action:focus-visible { background: #fff0ed; border-color: #d98178; outline: 0; }
+.bird-detail-status-action .dashboard-icon { height: .9rem; width: .9rem; }
 .bird-detail-action-menu { position: relative; }
 .bird-detail-action-menu > summary { align-items: center; background: #fff; border: 1px solid #cfdde2; border-radius: .4rem; color: #173b53; cursor: pointer; display: flex; font-size: 1.05rem; height: 2.15rem; justify-content: center; letter-spacing: .08em; list-style: none; width: 2.15rem; }
 .bird-detail-action-menu > summary::-webkit-details-marker { display: none; }
@@ -1205,6 +1244,10 @@ h1, h2 { line-height: 1.08; }
 .bird-detail-profile-meta div { min-width: 0; }
 .bird-detail-profile-meta dt { color: #78919a; font-size: .57rem; }
 .bird-detail-profile-meta dd { color: #365f72; font-size: .64rem; font-weight: 800; margin: .18rem 0 0; overflow-wrap: anywhere; }
+.bird-status-history-notice { align-items: flex-start; background: #f7fafb; border: 1px solid #dce7e9; border-radius: .55rem; color: #53667f; display: flex; font-size: .68rem; gap: .5rem; line-height: 1.45; margin: 0; padding: .65rem .75rem; }
+.bird-status-history-notice > span { align-items: center; background: #dfe9ed; border-radius: 50%; color: #4f6b78; display: inline-flex; flex: 0 0 auto; font-size: .63rem; font-weight: 900; height: 1.1rem; justify-content: center; width: 1.1rem; }
+.bird-status-history-notice-deceased, .bird-status-history-notice-escaped { background: #fff8f6; border-color: #f0d4d0; color: #7e4843; }
+.bird-status-history-notice-deceased > span, .bird-status-history-notice-escaped > span { background: #f7d7d2; color: #a53a32; }
 .bird-detail-tabs { border-bottom: 1px solid #dce7e9; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
 .bird-detail-tabs ul { display: flex; gap: 1rem; list-style: none; margin: 0; min-width: max-content; padding: 0 .15rem; }
 .bird-detail-tabs li { display: flex; }
@@ -1265,6 +1308,7 @@ h1, h2 { line-height: 1.08; }
   .bird-detail-profile-content { padding: .9rem; }
   .bird-detail-profile-heading { flex-direction: column; gap: .75rem; }
   .bird-detail-profile-actions { justify-content: flex-start; }
+  .bird-detail-profile-actions > a, .bird-detail-profile-actions > button { min-height: 2.45rem; }
   .bird-detail-profile-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bird-detail-side-column { grid-template-columns: 1fr; }
   .bird-detail-side-column .bird-detail-quick-actions { grid-column: auto; }

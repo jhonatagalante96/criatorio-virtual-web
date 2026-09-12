@@ -120,6 +120,38 @@ describe("BirdDetailPage", () => {
     expect(String(detailRequest[0])).toContain("/api/birds/bird-a");
   });
 
+  it("keeps a terminal bird available for historical consultation", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse({ deathDate: "2025-02-01", status: "Deceased" }))
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+
+    expect(screen.getByRole("status").textContent).toContain("marcada como falecida");
+    expect(screen.getByRole("row", { name: /Falecimento/ }).textContent).toContain("01/02/2025");
+    const actionSummary = document.querySelector(".bird-detail-action-menu > summary");
+    expect(actionSummary).not.toBeNull();
+    fireEvent.click(actionSummary as HTMLElement);
+    expect(screen.queryByRole("button", { name: "Inativar" })).toBeNull();
+  });
+
+  it("shows the transfer-pending block while keeping the bird readable", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse({ status: "Transferred" }))
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+
+    expect(screen.getByRole("status").textContent).toContain("transferência pendente");
+    expect(screen.getByRole("heading", { name: "Aurora" })).toBeTruthy();
+  });
+
   it("renders external parents and honest empty profile resources", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())

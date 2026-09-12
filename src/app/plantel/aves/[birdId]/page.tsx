@@ -8,6 +8,7 @@ import { AppLoadingState } from "../../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../../components/brand";
 import { AuthenticatedShell } from "../../../components/authenticated-shell";
 import { DashboardIcon } from "../../../components/dashboard-icons";
+import { BirdStatusAction, type BirdStatus, type BirdStatusResponse } from "../bird-status-action";
 
 interface BreedingFarmSummary {
   breedingFarmId: string;
@@ -22,7 +23,6 @@ interface BreedingFarmSelectionResponse {
 }
 
 type BirdSex = "Female" | "Male" | "Unknown";
-type BirdStatus = "Active" | "Archived" | "Transferred" | "Deceased" | "Escaped";
 type DetailState = "error" | "loading" | "ready";
 type FarmState = "blocked" | "error" | "loading" | "ready";
 type GenealogyState = "error" | "loading" | "ready";
@@ -104,6 +104,14 @@ function sexLabel(sex: BirdSex | null): string {
 
 function statusLabel(status: BirdStatus | null): string {
   return status ? statusLabels[status] : "Não informado";
+}
+
+function statusNotice(status: BirdStatus): string | undefined {
+  if (status === "Archived") return "Esta ave está arquivada e permanece disponível para consulta histórica.";
+  if (status === "Deceased") return "Esta ave está marcada como falecida. A ficha permanece disponível para consulta histórica.";
+  if (status === "Escaped") return "Esta ave está marcada como escapada. A ficha permanece disponível para consulta histórica.";
+  if (status === "Transferred") return "Esta ave está com uma transferência pendente. Alterações cadastrais e de situação ficam bloqueadas até o fluxo terminar.";
+  return undefined;
 }
 
 function formatDate(value: string | null): string {
@@ -321,7 +329,19 @@ function BirdDetailTabs() {
   );
 }
 
-function BirdDetailActionMenu({ birdId }: Readonly<{ birdId: string }>) {
+function BirdDetailActionMenu({
+  bird,
+  client,
+  onSessionExpired,
+  onStatusChanged,
+  prepareStatusMutation
+}: Readonly<{
+  bird: BirdDetailsResponse;
+  client: ApiClient;
+  onSessionExpired: () => Promise<unknown> | void;
+  onStatusChanged: (bird: BirdStatusResponse) => void;
+  prepareStatusMutation: () => Promise<void>;
+}>) {
   const menuRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
@@ -339,7 +359,20 @@ function BirdDetailActionMenu({ birdId }: Readonly<{ birdId: string }>) {
     <details className="bird-detail-action-menu" ref={menuRef}>
       <summary aria-label="Abrir mais ações">⋮</summary>
       <div className="bird-detail-action-menu-panel">
-        <Link href={`/plantel/aves/${encodeURIComponent(birdId)}/editar`}>Editar dados</Link>
+        <Link href={`/plantel/aves/${encodeURIComponent(bird.birdId)}/editar`}>Editar dados</Link>
+        {bird.status === "Active" && (
+          <BirdStatusAction
+            birdBirthDate={bird.birthDate}
+            birdId={bird.birdId}
+            birdName={bird.name}
+            client={client}
+            label="Inativar"
+            onSessionExpired={onSessionExpired}
+            onUpdated={onStatusChanged}
+            prepareMutation={prepareStatusMutation}
+            variant="detail"
+          />
+        )}
         <button disabled title="Módulo em desenvolvimento" type="button">Iniciar transferência</button>
         <button disabled title="Módulo em desenvolvimento" type="button">Registrar competição</button>
         <button disabled title="Módulo em desenvolvimento" type="button">Baixar ficha (PDF)</button>
@@ -452,9 +485,27 @@ function BirdDetailPage() {
   const [genealogyState, setGenealogyState] = useState<GenealogyState>("loading");
   const [reloadVersion, setReloadVersion] = useState(0);
   const client = useRef<ApiClient | null>(null);
+  const csrfToken = useRef<string | undefined>(undefined);
   const requestVersion = useRef(0);
 
-  if (!client.current) client.current = createApiClient();
+  if (!client.current) client.current = createApiClient(() => csrfToken.current);
+
+  const prepareStatusMutation = useCallback(async () => {
+    if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
+  }, []);
+
+  const handleStatusChanged = useCallback((updatedBird: BirdStatusResponse) => {
+    client.current?.clearCache();
+    setBird((current) => current
+      ? {
+        ...current,
+        deathDate: updatedBird.deathDate,
+        notes: updatedBird.notes ?? current.notes,
+        status: updatedBird.status,
+        updatedAtUtc: updatedBird.updatedAtUtc ?? current.updatedAtUtc
+      }
+      : current);
+  }, []);
 
   const loadData = useCallback(async (recoverSession = true) => {
     const nextRequestVersion = requestVersion.current + 1;
@@ -577,7 +628,7 @@ function BirdDetailPage() {
             <div className="bird-detail-profile-actions">
               <Link className="bird-detail-outline-action" href={`/plantel/aves/${encodeURIComponent(bird.birdId)}/editar`}><DashboardIcon name="edit" />Editar</Link>
               <button disabled title="Módulo em desenvolvimento" type="button"><DashboardIcon name="heart" />Registrar reprodução</button>
-              <BirdDetailActionMenu birdId={bird.birdId} />
+              <BirdDetailActionMenu bird={bird} client={client.current!} onSessionExpired={refresh} onStatusChanged={handleStatusChanged} prepareStatusMutation={prepareStatusMutation} />
             </div>
           </div>
 
@@ -589,6 +640,8 @@ function BirdDetailPage() {
           </dl>
         </div>
       </section>
+
+      {statusNotice(bird.status) && <p className={`bird-status-history-notice bird-status-history-notice-${bird.status.toLowerCase()}`} role="status"><span aria-hidden="true">i</span>{statusNotice(bird.status)}</p>}
 
       <BirdDetailTabs />
 
@@ -603,6 +656,7 @@ function BirdDetailPage() {
                 <tr><th scope="row">Espécie/Raça</th><td>{bird.speciesPopularName}</td></tr>
                 <tr><th scope="row">Cor</th><td>Não informado</td></tr>
                 <tr><th scope="row">Nascimento</th><td>{formatDate(bird.birthDate)}{bird.ageInYears !== null ? ` (${bird.ageInYears} ${bird.ageInYears === 1 ? "ano" : "anos"})` : ""}</td></tr>
+                {bird.deathDate && <tr><th scope="row">Falecimento</th><td>{formatDate(bird.deathDate)}</td></tr>}
                 <tr><th scope="row">Anilha</th><td>{bird.ringNumber ?? "Não informada"}</td></tr>
                 <tr><th scope="row">Situação</th><td><span className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}><span aria-hidden="true" />{statusLabel(bird.status)}</span></td></tr>
                 <tr><th scope="row">Criatório</th><td>{farmName ?? "Não informado"}</td></tr>
