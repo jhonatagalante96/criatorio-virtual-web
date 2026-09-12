@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getLastKnownShellIdentity, isKnownFarmName, rememberShellIdentity } from "../../lib/auth/shell-identity";
 import { BrandLockup } from "./brand";
 import { DashboardIcon } from "./dashboard-icons";
+import { PwaInstallPrompt } from "./pwa-install-prompt";
 import type { DashboardIconName } from "./dashboard-icons";
 
 export type AuthenticatedNav = "dashboard" | "birds" | "farm" | "settings";
@@ -145,6 +146,7 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
         </aside>
 
         <div className="authenticated-main">
+          <PwaInstallPrompt />
           <header className="authenticated-topbar">
             <div aria-label="Busca no sistema" className="authenticated-search" role="search">
               <span aria-hidden="true">⌕</span>
