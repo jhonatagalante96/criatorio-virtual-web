@@ -106,7 +106,9 @@ describe("BirdDetailPage", () => {
 
     await openDetail(fetchMock);
 
-    expect(screen.getByText(/Plantel · Criatório Aurora/)).toBeTruthy();
+    expect(screen.getByText(/Ficha privada · Criatório Aurora/)).toBeTruthy();
+    expect(screen.getByLabelText("Navegação principal")).toBeTruthy();
+    expect(screen.getByLabelText("Foto da ave não cadastrada")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Dados cadastrais" })).toBeTruthy();
     expect(screen.getByText("Ave acompanhada desde o primeiro cadastro.")).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /Pai Azul/ }).some((link) => link.getAttribute("href") === "/plantel/aves/father-a")).toBe(true);
