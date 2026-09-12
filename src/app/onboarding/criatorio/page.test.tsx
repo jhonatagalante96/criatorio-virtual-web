@@ -147,6 +147,21 @@ describe("BreedingFarmOnboardingPage", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps address fields locked when the CEP service is unavailable", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BreedingFarmOnboardingPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Vamos criar seu criatório" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "01001-000" } });
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Não foi possível consultar o CEP agora"));
+    expect((screen.getByLabelText("Rua") as HTMLInputElement).disabled).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("locks the form while the creation request is pending", async () => {
     let resolveCreate: (response: Response) => void = () => undefined;
     const pendingCreate = new Promise<Response>((resolve) => {

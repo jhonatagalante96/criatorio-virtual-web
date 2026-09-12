@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { lookupPostalCode, normalizePostalCode, PostalCodeAddress, PostalCodeNotFoundError } from "../../lib/postal-code";
+import { lookupPostalCode, normalizePostalCode, PostalCodeNotFoundError } from "../../lib/postal-code";
+import type { PostalCodeAddress } from "../../lib/postal-code";
 
 export type PostalCodeLookupState = "error" | "idle" | "loading" | "not-found" | "ready";
 
