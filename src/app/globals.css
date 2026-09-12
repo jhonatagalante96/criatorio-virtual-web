@@ -1005,6 +1005,83 @@ h1, h2 { line-height: 1.08; }
   .bird-detail-section { padding: .85rem; }
 }
 
+/* Authenticated bird detail */
+
+.bird-detail-view { display: grid; gap: 1rem; min-width: 0; }
+.bird-detail-view h1 { color: var(--ink); font-size: clamp(2rem, 3.2vw, 2.55rem); letter-spacing: -.065em; line-height: 1; margin: 0; }
+.bird-detail-view h2 { color: var(--ink); }
+.bird-detail-view h3 { color: var(--ink); font-size: .78rem; margin: 1rem 0 .6rem; }
+.bird-detail-breadcrumb { align-items: center; color: #78919a; display: flex; font-size: .7rem; gap: .55rem; margin: 0; }
+.bird-detail-breadcrumb a { color: #617086; font-weight: 600; text-decoration: none; }
+.bird-detail-breadcrumb a:hover, .bird-detail-breadcrumb a:focus-visible { color: var(--green-dark); text-decoration: underline; }
+.bird-detail-breadcrumb span:last-child { color: var(--ink); font-weight: 800; }
+.bird-detail-page-header { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; }
+.bird-detail-page-header > div:first-child { min-width: 0; }
+.bird-detail-page-header .eyebrow { margin: 0 0 .35rem; }
+.bird-detail-page-header .lede { color: #5b6d86; font-size: .95rem; margin: .3rem 0 0 !important; max-width: none; }
+.bird-detail-page-header-actions { align-items: flex-end; display: flex; flex-wrap: wrap; gap: .55rem; justify-content: flex-end; }
+.bird-detail-page-header-actions .bird-status-badge { margin: .2rem 0 0; }
+.bird-detail-page-header-actions .bird-detail-edit-action { min-height: 2.45rem; padding: .5rem .85rem; }
+.bird-detail-back-link { color: #1769a0; font-size: .7rem; font-weight: 800; text-decoration: none; }
+.bird-detail-back-link:hover, .bird-detail-back-link:focus-visible { text-decoration: underline; }
+.bird-detail-hero { align-items: stretch; background: linear-gradient(135deg, #fff, #f4fbf8); border: 1px solid #d9e9e6; border-radius: .8rem; box-shadow: 0 .4rem 1.2rem rgb(6 58 86 / 5%); display: grid; gap: 1rem; grid-template-columns: 8rem minmax(0, 1fr); padding: 1rem; }
+.bird-detail-photo { align-items: center; background: linear-gradient(145deg, #e8f7dd, #f7fbef); border: 1px dashed #acd4c0; border-radius: .65rem; color: var(--green-dark); display: flex; flex-direction: column; gap: .35rem; justify-content: center; min-height: 8rem; text-align: center; }
+.bird-detail-photo .dashboard-icon { height: 3.2rem; width: 3.2rem; }
+.bird-detail-photo span { color: #557d6f; font-size: .6rem; }
+.bird-detail-hero-content { min-width: 0; }
+.bird-detail-hero-species { color: #53667f; font-size: .8rem; margin: .2rem 0 .75rem; }
+.bird-detail-hero-species em { color: #78919a; }
+.bird-detail-hero-meta { display: grid; gap: .55rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: .8rem; }
+.bird-detail-hero-meta span { border-top: 1px solid #e3efeb; display: grid; gap: .1rem; padding-top: .45rem; }
+.bird-detail-hero-meta small { color: #78919a; font-size: .6rem; }
+.bird-detail-hero-meta strong { color: #365f72; font-size: .7rem; overflow-wrap: anywhere; }
+.bird-detail-view .bird-detail-hero .bird-detail-summary { margin: 0; padding: .7rem .8rem; }
+.bird-detail-view .bird-detail-summary { border: 1px solid #cce9da; }
+.bird-detail-view .bird-detail-grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1.1fr) minmax(17rem, .9fr); }
+.bird-detail-view .bird-detail-grid > .bird-detail-section:nth-child(n + 3) { grid-column: 1 / -1; }
+.bird-detail-view .bird-detail-section { background: #fff; border: 1px solid #e0e9ed; border-radius: .8rem; box-shadow: 0 .35rem 1rem rgb(6 58 86 / 4%); min-width: 0; padding: 1rem; }
+.bird-detail-view .bird-detail-section-heading { margin-bottom: .85rem; }
+.bird-detail-view .bird-detail-section h2 { font-size: 1.05rem; letter-spacing: -.025em; }
+.bird-detail-view .bird-detail-fields { gap: .7rem; }
+.bird-detail-view .bird-detail-help { font-size: .66rem; }
+.bird-detail-view .bird-related-sections { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bird-detail-view .bird-detail-page-state { padding: 1rem 0; }
+.bird-detail-view .bird-detail-page-state .bird-detail-substate { background: #fff; border: 1px solid #e0e9ed; border-radius: .8rem; justify-content: center; min-height: 18rem; }
+.bird-detail-state { align-items: flex-start; background: #fff; border: 1px solid #e0e9ed; border-radius: .8rem; display: flex; flex-direction: column; justify-content: center; min-height: 20rem; padding: 2rem; }
+.bird-detail-state h1 { font-size: clamp(1.8rem, 3vw, 2.35rem); }
+.bird-detail-state p { color: #5b6d86; line-height: 1.5; margin: .6rem 0 1.1rem; max-width: 42ch; }
+.bird-detail-state-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .6rem; }
+.bird-detail-state-actions .auth-primary-action, .bird-detail-state-actions .auth-secondary-action { min-height: 2.4rem; padding: .5rem .8rem; }
+.bird-detail-view > .auth-footer { max-width: 46ch; }
+
+@media (max-width: 62rem) {
+  .bird-detail-view .bird-detail-grid { grid-template-columns: 1fr; }
+  .bird-detail-view .bird-detail-grid > .bird-detail-section:nth-child(n + 3) { grid-column: auto; }
+}
+
+@media (max-width: 47.99rem) {
+  .bird-detail-view { gap: .85rem; }
+  .bird-detail-view h1 { font-size: clamp(1.85rem, 9vw, 2.35rem); }
+  .bird-detail-page-header { flex-direction: column; gap: .65rem; }
+  .bird-detail-page-header-actions { align-items: center; justify-content: flex-start; }
+  .bird-detail-page-header-actions .bird-status-badge { margin: 0; }
+  .bird-detail-hero { gap: .75rem; grid-template-columns: 5.5rem minmax(0, 1fr); padding: .75rem; }
+  .bird-detail-photo { min-height: 6.5rem; }
+  .bird-detail-photo .dashboard-icon { height: 2.4rem; width: 2.4rem; }
+  .bird-detail-hero-meta { gap: .4rem; }
+  .bird-detail-hero-meta strong { font-size: .65rem; }
+  .bird-detail-view .bird-detail-section { padding: .85rem; }
+  .bird-detail-view .bird-related-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bird-detail-state { min-height: 16rem; padding: 1.3rem; }
+}
+
+@media (max-width: 30rem) {
+  .bird-detail-hero { grid-template-columns: 1fr; }
+  .bird-detail-photo { min-height: 5rem; }
+  .bird-detail-hero-meta { grid-template-columns: 1fr 1fr; }
+  .bird-detail-view .bird-related-sections { grid-template-columns: 1fr; }
+}
+
 /* Bird registration */
 
 .bird-registration-shell { max-width: 68rem; min-height: min(56rem, calc(100svh - 4rem)); }

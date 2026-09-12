@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AuthProvider, useAuth } from "../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../../../components/brand";
+import { AuthenticatedShell } from "../../../components/authenticated-shell";
+import { DashboardIcon } from "../../../components/dashboard-icons";
 
 interface BreedingFarmSummary {
   breedingFarmId: string;
@@ -161,19 +163,54 @@ function DetailStateView({
   );
 }
 
-function DetailLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+function AuthenticatedDetailState({
+  email,
+  farmName,
+  heading,
+  message,
+  onRetry,
+  actionHref = "/plantel/aves",
+  actionLabel = "Voltar para o plantel",
+  retryLabel = "Tentar novamente"
+}: Readonly<{
+  actionHref?: string;
+  actionLabel?: string;
+  email: string;
+  farmName: string;
+  heading: string;
+  message: string;
+  onRetry?: () => void;
+  retryLabel?: string;
+}>) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
   return (
-    <main className="auth-page onboarding-page bird-detail-page">
-      <a className="skip-link" href="#conteudo-ficha-ave">Pular para o conteúdo</a>
-      <div className="auth-shell onboarding-shell bird-detail-shell">
-        <BrandPanel />
-        <section aria-label="Ficha da ave" className="auth-form-panel onboarding-form-panel">
-          <div className="onboarding-form-content" id="conteudo-ficha-ave">
-            {children}
+    <AuthenticatedShell activeNav="birds" email={email} farmName={farmName}>
+      <div className="bird-detail-view">
+        <div className="bird-detail-state" id="conteudo-ficha-ave">
+          <h1 id="titulo-estado-ficha-ave" ref={headingRef} tabIndex={-1}>{heading}</h1>
+          <p>{message}</p>
+          <div className="bird-detail-state-actions">
+            {onRetry && <button className="auth-primary-action" onClick={onRetry} type="button">{retryLabel}</button>}
+            <a className="auth-secondary-action" href={actionHref}>{actionLabel}</a>
           </div>
-        </section>
+        </div>
       </div>
-    </main>
+    </AuthenticatedShell>
+  );
+}
+
+function DetailLayout({ children, email, farmName }: Readonly<{ children: React.ReactNode; email: string; farmName: string }>) {
+  return (
+    <AuthenticatedShell activeNav="birds" email={email} farmName={farmName}>
+      <div className="bird-detail-view" id="conteudo-ficha-ave">
+        {children}
+      </div>
+    </AuthenticatedShell>
   );
 }
 
@@ -281,7 +318,7 @@ function RelatedSections() {
 }
 
 function BirdDetailPage() {
-  const { refresh } = useAuth();
+  const { refresh, session } = useAuth();
   const [birdId, setBirdId] = useState("");
   const [bird, setBird] = useState<BirdDetailsResponse>();
   const [detailError, setDetailError] = useState<string>();
@@ -381,53 +418,69 @@ function BirdDetailPage() {
     void loadData();
   }, [birdId, loadData, reloadVersion]);
 
+  if (!session) {
+    return <DetailStateView actionHref="/login" actionLabel="Ir para o login" heading="Entre para consultar a ficha" message="Faça login para visualizar os dados privados da ave." />;
+  }
+
   if (farmState === "loading") {
-    return <DetailStateView actionHref="/plantel/aves" heading="Verificando o criatório" message="Só um instante enquanto buscamos a ave no criatório selecionado." />;
+    return <AuthenticatedDetailState email={session.email} farmName={farmName ?? "Criatório selecionado"} actionHref="/plantel/aves" heading="Verificando o criatório" message="Só um instante enquanto buscamos a ave no criatório selecionado." />;
   }
   if (farmState === "blocked") {
-    return <DetailStateView actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar criatório" heading="Selecione um criatório" message={farmError ?? "Escolha um criatório antes de consultar a ficha."} />;
+    return <AuthenticatedDetailState email={session.email} farmName={farmName ?? "Criatório selecionado"} actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar criatório" heading="Selecione um criatório" message={farmError ?? "Escolha um criatório antes de consultar a ficha."} />;
   }
   if (farmState === "error") {
-    return <DetailStateView actionHref="/plantel/aves" heading="Não foi possível abrir a ficha" message={farmError ?? "Tente novamente para continuar."} onRetry={() => setReloadVersion((value) => value + 1)} />;
+    return <AuthenticatedDetailState email={session.email} farmName={farmName ?? "Criatório selecionado"} actionHref="/plantel/aves" heading="Não foi possível abrir a ficha" message={farmError ?? "Tente novamente para continuar."} onRetry={() => setReloadVersion((value) => value + 1)} />;
   }
   if (detailState === "loading") {
     return (
-      <DetailLayout>
-        <div className="auth-mobile-brand"><BrandLockup stacked /></div>
+      <DetailLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
         <div className="bird-detail-page-state"><LoadingSection label="ficha da ave" /></div>
       </DetailLayout>
     );
   }
   if (detailState === "error" || !bird) {
-    return <DetailStateView actionHref="/plantel/aves" message={detailError ?? "Tente novamente para consultar os dados desta ave."} heading="Não foi possível abrir a ficha" onRetry={() => setReloadVersion((value) => value + 1)} />;
+    return <AuthenticatedDetailState email={session.email} farmName={farmName ?? "Criatório selecionado"} actionHref="/plantel/aves" message={detailError ?? "Tente novamente para consultar os dados desta ave."} heading="Não foi possível abrir a ficha" onRetry={() => setReloadVersion((value) => value + 1)} />;
   }
 
   return (
-    <DetailLayout>
-      <a aria-label="Voltar para o plantel" className="auth-mobile-back" href="/plantel/aves">←</a>
-      <div className="auth-mobile-brand"><BrandLockup stacked /></div>
-      <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><a href="/plantel/aves">Plantel</a><span aria-hidden="true">/</span><span aria-current="page">Ficha da ave</span></nav>
+    <DetailLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
+      <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><a href="/dashboard">Dashboard</a><span aria-hidden="true">›</span><a href="/plantel/aves">Aves</a><span aria-hidden="true">›</span><span aria-current="page">{bird.name}</span></nav>
 
-      <header className="bird-detail-header">
+      <header className="bird-detail-page-header">
         <div>
-          <p className="eyebrow">Plantel{farmName ? ` · ${farmName}` : ""}</p>
+          <p className="eyebrow">Ficha privada{farmName ? ` · ${farmName}` : ""}</p>
           <h1 id="titulo-ficha-ave">{bird.name}</h1>
           <p className="lede">{bird.speciesPopularName} · <em>{bird.speciesScientificName}</em></p>
         </div>
-        <span className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}>{statusLabel(bird.status)}</span>
+        <div className="bird-detail-page-header-actions">
+          <span aria-label={`Status: ${statusLabel(bird.status)}`} className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}><span aria-hidden="true" />{statusLabel(bird.status)}</span>
+          <a className="auth-primary-action bird-detail-edit-action" href={`/plantel/aves/${encodeURIComponent(bird.birdId)}/editar`}>Editar dados</a>
+        </div>
       </header>
 
-      <div className="bird-detail-actions">
-        <a className="auth-secondary-action" href="/plantel/aves">← Voltar ao plantel</a>
-        <a className="auth-primary-action bird-detail-edit-action" href={`/plantel/aves/${encodeURIComponent(bird.birdId)}/editar`}>Editar dados</a>
-      </div>
+      <a className="bird-detail-back-link" href="/plantel/aves">← Voltar para aves</a>
 
-      <section aria-labelledby="titulo-resumo-ave" className="bird-detail-summary">
-        <div className="bird-detail-summary-mark" aria-hidden="true">{bird.identificationPending ? "!" : "#"}</div>
-        <div>
-          <p className="eyebrow">Resumo da identificação</p>
-          <h2 id="titulo-resumo-ave">{bird.identificationPending ? "Identificação pendente" : `Anilha ${bird.ringNumber}`}</h2>
-          <p>{bird.identificationPending ? "Adicione uma anilha válida para concluir a identificação desta ave." : "Esta ave possui identificação registrada no criatório."}</p>
+      <section aria-labelledby="titulo-resumo-ave" className="bird-detail-hero">
+        <div aria-label="Foto da ave não cadastrada" className="bird-detail-photo">
+          <DashboardIcon name="bird" />
+          <span>Foto não cadastrada</span>
+        </div>
+        <div className="bird-detail-hero-content">
+          <p className="eyebrow">Identificação</p>
+          <p className="bird-detail-hero-species">{bird.speciesPopularName} · <em>{bird.speciesScientificName}</em></p>
+          <div className="bird-detail-hero-meta">
+            <span><small>Sexo</small><strong>{sexLabel(bird.sex)}</strong></span>
+            <span><small>Situação</small><strong>{statusLabel(bird.status)}</strong></span>
+            <span><small>Nascimento</small><strong>{formatDate(bird.birthDate)}</strong></span>
+          </div>
+          <div className="bird-detail-summary">
+            <div className="bird-detail-summary-mark" aria-hidden="true">{bird.identificationPending ? "!" : "#"}</div>
+            <div>
+              <p className="eyebrow">Resumo da identificação</p>
+              <h2 id="titulo-resumo-ave">{bird.identificationPending ? "Identificação pendente" : `Anilha ${bird.ringNumber}`}</h2>
+              <p>{bird.identificationPending ? "Adicione uma anilha válida para concluir a identificação desta ave." : "Esta ave possui identificação registrada no criatório."}</p>
+            </div>
+          </div>
         </div>
       </section>
 
