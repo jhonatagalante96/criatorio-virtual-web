@@ -4,7 +4,7 @@ export function BrandLockup({ className = "", stacked = false }: { className?: s
   return (
     <span className={`brand-lockup${stacked ? " brand-lockup-stacked" : ""}${className ? ` ${className}` : ""}`} role="img" aria-label="Criatório Virtual">
       <img
-        src={`/assets/brand/svg/criatorio-virtual-${stacked ? "empilhada" : "horizontal"}.svg`}
+        src="/assets/brand/png/criatorio-virtual-horizontal.png"
         alt=""
         aria-hidden="true"
       />

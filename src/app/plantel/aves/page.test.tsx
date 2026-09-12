@@ -129,6 +129,17 @@ describe("BirdListPage", () => {
     expect(screen.getByText("2 aves encontradas")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Cadastrar ave" }).getAttribute("href")).toBe("/plantel/aves/novo");
     expect(screen.getByRole("link", { name: "Abrir ficha de Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a");
+
+    const birdRow = screen.getByRole("article", { name: "Ave Aurora" });
+    expect(birdRow.querySelector(".bird-list-card-name a")?.getAttribute("href")).toBe("/plantel/aves/bird-a");
+    fireEvent.click(within(birdRow).getByRole("button", { name: "Abrir ações de Aurora" }));
+    expect(within(birdRow).getByRole("link", { name: "Ver detalhes de Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a");
+    expect(within(birdRow).getByRole("link", { name: "Editar Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
+    expect(within(birdRow).getByRole("button", { name: "Iniciar transferência" }).hasAttribute("disabled")).toBe(true);
+    expect(within(birdRow).getByRole("button", { name: "Registrar competição" }).hasAttribute("disabled")).toBe(true);
+    expect(within(birdRow).getByRole("button", { name: "Inativar" }).hasAttribute("disabled")).toBe(true);
+    fireEvent.pointerDown(document.body);
+    expect(birdRow.querySelector(".bird-row-actions")?.hasAttribute("open")).toBe(false);
   });
 
   it("submits a search and keeps the query represented in the URL and API request", async () => {
@@ -185,6 +196,25 @@ describe("BirdListPage", () => {
     expect(window.location.search).toContain("speciesId=species-a");
     expect(window.location.search).toContain("speciesName=Sabi%C3%A1-laranjeira");
     expect(listUrl(fetchMock, 4)).toContain("speciesId=species-a");
+  });
+
+  it("closes the species options when the user clicks outside the filter", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([bird()]))
+      .mockResolvedValueOnce(speciesResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openList(fetchMock);
+    fireEvent.click(screen.getByText("Filtros e ordenação"));
+    fireEvent.change(screen.getByRole("searchbox", { name: "Espécie" }), { target: { value: "sa" } });
+    await waitFor(() => expect(screen.getByRole("option", { name: /Sabiá-laranjeira/ })).toBeTruthy());
+
+    fireEvent.pointerDown(document.body);
+
+    await waitFor(() => expect(screen.queryByRole("option", { name: /Sabiá-laranjeira/ })).toBeNull());
+    expect((screen.getByRole("searchbox", { name: "Espécie" }) as HTMLInputElement).value).toBe("");
   });
 
   it("explains when the species catalog is forbidden", async () => {
