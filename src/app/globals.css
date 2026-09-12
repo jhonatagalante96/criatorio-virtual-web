@@ -1193,6 +1193,39 @@ h1, h2 { line-height: 1.08; }
   .bird-detail-qr-content { align-items: flex-start; }
 }
 
+/* Bird forms aligned with the authenticated application shell */
+
+.bird-form-view { display: grid; gap: 1rem; min-width: 0; }
+.bird-form-view h1 { color: var(--ink); font-size: clamp(2rem, 3.2vw, 2.55rem); letter-spacing: -.065em; line-height: 1; margin: 0; }
+.bird-form-page-header { margin-bottom: .15rem; }
+.bird-form-page-header .eyebrow { margin-bottom: .4rem; }
+.bird-form-page-header .lede { color: #596780; font-size: .9rem; line-height: 1.45; margin: .45rem 0 0; max-width: 54ch; }
+.bird-form-layout { align-items: start; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) minmax(15rem, .34fr); }
+.bird-form-main { min-width: 0; }
+.bird-form-card { background: #fff; border: 1px solid #e0e9ed; border-radius: .8rem; box-shadow: 0 .35rem 1rem rgb(6 58 86 / 4%); min-width: 0; padding: 1rem; }
+.bird-form-card.bird-registration-form { display: grid; gap: .8rem; margin: 0 !important; }
+.bird-form-card .onboarding-fieldset { background: #fff; }
+.bird-form-card .form-error { margin: 0; }
+.bird-form-card .submit-action { margin-top: .05rem; width: 100%; }
+.bird-form-card-edit { display: grid; gap: .8rem; }
+.bird-form-card-edit .bird-pending-feedback { margin: 0; max-width: none; }
+.bird-form-card-edit .bird-edit-form { margin: 0 !important; }
+.bird-form-aside { display: grid; gap: 1rem; min-width: 0; }
+.bird-form-aside-card { background: #fff; border: 1px solid #e0e9ed; border-radius: .8rem; box-shadow: 0 .35rem 1rem rgb(6 58 86 / 4%); min-width: 0; padding: 1rem; }
+.bird-form-aside-card-soft { background: #f2faf7; border-color: #cfe8da; }
+.bird-form-aside-card .eyebrow { margin-bottom: .4rem; }
+.bird-form-aside-card h2 { color: var(--ink); font-size: .98rem; letter-spacing: -.025em; margin: 0; }
+.bird-form-aside-card p:not(.eyebrow) { color: #657389; font-size: .7rem; line-height: 1.5; margin: .55rem 0 0; }
+.bird-form-state { align-content: center; background: #fff; border: 1px solid #e0e9ed; border-radius: .8rem; box-shadow: 0 .35rem 1rem rgb(6 58 86 / 4%); display: grid; justify-items: center; margin: 1rem auto; max-width: 42rem; min-height: 20rem; padding: 2rem; text-align: center; width: 100%; }
+.bird-form-state h1 { font-size: clamp(1.65rem, 3vw, 2.2rem); }
+.bird-form-state p { color: #657389; font-size: .82rem; line-height: 1.5; margin: .6rem 0 0; max-width: 42ch; }
+.bird-form-state-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .65rem; justify-content: center; margin-top: 1.25rem; }
+.bird-form-state-actions .auth-primary-action, .bird-form-state-actions .auth-secondary-action { margin: 0; width: auto; }
+.bird-form-summary-list { display: grid; gap: .6rem; margin: 1rem 0 0; }
+.bird-form-summary-list > div { align-items: baseline; border-top: 1px solid #edf3f3; display: flex; gap: .75rem; justify-content: space-between; padding-top: .6rem; }
+.bird-form-summary-list dt { color: #78919a; font-size: .65rem; }
+.bird-form-summary-list dd { color: var(--ink); font-size: .68rem; font-weight: 800; margin: 0; text-align: right; }
+
 /* Bird registration */
 
 .bird-registration-shell { max-width: 68rem; min-height: min(56rem, calc(100svh - 4rem)); }
@@ -1269,6 +1302,22 @@ h1, h2 { line-height: 1.08; }
 .bird-registration-success > .lede { color: #67808d; font-size: .82rem; margin: .55rem auto 1.4rem; max-width: 38ch; }
 .bird-registration-success .auth-primary-action { width: 100%; }
 .bird-registration-success .text-action { display: block; margin-top: .8rem; }
+
+@media (max-width: 47.99rem) {
+  .bird-form-view { gap: .85rem; }
+  .bird-form-view h1 { font-size: clamp(1.85rem, 9vw, 2.35rem); }
+  .bird-form-page-header .lede { font-size: .76rem; }
+  .bird-form-layout { grid-template-columns: 1fr; }
+  .bird-form-card, .bird-form-aside-card { border-radius: .7rem; padding: .85rem; }
+  .bird-form-aside { gap: .75rem; }
+  .bird-form-state { margin: .25rem 0; min-height: 16rem; padding: 1.35rem; }
+  .bird-form-state-actions { align-items: stretch; flex-direction: column; width: 100%; }
+  .bird-form-state-actions .auth-primary-action, .bird-form-state-actions .auth-secondary-action { width: 100%; }
+}
+
+@media (min-width: 48rem) and (max-width: 62rem) {
+  .bird-form-layout { grid-template-columns: minmax(0, 1fr) minmax(13rem, .38fr); }
+}
 
 @media (max-width: 47.99rem) {
   .bird-registration-page { padding: 0; }
