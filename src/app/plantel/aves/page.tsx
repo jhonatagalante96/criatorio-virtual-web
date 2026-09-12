@@ -228,11 +228,25 @@ function SpeciesFilter({
   onSessionExpired: () => void;
   selection?: SpeciesFilterSelection;
 }>) {
+  const filterRef = useRef<HTMLDivElement>(null);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [options, setOptions] = useState<SpeciesSummary[]>([]);
   const [query, setQuery] = useState("");
   const [reloadVersion, setReloadVersion] = useState(0);
   const [searchState, setSearchState] = useState<"empty" | "error" | "idle" | "loading" | "ready">("idle");
+
+  useEffect(() => {
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (filterRef.current?.contains(event.target as Node)) return;
+      setQuery("");
+      setOptions([]);
+      setErrorMessage(undefined);
+      setSearchState("idle");
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, []);
 
   useEffect(() => {
     if (selection) return;
@@ -282,7 +296,7 @@ function SpeciesFilter({
   }, [client, onSessionExpired, query, reloadVersion, selection]);
 
   return (
-    <div className="bird-species-filter">
+    <div className="bird-species-filter" ref={filterRef}>
       <span className="bird-filter-label" id="bird-species-filter-label">Espécie</span>
       {selection ? (
         <div className="bird-species-filter-selected" role="status">
@@ -311,7 +325,7 @@ function SpeciesFilter({
             {query && <button aria-label="Limpar busca de espécie" className="bird-filter-search-clear" disabled={disabled} onClick={() => setQuery("")} type="button">×</button>}
           </div>
           <p className="bird-filter-help" id="bird-species-filter-help">Digite pelo menos dois caracteres para consultar.</p>
-          <div aria-live="polite" className="bird-filter-results" id="bird-species-filter-options">
+          <div aria-live="polite" className={`bird-filter-results${searchState === "ready" ? " is-overlay" : ""}`} id="bird-species-filter-options">
             {searchState === "loading" && <p role="status">Buscando espécies…</p>}
             {searchState === "idle" && <p role="status">Nenhuma espécie filtrada.</p>}
             {searchState === "empty" && <p role="status">Nenhuma espécie encontrada.</p>}
@@ -376,28 +390,70 @@ function BirdFilterSelect({
   );
 }
 
+function BirdActionMenu({ bird }: Readonly<{ bird: BirdListItem }>) {
+  const menuRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (menuRef.current?.contains(event.target as Node)) return;
+      if (menuRef.current) menuRef.current.open = false;
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, []);
+
+  return (
+    <details className="bird-row-actions" ref={menuRef}>
+      <summary aria-label={`Abrir ações de ${bird.name}`} role="button">⋯</summary>
+      <div className="bird-row-actions-menu">
+        <a aria-label={`Ver detalhes de ${bird.name}`} className="bird-row-action" href={`/plantel/aves/${bird.birdId}`}>
+          <DashboardIcon name="eye" />
+          <span>Ver detalhes</span>
+        </a>
+        <a aria-label={`Editar ${bird.name}`} className="bird-row-action" href={`/plantel/aves/${bird.birdId}/editar`}>
+          <DashboardIcon name="edit" />
+          <span>Editar</span>
+        </a>
+        <div aria-hidden="true" className="bird-row-action-divider" />
+        <button className="bird-row-action" disabled title="Módulo em desenvolvimento" type="button">
+          <DashboardIcon name="transfer" />
+          <span>Iniciar transferência</span>
+        </button>
+        <button className="bird-row-action" disabled title="Módulo em desenvolvimento" type="button">
+          <DashboardIcon name="trophy" />
+          <span>Registrar competição</span>
+        </button>
+        <div aria-hidden="true" className="bird-row-action-divider" />
+        <button className="bird-row-action is-danger" disabled title="Módulo em desenvolvimento" type="button">
+          <DashboardIcon name="ban" />
+          <span>Inativar</span>
+        </button>
+      </div>
+    </details>
+  );
+}
+
 function BirdCard({ bird }: Readonly<{ bird: BirdListItem }>) {
   return (
     <li>
-      <a aria-label={`Abrir ficha de ${bird.name}`} className="bird-list-card-link" href={`/plantel/aves/${bird.birdId}`}>
-        <article aria-label={`Ave ${bird.name}`} className="bird-list-card">
-          <span aria-hidden="true" className="bird-list-card-avatar"><DashboardIcon name="bird" /></span>
-          <div className="bird-list-card-name">
-            <h2>{bird.name}</h2>
-            <span className="bird-list-card-mobile-species">{bird.speciesPopularName}</span>
-          </div>
-          <span aria-label={`Sexo: ${sexLabel(bird.sex)}`} className="bird-list-card-sex">{sexLabel(bird.sex)}</span>
-          <span aria-label={`Espécie ou raça: ${bird.speciesPopularName}`} className="bird-list-card-species">{bird.speciesPopularName}</span>
-          <span aria-label={`Anilha: ${bird.identificationPending ? "pendente" : bird.ringNumber ?? "não informada"}`} className="bird-list-card-ring">{bird.identificationPending ? "—" : bird.ringNumber ?? "—"}</span>
-          <span aria-label={`Status: ${statusLabel(bird.status)}`} className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}><span aria-hidden="true" />{statusLabel(bird.status)}</span>
-          <span aria-label={`Nascimento: ${formatDate(bird.birthDate)}`} className="bird-list-card-birth">{formatDate(bird.birthDate)}</span>
-          <span className={`bird-identification${bird.identificationPending ? " is-pending" : ""}`}>
-            <span aria-hidden="true">{bird.identificationPending ? "!" : "#"}</span>
-            <strong>{bird.identificationPending ? "Identificação pendente" : `Anilha ${bird.ringNumber}`}</strong>
-          </span>
-          <span className="bird-list-card-action"><span>Abrir ficha</span><span aria-hidden="true">⋯</span></span>
-        </article>
-      </a>
+      <article aria-label={`Ave ${bird.name}`} className="bird-list-card">
+        <span aria-hidden="true" className="bird-list-card-photo"><DashboardIcon name="bird" /></span>
+        <div className="bird-list-card-name">
+          <h2><a aria-label={`Abrir ficha de ${bird.name}`} href={`/plantel/aves/${bird.birdId}`}>{bird.name}</a></h2>
+          <span className="bird-list-card-mobile-species">{bird.speciesPopularName}</span>
+        </div>
+        <span aria-label={`Sexo: ${sexLabel(bird.sex)}`} className="bird-list-card-sex">{sexLabel(bird.sex)}</span>
+        <span aria-label={`Espécie ou raça: ${bird.speciesPopularName}`} className="bird-list-card-species">{bird.speciesPopularName}</span>
+        <span aria-label={`Anilha: ${bird.identificationPending ? "pendente" : bird.ringNumber ?? "não informada"}`} className="bird-list-card-ring">{bird.identificationPending ? "—" : bird.ringNumber ?? "—"}</span>
+        <span aria-label={`Status: ${statusLabel(bird.status)}`} className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}><span aria-hidden="true" />{statusLabel(bird.status)}</span>
+        <span aria-label={`Nascimento: ${formatDate(bird.birthDate)}`} className="bird-list-card-birth">{formatDate(bird.birthDate)}</span>
+        <span className={`bird-identification${bird.identificationPending ? " is-pending" : ""}`}>
+          <span aria-hidden="true">{bird.identificationPending ? "!" : "#"}</span>
+          <strong>{bird.identificationPending ? "Identificação pendente" : `Anilha ${bird.ringNumber}`}</strong>
+        </span>
+        <BirdActionMenu bird={bird} />
+      </article>
     </li>
   );
 }
@@ -652,8 +708,12 @@ function BirdListPage() {
           <h1 id="titulo-lista-aves">Aves</h1>
           <p className="lede">Gerencie as aves cadastradas no seu criatório.</p>
         </div>
-        <div className="bird-list-header-side">
-          <a className="auth-primary-action bird-list-register-action" href="/plantel/aves/novo"><span aria-hidden="true">＋</span> Cadastrar ave</a>
+        <a className="auth-primary-action bird-list-register-action" href="/plantel/aves/novo"><span aria-hidden="true">＋</span> Cadastrar ave</a>
+      </header>
+
+      <section aria-labelledby="titulo-busca-aves" className="bird-list-toolbar">
+        <h2 className="sr-only" id="titulo-busca-aves">Buscar e filtrar aves</h2>
+        <div className="bird-list-query-row">
           <aside aria-label="Resumo do plantel" className="bird-list-summary">
             <span aria-hidden="true" className="bird-list-summary-icon"><DashboardIcon name="bird" /></span>
             <div>
@@ -661,29 +721,26 @@ function BirdListPage() {
               <p>Organize, acompanhe e mantenha o histórico do seu plantel sempre atualizado.</p>
             </div>
           </aside>
-        </div>
-      </header>
 
-      <section aria-labelledby="titulo-busca-aves" className="bird-list-toolbar">
-        <h2 className="sr-only" id="titulo-busca-aves">Buscar e filtrar aves</h2>
-        <form className="bird-list-search-form" onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); commitFilters({ ...filters, page: 1, search: searchDraft.trim() }); }}>
-          <label className="sr-only" htmlFor="bird-list-search">Buscar ave</label>
-          <div className="bird-list-search-control">
-            <span aria-hidden="true" className="bird-list-search-icon"><DashboardIcon name="search" /></span>
-            <input
-              aria-describedby="bird-list-search-help"
-              id="bird-list-search"
-              maxLength={100}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchDraft(event.target.value)}
-              placeholder="Nome, anilha ou espécie"
-              type="search"
-              value={searchDraft}
-            />
-            {searchDraft && <button aria-label="Limpar busca" className="bird-list-search-clear" onClick={() => { setSearchDraft(""); commitFilters({ ...filters, page: 1, search: "" }); }} type="button">×</button>}
-            <button aria-label="Buscar" className="bird-list-search-submit" type="submit"><DashboardIcon name="search" /><span className="sr-only">Buscar</span></button>
-          </div>
-          <p id="bird-list-search-help">A busca consulta nome, anilha e espécie no criatório selecionado.</p>
-        </form>
+          <form className="bird-list-search-form" onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); commitFilters({ ...filters, page: 1, search: searchDraft.trim() }); }}>
+            <label className="sr-only" htmlFor="bird-list-search">Buscar ave</label>
+            <div className="bird-list-search-control">
+              <span aria-hidden="true" className="bird-list-search-icon"><DashboardIcon name="search" /></span>
+              <input
+                aria-describedby="bird-list-search-help"
+                id="bird-list-search"
+                maxLength={100}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchDraft(event.target.value)}
+                placeholder="Nome, anilha ou espécie"
+                type="search"
+                value={searchDraft}
+              />
+              {searchDraft && <button aria-label="Limpar busca" className="bird-list-search-clear" onClick={() => { setSearchDraft(""); commitFilters({ ...filters, page: 1, search: "" }); }} type="button">×</button>}
+              <button aria-label="Buscar" className="bird-list-search-submit" type="submit"><DashboardIcon name="search" /><span className="sr-only">Buscar</span></button>
+            </div>
+            <p id="bird-list-search-help">A busca consulta nome, anilha e espécie no criatório selecionado.</p>
+          </form>
+        </div>
 
         <details className="bird-filter-panel" onToggle={(event) => setIsFilterPanelOpen(event.currentTarget.open)} open={isFilterPanelOpen}>
           <summary>Filtros e ordenação{activeFilterCount() > 0 && <span>{activeFilterCount()} ativo{activeFilterCount() === 1 ? "" : "s"}</span>}</summary>
@@ -768,7 +825,7 @@ function BirdListPage() {
         </div>
         {listState === "ready" && birds.length > 0 && (
           <div className="bird-list-table-heading">
-            <span />
+            <span>Foto</span>
             <span>Nome</span>
             <span>Sexo</span>
             <span>Espécie/Raça</span>

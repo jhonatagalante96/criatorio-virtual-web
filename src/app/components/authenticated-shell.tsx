@@ -91,7 +91,9 @@ function AccountMenu({ displayName, email, farmName }: Readonly<{ displayName: s
           <strong>{displayName}</strong>
           <small>{farmName}</small>
         </span>
-        <span aria-hidden="true" className="authenticated-account-chevron">⌄</span>
+        <span aria-hidden="true" className="authenticated-account-chevron">
+          <svg viewBox="0 0 16 16"><path d="m4.5 6.25 3.5 3.5 3.5-3.5" /></svg>
+        </span>
       </summary>
       <div className="authenticated-account-menu-panel">
         <div className="authenticated-account-menu-heading">
@@ -119,7 +121,6 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
         <aside aria-label="Navegação principal" className="authenticated-sidebar">
           <a aria-label="Ir para o dashboard" className="authenticated-brand" href="/dashboard">
             <BrandLockup />
-            <span className="authenticated-brand-tagline">Gestão com paixão</span>
           </a>
           <nav aria-label="Módulos disponíveis" className="authenticated-desktop-nav">
             <NavigationLinks activeNav={activeNav} />
@@ -129,7 +130,7 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
           </nav>
           <div className="authenticated-sidebar-inspiration" aria-label="Mensagem inspiradora">
             <p>“Grandes criatórios começam com boas histórias.”</p>
-            <span aria-hidden="true"><DashboardIcon name="leaf" /></span>
+            <img alt="" aria-hidden="true" src="/assets/brand/png/criatorio-virtual-symbol.png" />
             <small>Criatório Virtual</small>
           </div>
         </aside>

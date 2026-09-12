@@ -2,10 +2,13 @@ import React from "react";
 
 export type DashboardIconName =
   | "alert"
+  | "ban"
   | "bird"
   | "calendar"
   | "crown"
   | "document"
+  | "edit"
+  | "eye"
   | "farm"
   | "heart"
   | "home"
@@ -35,6 +38,18 @@ export function DashboardIcon({ name, className = "" }: Readonly<{ name: Dashboa
 
   if (name === "calendar") {
     return <svg {...props}><rect height="15" rx="2" width="17" x="3.5" y="5.5" /><path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17" /></svg>;
+  }
+
+  if (name === "eye") {
+    return <svg {...props}><path d="M2.8 12s3.2-5 9.2-5 9.2 5 9.2 5-3.2 5-9.2 5-9.2-5-9.2-5Z" /><circle cx="12" cy="12" r="2.2" /></svg>;
+  }
+
+  if (name === "edit") {
+    return <svg {...props}><path d="m4.2 16.9-.8 3.7 3.7-.8L18.2 8.7a2.1 2.1 0 0 0-3-3L4.2 16.9Z" /><path d="m13.8 7.2 3 3" /></svg>;
+  }
+
+  if (name === "ban") {
+    return <svg {...props}><circle cx="12" cy="12" r="8.6" /><path d="m6 6 12 12" /></svg>;
   }
 
   if (name === "bird") {
