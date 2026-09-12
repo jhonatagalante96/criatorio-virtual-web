@@ -13,10 +13,10 @@ export const metadata: Metadata = {
   title: "Criatório Virtual",
   description: "Gestão simples e segura para o seu criatório.",
   icons: {
-    apple: "/icons/icon-192.png",
-    icon: "/icons/icon-192.png"
+    apple: "/icons/icon-192-v2.png",
+    icon: "/icons/icon-192-v2.png"
   },
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.webmanifest?v=2",
   other: {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "default"
