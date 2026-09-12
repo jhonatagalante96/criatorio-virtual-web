@@ -132,9 +132,10 @@ describe("DashboardPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
     expect(screen.getByText("Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.")).toBeTruthy();
 
-    const activeBirdMetric = screen.getByText("Aves cadastradas").parentElement;
+    const activeBirdMetric = screen.getByText("Aves cadastradas").closest("article");
     if (!activeBirdMetric) throw new Error("Indicador de aves cadastradas não encontrado.");
     expect(within(activeBirdMetric).getByText("3")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Ver aves cadastradas" }).getAttribute("href")).toBe("/plantel/aves");
 
     const pendingMetric = screen.getByText("Pendências", { selector: ".dashboard-metric-label" }).parentElement;
     if (!pendingMetric) throw new Error("Indicador de pendências não encontrado.");
@@ -156,10 +157,10 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Personalizar atalhos")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Atividades recentes" })).toBeTruthy();
     expect(screen.getByText("Que tal fazer hoje um grande dia para o seu criatório?")).toBeTruthy();
-    fireEvent.click(screen.getByLabelText("Abrir menu de Owner"));
-    expect(screen.getAllByRole("link", { name: "Meu Criatório" }).filter((element) => element.closest(".authenticated-account-menu-panel"))).toHaveLength(1);
-    expect(screen.getAllByRole("link", { name: "Configurações" }).filter((element) => element.closest(".authenticated-account-menu-panel"))).toHaveLength(1);
-    expect(screen.getAllByRole("link", { name: "Gerenciar sessão" }).filter((element) => element.closest(".authenticated-account-menu-panel"))).toHaveLength(1);
+    fireEvent.click(screen.getAllByLabelText("Abrir menu de Owner")[0]);
+    expect(screen.getAllByRole("link", { name: "Meu Criatório" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Configurações" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Gerenciar sessão" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
 
     expect(screen.getAllByRole("link", { name: /^Dashboard$/ })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: /^Aves$/ })).toHaveLength(2);

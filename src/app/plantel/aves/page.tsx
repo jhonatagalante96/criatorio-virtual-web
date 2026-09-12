@@ -8,6 +8,7 @@ import { AppLoadingContent, AppLoadingState } from "../../components/app-loading
 import { BrandLockup, BrandPanel } from "../../components/brand";
 import { AuthenticatedShell } from "../../components/authenticated-shell";
 import { DashboardIcon } from "../../components/dashboard-icons";
+import type { DashboardIconName } from "../../components/dashboard-icons";
 import { SpeciesSummary } from "../../components/species-selector";
 
 interface BreedingFarmSummary {
@@ -35,6 +36,7 @@ interface BirdListItem {
   birdId: string;
   identificationPending: boolean;
   name: string;
+  photoUrl?: string | null;
   ringNumber: string | null;
   sex: BirdSex;
   speciesId: string;
@@ -300,6 +302,8 @@ function SpeciesFilter({
   return (
     <div className="bird-species-filter" ref={filterRef}>
       <span className="bird-filter-label" id="bird-species-filter-label">Espécie</span>
+      <span aria-hidden="true" className="bird-filter-mobile-icon bird-filter-mobile-icon-leaf"><DashboardIcon name="leaf" /></span>
+      <span aria-hidden="true" className="bird-filter-mobile-label">Espécie</span>
       {selection ? (
         <div className="bird-species-filter-selected" role="status">
           <span>
@@ -370,6 +374,8 @@ function BirdFilterSelect({
   disabled,
   id,
   label,
+  mobileIcon,
+  mobileLabel,
   onChange,
   options,
   value
@@ -378,6 +384,8 @@ function BirdFilterSelect({
   disabled: boolean;
   id: string;
   label: string;
+  mobileIcon?: DashboardIconName;
+  mobileLabel?: string;
   onChange: (value: string) => void;
   options: Array<{ label: string; value: string }>;
   value: string;
@@ -385,6 +393,8 @@ function BirdFilterSelect({
   return (
     <label className={`bird-filter-select${className ? ` ${className}` : ""}`} htmlFor={id}>
       <span>{label}</span>
+      {mobileIcon && <span aria-hidden="true" className={`bird-filter-mobile-icon bird-filter-mobile-icon-${mobileIcon}`}><DashboardIcon name={mobileIcon} /></span>}
+      <span aria-hidden="true" className="bird-filter-mobile-label">{mobileLabel ?? label}</span>
       <select disabled={disabled} id={id} onChange={(event) => onChange(event.target.value)} value={value}>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -440,20 +450,33 @@ function BirdCard({ bird }: Readonly<{ bird: BirdListItem }>) {
   return (
     <li>
       <article aria-label={`Ave ${bird.name}`} className="bird-list-card">
-        <span aria-hidden="true" className="bird-list-card-photo"><DashboardIcon name="bird" /></span>
+        <span aria-hidden="true" className="bird-list-card-photo">
+          <img alt="" src={bird.photoUrl ?? "/assets/imagery/birds/great-tit-header-hd.webp"} />
+        </span>
         <div className="bird-list-card-name">
           <h2><Link aria-label={`Abrir ficha de ${bird.name}`} href={`/plantel/aves/${bird.birdId}`}>{bird.name}</Link></h2>
           <span className="bird-list-card-mobile-species">{bird.speciesPopularName}</span>
         </div>
-        <span aria-label={`Sexo: ${sexLabel(bird.sex)}`} className="bird-list-card-sex">{sexLabel(bird.sex)}</span>
-        <span aria-label={`Espécie ou raça: ${bird.speciesPopularName}`} className="bird-list-card-species">{bird.speciesPopularName}</span>
-        <span aria-label={`Anilha: ${bird.identificationPending ? "pendente" : bird.ringNumber ?? "não informada"}`} className="bird-list-card-ring">{bird.identificationPending ? "—" : bird.ringNumber ?? "—"}</span>
+        <span aria-label={`Sexo: ${sexLabel(bird.sex)}`} className="bird-list-card-sex">
+          <span aria-hidden="true" className="bird-list-card-field-icon">{bird.sex === "Female" ? "♀" : bird.sex === "Male" ? "♂" : "•"}</span>
+          {sexLabel(bird.sex)}
+        </span>
+        <span aria-label={`Espécie ou raça: ${bird.speciesPopularName}`} className="bird-list-card-species">
+          <DashboardIcon name="leaf" />
+          {bird.speciesPopularName}
+        </span>
+        <span aria-label={`Anilha: ${bird.identificationPending ? "pendente" : bird.ringNumber ?? "não informada"}`} className={`bird-list-card-ring${bird.identificationPending ? " is-pending" : ""}`}>
+          <span aria-hidden="true" className="bird-list-card-field-icon">⌑</span>
+          <span aria-hidden="true" className="bird-list-card-ring-value-desktop">{bird.identificationPending ? "—" : bird.ringNumber ?? "—"}</span>
+          <span aria-hidden="true" className="bird-list-card-ring-value-mobile">{bird.identificationPending ? "Sem anilha" : `Anilha: ${bird.ringNumber ?? "não informada"}`}</span>
+        </span>
         <span aria-label={`Status: ${statusLabel(bird.status)}`} className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}><span aria-hidden="true" />{statusLabel(bird.status)}</span>
         <span aria-label={`Nascimento: ${formatDate(bird.birthDate)}`} className="bird-list-card-birth">{formatDate(bird.birthDate)}</span>
         <span className={`bird-identification${bird.identificationPending ? " is-pending" : ""}`}>
           <span aria-hidden="true">{bird.identificationPending ? "!" : "#"}</span>
           <strong>{bird.identificationPending ? "Identificação pendente" : `Anilha ${bird.ringNumber}`}</strong>
         </span>
+        <Link aria-label={`Ver detalhes de ${bird.name}`} className="bird-list-card-arrow" href={`/plantel/aves/${bird.birdId}`}><span aria-hidden="true">›</span></Link>
         <BirdActionMenu bird={bird} />
       </article>
     </li>
@@ -522,6 +545,7 @@ function BirdPagination({
 function BirdListPage() {
   const { refresh, session } = useAuth();
   const [birds, setBirds] = useState<BirdListItem[]>([]);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [farmError, setFarmError] = useState<string>();
   const [farmName, setFarmName] = useState<string>();
   const [farmState, setFarmState] = useState<FarmState>("loading");
@@ -530,6 +554,11 @@ function BirdListPage() {
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
   const [listError, setListError] = useState<string>();
   const [listState, setListState] = useState<ListState>("loading");
+  const [mobileBirds, setMobileBirds] = useState<BirdListItem[]>([]);
+  const [mobileLoadError, setMobileLoadError] = useState<string>();
+  const [mobileLoadingMore, setMobileLoadingMore] = useState(false);
+  const [mobileNextPage, setMobileNextPage] = useState(2);
+  const [mobileVisibleCount, setMobileVisibleCount] = useState(5);
   const [searchDraft, setSearchDraft] = useState("");
   const [speciesSelection, setSpeciesSelection] = useState<SpeciesFilterSelection>();
   const [totalCount, setTotalCount] = useState(0);
@@ -543,6 +572,15 @@ function BirdListPage() {
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
 
   const handleSessionExpired = useCallback(() => { void refresh(); }, [refresh]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia?.("(max-width: 47.99rem)");
+    if (!mediaQuery) return;
+    const updateViewport = () => setIsMobileViewport(mediaQuery.matches);
+    updateViewport();
+    mediaQuery.addEventListener?.("change", updateViewport);
+    return () => mediaQuery.removeEventListener?.("change", updateViewport);
+  }, []);
 
   useEffect(() => {
     const readUrlState = () => {
@@ -635,6 +673,10 @@ function BirdListPage() {
         const response = await client.current!.request<BirdListResponse>(`api/birds?${params.toString()}`, { signal: controller.signal });
         if (controller.signal.aborted || requestVersion !== listRequestVersion.current) return;
         setBirds(response.items);
+        setMobileBirds(response.items);
+        setMobileVisibleCount(5);
+        setMobileNextPage(response.page + 1);
+        setMobileLoadError(undefined);
         setTotalCount(response.totalCount);
         setTotalPages(response.totalPages);
         setListState("ready");
@@ -678,6 +720,50 @@ function BirdListPage() {
   function activeFilterCount(): number {
     return [filters.search, filters.sex, filters.speciesId, filters.status, filters.identificationPending].filter(Boolean).length;
   }
+
+  async function loadMoreBirds() {
+    if (mobileLoadingMore || totalCount <= 5) return;
+
+    if (mobileVisibleCount < mobileBirds.length) {
+      setMobileVisibleCount((value) => Math.min(value + 5, mobileBirds.length));
+      return;
+    }
+
+    if (mobileNextPage > totalPages) return;
+
+    setMobileLoadingMore(true);
+    setMobileLoadError(undefined);
+    const params = new URLSearchParams();
+    if (filters.search) params.set("search", filters.search);
+    if (filters.sex) params.set("sex", filters.sex);
+    if (filters.speciesId) params.set("speciesId", filters.speciesId);
+    if (filters.status) params.set("status", filters.status);
+    if (filters.identificationPending) params.set("identificationPending", filters.identificationPending);
+    params.set("sortBy", filters.sortBy);
+    params.set("sortDirection", filters.sortDirection);
+    params.set("page", String(mobileNextPage));
+    params.set("pageSize", "20");
+
+    try {
+      const response = await client.current!.request<BirdListResponse>(`api/birds?${params.toString()}`);
+      setMobileBirds((current) => [...current, ...response.items]);
+      setMobileVisibleCount((value) => value + 5);
+      setMobileNextPage(response.page + 1);
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        await refresh();
+      } else {
+        setMobileLoadError("Não foi possível carregar mais aves agora.");
+      }
+    } finally {
+      setMobileLoadingMore(false);
+    }
+  }
+
+  const displayedBirds = isMobileViewport ? mobileBirds.slice(0, mobileVisibleCount) : birds;
+  const canLoadMoreBirds = isMobileViewport && totalCount > 5 && (
+    mobileVisibleCount < mobileBirds.length || mobileNextPage <= totalPages
+  );
 
   if (!session) return null;
 
@@ -741,7 +827,12 @@ function BirdListPage() {
         </div>
 
         <details className="bird-filter-panel" onToggle={(event) => setIsFilterPanelOpen(event.currentTarget.open)} open={isFilterPanelOpen}>
-          <summary>Filtros e ordenação{activeFilterCount() > 0 && <span>{activeFilterCount()} ativo{activeFilterCount() === 1 ? "" : "s"}</span>}</summary>
+          <summary aria-label={isFilterPanelOpen ? "Ocultar filtros" : "Mostrar mais filtros"}>
+            <DashboardIcon name="filter" />
+            <span className="bird-filter-panel-title">Filtros e ordenação</span>
+            <span aria-hidden="true" className="bird-filter-panel-mobile-title">{isFilterPanelOpen ? "Ocultar filtros" : "Mais filtros"}</span>
+            {activeFilterCount() > 0 && <span>{activeFilterCount()} ativo{activeFilterCount() === 1 ? "" : "s"}</span>}
+          </summary>
           <div className="bird-filter-grid">
             <SpeciesFilter
               client={client.current!}
@@ -761,6 +852,7 @@ function BirdListPage() {
               disabled={listState === "loading"}
               id="bird-sex-filter"
               label="Sexo"
+              mobileIcon="gender"
               onChange={(value) => changeFilter("sex", value)}
               options={[{ label: "Todos os sexos", value: "" }, { label: "Fêmeas", value: "Female" }, { label: "Machos", value: "Male" }, { label: "Não identificados", value: "Unknown" }]}
               value={filters.sex}
@@ -769,6 +861,7 @@ function BirdListPage() {
               disabled={listState === "loading"}
               id="bird-status-filter"
               label="Situação"
+              mobileLabel="Status"
               onChange={(value) => changeFilter("status", value)}
               options={[{ label: "Todas as situações", value: "" }, ...birdStatuses]}
               value={filters.status}
@@ -777,6 +870,8 @@ function BirdListPage() {
               disabled={listState === "loading"}
               id="bird-identification-filter"
               label="Identificação"
+              mobileIcon="tag"
+              mobileLabel="Anilha"
               onChange={(value) => changeFilter("identificationPending", value)}
               options={[{ label: "Todas", value: "" }, { label: "Com anilha", value: "false" }, { label: "Pendente", value: "true" }]}
               value={filters.identificationPending}
@@ -807,7 +902,7 @@ function BirdListPage() {
       <section aria-labelledby="titulo-resultados-aves" className="bird-list-results" aria-busy={listState === "loading"}>
         <div className="bird-list-results-heading">
           <div>
-            <h2 id="titulo-resultados-aves">{listState === "ready" ? resultLabel : "Aves cadastradas"}</h2>
+            <h2 id="titulo-resultados-aves"><span aria-hidden="true" className="bird-list-results-heading-icon"><DashboardIcon name="bird" /></span>{listState === "ready" ? resultLabel : "Aves cadastradas"}</h2>
             <span>Registros do criatório selecionado</span>
           </div>
           <label className="bird-list-inline-sort" htmlFor="bird-inline-sort">Ordenar por
@@ -834,8 +929,15 @@ function BirdListPage() {
           </div>
         )}
         {listState === "ready" && birds.length > 0
-          ? <ul aria-label="Aves cadastradas" className="bird-list-cards">{birds.map((bird) => <BirdCard bird={bird} key={bird.birdId} />)}</ul>
+          ? <ul aria-label="Aves cadastradas" className="bird-list-cards">{displayedBirds.map((bird) => <BirdCard bird={bird} key={bird.birdId} />)}</ul>
           : <BirdListState error={listError} hasActiveFilters={hasActiveFilters()} onClearFilters={clearFilters} onRetry={() => setReloadVersion((value) => value + 1)} state={listState} />}
+        {listState === "ready" && birds.length > 0 && isMobileViewport && (
+          <div className="bird-mobile-pagination">
+            {canLoadMoreBirds && <button disabled={mobileLoadingMore} onClick={() => void loadMoreBirds()} type="button">{mobileLoadingMore ? "Carregando…" : "Carregar mais"}</button>}
+            {mobileLoadError && <p role="alert">{mobileLoadError}</p>}
+            <span aria-live="polite">Mostrando {Math.min(displayedBirds.length, totalCount)} de {totalCount} aves</span>
+          </div>
+        )}
         {listState === "ready" && <BirdPagination onPageChange={(page) => commitFilters({ ...filters, page })} page={filters.page} totalPages={totalPages} />}
       </section>
 

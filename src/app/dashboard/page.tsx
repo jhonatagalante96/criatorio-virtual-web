@@ -191,14 +191,15 @@ function AccessState({
   );
 }
 
-function DashboardMetric({ detail, icon, label, value, tone = "green" }: Readonly<{
+function DashboardMetric({ detail, href, icon, label, value, tone = "green" }: Readonly<{
   detail: string;
+  href?: string;
   icon: DashboardIconName;
   label: string;
   tone?: "green" | "orange" | "blue" | "rose";
   value: number;
 }>) {
-  return (
+  const metric = (
     <article className={`dashboard-metric dashboard-metric-${tone}`}>
       <span aria-hidden="true" className="dashboard-metric-icon"><DashboardIcon name={icon} /></span>
       <div className="dashboard-metric-main">
@@ -212,6 +213,10 @@ function DashboardMetric({ detail, icon, label, value, tone = "green" }: Readonl
       </div>
     </article>
   );
+
+  return href
+    ? <Link aria-label={`Ver ${label.toLowerCase()}`} className="dashboard-metric-link" href={href}>{metric}</Link>
+    : metric;
 }
 
 function PendingSection({ pending }: Readonly<{ pending: DashboardPending[] }>) {
@@ -441,7 +446,7 @@ function DashboardContent({
       <section aria-labelledby="titulo-indicadores" className="dashboard-section">
         <h2 className="sr-only" id="titulo-indicadores">Indicadores principais</h2>
         <div className="dashboard-metrics-grid">
-          <DashboardMetric detail={formatCount(activeBirdCount, "ave ativa", "aves ativas")} icon="bird" label="Aves cadastradas" value={activeBirdCount} />
+          <DashboardMetric detail={formatCount(activeBirdCount, "ave ativa", "aves ativas")} href="/plantel/aves" icon="bird" label="Aves cadastradas" value={activeBirdCount} />
           <DashboardMetric detail={formatCount(activeReproductionCount, "registro ativo", "registros ativos")} icon="heart" label="Reproduções registradas" tone="rose" value={activeReproductionCount} />
           <DashboardMetric detail={formatCount(pendingIdentificationCount, "item pendente", "itens pendentes")} icon="alert" label="Pendências" tone="orange" value={pendingIdentificationCount} />
           <DashboardMetric detail={formatCount(transferCount, "registro recente", "registros recentes")} icon="transfer" label="Transferências" tone="blue" value={transferCount} />

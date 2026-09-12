@@ -44,4 +44,19 @@ describe("AuthenticatedShell", () => {
     expect(screen.getAllByText("Jhonata Galante").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Criatório Aurora").length).toBeGreaterThan(0);
   });
+
+  it("keeps the mobile navigation and account menu available", async () => {
+    const { container } = render(
+      <AuthenticatedShell activeNav="birds" email="jhonata@example.com" farmName="Criatório Aurora">
+        <div>Conteúdo carregado</div>
+      </AuthenticatedShell>
+    );
+
+    await waitFor(() => expect(screen.getAllByText("Jhonata").length).toBeGreaterThan(0));
+
+    expect(container.querySelector(".authenticated-mobile-menu")).not.toBeNull();
+    expect(container.querySelector(".authenticated-mobile-account-control")).not.toBeNull();
+    expect(container.querySelector(".authenticated-account-menu-panel a[href='/configuracoes/criatorio']")).not.toBeNull();
+    expect(container.querySelector(".authenticated-account-menu-panel a[href='/configuracoes']")).not.toBeNull();
+  });
 });

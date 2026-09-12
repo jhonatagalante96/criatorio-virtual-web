@@ -142,12 +142,17 @@ describe("BirdListPage", () => {
 
     const birdRow = screen.getByRole("article", { name: "Ave Aurora" });
     expect(birdRow.querySelector(".bird-list-card-name a")?.getAttribute("href")).toBe("/plantel/aves/bird-a");
+    expect(birdRow.querySelector(".bird-list-card-arrow")?.getAttribute("href")).toBe("/plantel/aves/bird-a");
+    expect(birdRow.querySelector(".bird-list-card-photo img")?.getAttribute("src")).toBe("/assets/imagery/birds/great-tit-header-hd.webp");
+    expect(birdRow.querySelector(".bird-list-card-sex")?.getAttribute("aria-label")).toBe("Sexo: Fêmea");
     fireEvent.click(within(birdRow).getByRole("button", { name: "Abrir ações de Aurora" }));
-    expect(within(birdRow).getByRole("link", { name: "Ver detalhes de Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a");
-    expect(within(birdRow).getByRole("link", { name: "Editar Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
-    expect(within(birdRow).getByRole("button", { name: "Iniciar transferência" }).hasAttribute("disabled")).toBe(true);
-    expect(within(birdRow).getByRole("button", { name: "Registrar competição" }).hasAttribute("disabled")).toBe(true);
-    expect(within(birdRow).getByRole("button", { name: "Inativar" }).hasAttribute("disabled")).toBe(true);
+    const actionMenu = birdRow.querySelector(".bird-row-actions-menu");
+    if (!(actionMenu instanceof HTMLElement)) throw new Error("Menu de ações não encontrado.");
+    expect(within(actionMenu).getByRole("link", { name: "Ver detalhes de Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a");
+    expect(within(actionMenu).getByRole("link", { name: "Editar Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
+    expect(within(actionMenu).getByRole("button", { name: "Iniciar transferência" }).hasAttribute("disabled")).toBe(true);
+    expect(within(actionMenu).getByRole("button", { name: "Registrar competição" }).hasAttribute("disabled")).toBe(true);
+    expect(within(actionMenu).getByRole("button", { name: "Inativar" }).hasAttribute("disabled")).toBe(true);
     fireEvent.pointerDown(document.body);
     expect(birdRow.querySelector(".bird-row-actions")?.hasAttribute("open")).toBe(false);
   });
@@ -179,7 +184,7 @@ describe("BirdListPage", () => {
 
     await openList(fetchMock);
     fireEvent.click(screen.getByText("Filtros e ordenação"));
-    fireEvent.change(screen.getByLabelText("Situação"), { target: { value: "Archived" } });
+    fireEvent.change(document.getElementById("bird-status-filter") as HTMLSelectElement, { target: { value: "Archived" } });
 
     await waitFor(() => expect(screen.getByRole("article", { name: "Ave Ave Arquivada" })).toBeTruthy());
     expect(window.location.search).toContain("status=Archived");
@@ -277,6 +282,35 @@ describe("BirdListPage", () => {
     expect(window.location.search).toBe("?page=2");
     expect(listUrl(fetchMock, 3)).toContain("page=2");
     expect(screen.getByRole("button", { name: "Página anterior" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("offers mobile load more only when more than five birds are available", async () => {
+    const mediaQuery = {
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn()
+    } as unknown as MediaQueryList;
+    vi.stubGlobal("matchMedia", vi.fn(() => mediaQuery));
+    const birds = Array.from({ length: 6 }, (_, index) => bird({
+      birdId: `bird-${index}`,
+      name: `Ave ${index + 1}`
+    }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse(birds));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openList(fetchMock, false);
+
+    await waitFor(() => expect(screen.getByRole("article", { name: "Ave Ave 5" })).toBeTruthy());
+    expect(screen.queryByRole("article", { name: "Ave Ave 6" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Carregar mais" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Carregar mais" }));
+
+    await waitFor(() => expect(screen.getByRole("article", { name: "Ave Ave 6" })).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Carregar mais" })).toBeNull();
+    expect(screen.getByText("Mostrando 6 de 6 aves")).toBeTruthy();
   });
 
   it("shows a retry state when the listing request fails", async () => {

@@ -84,9 +84,9 @@ function NavigationLinks({ activeNav, items = primaryNavigation }: Readonly<{ ac
   );
 }
 
-function AccountMenu({ displayName, email, farmName }: Readonly<{ displayName: string; email: string; farmName: string }>) {
+function AccountMenu({ compact = false, displayName, email, farmName }: Readonly<{ compact?: boolean; displayName: string; email: string; farmName: string }>) {
   return (
-    <details className="authenticated-account-menu">
+    <details className={`authenticated-account-menu${compact ? " authenticated-account-menu-compact" : ""}`}>
       <summary aria-label={`Abrir menu de ${displayName}`} className="authenticated-account-summary" suppressHydrationWarning>
         <span aria-hidden="true" className="authenticated-account-avatar" suppressHydrationWarning>{initialsFromName(displayName)}</span>
         <span className="authenticated-account-copy">
@@ -155,13 +155,10 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
             </div>
           </header>
           <header className="authenticated-mobile-header">
-            <Link aria-label="Ir para o dashboard" className="authenticated-brand" href="/dashboard">
-              <BrandLockup />
-            </Link>
             <details className="authenticated-mobile-menu">
-              <summary>
+              <summary aria-label="Abrir menu principal">
                 <img alt="" aria-hidden="true" src="/assets/icons/ui/menu.svg" />
-                <span>Menu</span>
+                <span className="sr-only">Menu</span>
               </summary>
               <div className="authenticated-mobile-menu-panel">
                 <div className="authenticated-farm-context">
@@ -174,13 +171,19 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
                 <nav aria-label="Conta e configurações no celular" className="authenticated-mobile-menu-links">
                   <NavigationLinks activeNav={activeNav} items={secondaryNavigation} />
                 </nav>
-                <div className="authenticated-mobile-account">
+                <div className="authenticated-mobile-menu-account">
                   <strong suppressHydrationWarning>{displayName}</strong>
                   <small suppressHydrationWarning>{resolvedEmail}</small>
                   <Link href="/configuracoes?section=session">Gerenciar sessão</Link>
                 </div>
               </div>
             </details>
+            <Link aria-label="Ir para o dashboard" className="authenticated-brand" href="/dashboard">
+              <BrandLockup />
+            </Link>
+            <div className="authenticated-mobile-account-control">
+              <AccountMenu compact displayName={displayName} email={resolvedEmail} farmName={resolvedFarmName} />
+            </div>
           </header>
           <div className="authenticated-content" id="conteudo-autenticado">
             {children}

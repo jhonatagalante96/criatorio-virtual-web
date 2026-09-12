@@ -55,7 +55,9 @@ async function openForm(fetchMock: ReturnType<typeof vi.fn>) {
   render(<BirdRegistrationPage />);
   await waitFor(() => expect(screen.getByRole("heading", { name: "Cadastrar ave" })).toBeTruthy());
   expect(screen.getByRole("complementary", { name: "Navegação principal" })).toBeTruthy();
-  expect(screen.getByRole("complementary", { name: "Resumo do cadastro" })).toBeTruthy();
+  expect(screen.getByRole("complementary", { name: "Orientações do cadastro" })).toBeTruthy();
+  const formLayout = document.querySelector(".bird-form-layout");
+  expect(formLayout?.firstElementChild?.classList.contains("bird-form-aside")).toBe(true);
   expect(fetchMock).toHaveBeenCalledTimes(2);
 }
 

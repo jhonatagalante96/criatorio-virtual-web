@@ -10,12 +10,15 @@ export type DashboardIconName =
   | "edit"
   | "eye"
   | "farm"
+  | "filter"
+  | "gender"
   | "heart"
   | "home"
   | "leaf"
   | "search"
   | "settings"
   | "shield"
+  | "tag"
   | "transfer"
   | "trophy"
   | "user"
@@ -88,6 +91,14 @@ export function DashboardIcon({ name, className = "" }: Readonly<{ name: Dashboa
     return <svg {...props}><path d="m3.5 10.5 8.5-6.8 8.5 6.8" /><path d="M5.2 9.5v10.2h13.6V9.5M9.2 19.7v-5.2h5.6v5.2M16.7 4.8h2v3" /></svg>;
   }
 
+  if (name === "filter") {
+    return <svg {...props}><path d="M4 5h16l-6.4 7v5.8L10.4 19v-7L4 5Z" /></svg>;
+  }
+
+  if (name === "gender") {
+    return <svg {...props}><circle cx="9" cy="9" r="4.5" /><path d="m12.3 5.7 5.4-5.4M14.8 1h3.9v3.9M12.3 12.3l4.2 4.2M7.2 13.5v7M4.4 17h5.6" /></svg>;
+  }
+
   if (name === "crown") {
     return <svg {...props}><path d="m4 7 4 3 4-5 4 5 4-3-1.7 10.3H5.7z" /><path d="M6.5 20h11" /></svg>;
   }
@@ -98,6 +109,10 @@ export function DashboardIcon({ name, className = "" }: Readonly<{ name: Dashboa
 
   if (name === "shield") {
     return <svg {...props}><path d="M12 3.5 19 6v5.3c0 4.5-2.9 7.8-7 9.2-4.1-1.4-7-4.7-7-9.2V6l7-2.5Z" /><path d="m9 12 2 2 4-4" /></svg>;
+  }
+
+  if (name === "tag") {
+    return <svg {...props}><path d="M4 5.5h6l8.5 8.5-5.5 5.5L4.5 11V5.5Z" /><circle cx="7.5" cy="8.5" r="1" /></svg>;
   }
 
   if (name === "user") {
