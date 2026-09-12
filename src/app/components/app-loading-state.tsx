@@ -22,8 +22,8 @@ export function AppLoadingContent({ label, message }: Pick<AppLoadingStateProps,
 export function AppLoadingState({ activeNav, email, farmName = "Criatório selecionado", label, message }: AppLoadingStateProps) {
   const content = <AppLoadingContent label={label} message={message} />;
 
-  if (activeNav && email) {
-    return <AuthenticatedShell activeNav={activeNav} email={email} farmName={farmName}>{content}</AuthenticatedShell>;
+  if (activeNav) {
+    return <AuthenticatedShell activeNav={activeNav} email={email ?? ""} farmName={farmName}>{content}</AuthenticatedShell>;
   }
 
   return <main aria-busy="true" className="app-loading-page">{content}</main>;

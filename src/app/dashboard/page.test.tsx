@@ -75,6 +75,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     expect(screen.queryByRole("heading", { name: "Restaurando sua sessão" })).toBeNull();
+    expect(screen.getByRole("complementary", { name: "Navegação principal" })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain("Carregando dashboard");
     expect(screen.getByRole("status").textContent).not.toContain("Restaurando sua sessão");
   });
