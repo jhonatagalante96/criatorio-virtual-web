@@ -10,6 +10,7 @@ import { AuthenticatedShell } from "../../components/authenticated-shell";
 import { DashboardIcon } from "../../components/dashboard-icons";
 import type { DashboardIconName } from "../../components/dashboard-icons";
 import { SpeciesSummary } from "../../components/species-selector";
+import { BirdStatusAction } from "./bird-status-action";
 
 interface BreedingFarmSummary {
   breedingFarmId: string;
@@ -402,7 +403,19 @@ function BirdFilterSelect({
   );
 }
 
-function BirdActionMenu({ bird }: Readonly<{ bird: BirdListItem }>) {
+function BirdActionMenu({
+  bird,
+  client,
+  onStatusChanged,
+  prepareStatusMutation,
+  onSessionExpired
+}: Readonly<{
+  bird: BirdListItem;
+  client: ApiClient;
+  onSessionExpired: () => Promise<unknown> | void;
+  onStatusChanged: () => void;
+  prepareStatusMutation: () => Promise<void>;
+}>) {
   const menuRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
@@ -437,16 +450,35 @@ function BirdActionMenu({ bird }: Readonly<{ bird: BirdListItem }>) {
           <span>Registrar competição</span>
         </button>
         <div aria-hidden="true" className="bird-row-action-divider" />
-        <button className="bird-row-action is-danger" disabled title="Módulo em desenvolvimento" type="button">
-          <DashboardIcon name="ban" />
-          <span>Inativar</span>
-        </button>
+        {bird.status === "Active" && (
+          <BirdStatusAction
+            birdBirthDate={bird.birthDate}
+            birdId={bird.birdId}
+            birdName={bird.name}
+            client={client}
+            onSessionExpired={onSessionExpired}
+            onUpdated={onStatusChanged}
+            prepareMutation={prepareStatusMutation}
+          />
+        )}
       </div>
     </details>
   );
 }
 
-function BirdCard({ bird }: Readonly<{ bird: BirdListItem }>) {
+function BirdCard({
+  bird,
+  client,
+  onSessionExpired,
+  onStatusChanged,
+  prepareStatusMutation
+}: Readonly<{
+  bird: BirdListItem;
+  client: ApiClient;
+  onSessionExpired: () => Promise<unknown> | void;
+  onStatusChanged: () => void;
+  prepareStatusMutation: () => Promise<void>;
+}>) {
   return (
     <li>
       <article aria-label={`Ave ${bird.name}`} className="bird-list-card">
@@ -477,7 +509,13 @@ function BirdCard({ bird }: Readonly<{ bird: BirdListItem }>) {
           <strong>{bird.identificationPending ? "Identificação pendente" : `Anilha ${bird.ringNumber}`}</strong>
         </span>
         <Link aria-label={`Ver detalhes de ${bird.name}`} className="bird-list-card-arrow" href={`/plantel/aves/${bird.birdId}`}><span aria-hidden="true">›</span></Link>
-        <BirdActionMenu bird={bird} />
+        <BirdActionMenu
+          bird={bird}
+          client={client}
+          onSessionExpired={onSessionExpired}
+          onStatusChanged={onStatusChanged}
+          prepareStatusMutation={prepareStatusMutation}
+        />
       </article>
     </li>
   );
@@ -572,6 +610,13 @@ function BirdListPage() {
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
 
   const handleSessionExpired = useCallback(() => { void refresh(); }, [refresh]);
+  const prepareStatusMutation = useCallback(async () => {
+    if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
+  }, []);
+  const handleStatusChanged = useCallback(() => {
+    client.current?.clearCache();
+    setReloadVersion((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia?.("(max-width: 47.99rem)");
@@ -929,7 +974,7 @@ function BirdListPage() {
           </div>
         )}
         {listState === "ready" && birds.length > 0
-          ? <ul aria-label="Aves cadastradas" className="bird-list-cards">{displayedBirds.map((bird) => <BirdCard bird={bird} key={bird.birdId} />)}</ul>
+          ? <ul aria-label="Aves cadastradas" className="bird-list-cards">{displayedBirds.map((bird) => <BirdCard bird={bird} client={client.current!} key={bird.birdId} onSessionExpired={handleSessionExpired} onStatusChanged={handleStatusChanged} prepareStatusMutation={prepareStatusMutation} />)}</ul>
           : <BirdListState error={listError} hasActiveFilters={hasActiveFilters()} onClearFilters={clearFilters} onRetry={() => setReloadVersion((value) => value + 1)} state={listState} />}
         {listState === "ready" && birds.length > 0 && isMobileViewport && (
           <div className="bird-mobile-pagination">

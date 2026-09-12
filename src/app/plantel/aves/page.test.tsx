@@ -67,6 +67,18 @@ function speciesResponse(): Response {
   }]), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
+function tokenResponse(): Response {
+  return new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 });
+}
+
+function statusResponse(status = "Deceased"): Response {
+  return new Response(JSON.stringify({
+    deathDate: status === "Deceased" ? "2025-02-01" : null,
+    notes: status === "Deceased" ? "Falecimento registrado." : null,
+    status
+  }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
 async function openList(fetchMock: ReturnType<typeof vi.fn>, waitForBird = true) {
   render(<BirdListPage />);
   await waitFor(() => expect(screen.getByRole("heading", { name: "Aves" })).toBeTruthy());
@@ -152,7 +164,7 @@ describe("BirdListPage", () => {
     expect(within(actionMenu).getByRole("link", { name: "Editar Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
     expect(within(actionMenu).getByRole("button", { name: "Iniciar transferência" }).hasAttribute("disabled")).toBe(true);
     expect(within(actionMenu).getByRole("button", { name: "Registrar competição" }).hasAttribute("disabled")).toBe(true);
-    expect(within(actionMenu).getByRole("button", { name: "Inativar" }).hasAttribute("disabled")).toBe(true);
+    expect(within(actionMenu).getByRole("button", { name: "Inativar" }).hasAttribute("disabled")).toBe(false);
     fireEvent.pointerDown(document.body);
     expect(birdRow.querySelector(".bird-row-actions")?.hasAttribute("open")).toBe(false);
   });
@@ -172,6 +184,77 @@ describe("BirdListPage", () => {
     await waitFor(() => expect(screen.getByRole("article", { name: "Ave Aurora Filtrada" })).toBeTruthy());
     expect(window.location.search).toBe("?search=Aurora");
     expect(listUrl(fetchMock, 3)).toContain("search=Aurora");
+  });
+
+  it("validates a death date before submitting a status change", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([bird()]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openList(fetchMock);
+    const birdRow = screen.getByRole("article", { name: "Ave Aurora" });
+    fireEvent.click(within(birdRow).getByRole("button", { name: "Abrir ações de Aurora" }));
+    fireEvent.click(within(birdRow).getByRole("button", { name: "Inativar" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Registrar falecimento" }));
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar alteração" }));
+
+    expect(await screen.findByText("Informe a data do falecimento.")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("changes a bird status after explicit confirmation and refreshes the list", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([bird()]))
+      .mockResolvedValueOnce(tokenResponse())
+      .mockResolvedValueOnce(statusResponse())
+      .mockResolvedValueOnce(listResponse([bird({ status: "Deceased" })]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openList(fetchMock);
+    const birdRow = screen.getByRole("article", { name: "Ave Aurora" });
+    fireEvent.click(within(birdRow).getByRole("button", { name: "Abrir ações de Aurora" }));
+    fireEvent.click(within(birdRow).getByRole("button", { name: "Inativar" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Registrar falecimento" }));
+    fireEvent.change(screen.getByLabelText("Data do falecimento (obrigatória)"), { target: { value: "2025-02-01" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar alteração" }));
+
+    expect(await screen.findByText("Alteração concluída")).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole("article", { name: "Ave Aurora" }).textContent).toContain("Falecida"));
+    expect(fetchMock.mock.calls[3][0]).toContain("antiforgery/token");
+    expect(fetchMock.mock.calls[4][1]).toMatchObject({ method: "PATCH" });
+    expect(JSON.parse(String(fetchMock.mock.calls[4][1].body))).toEqual({
+      confirmed: true,
+      deathDate: "2025-02-01",
+      notes: null,
+      status: "Deceased"
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+  });
+
+  it("explains when a pending transfer blocks the status change", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([bird()]))
+      .mockResolvedValueOnce(tokenResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Bird status changes are unavailable while a transfer is pending." }), { headers: { "content-type": "application/problem+json" }, status: 409 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openList(fetchMock);
+    const birdRow = screen.getByRole("article", { name: "Ave Aurora" });
+    fireEvent.click(within(birdRow).getByRole("button", { name: "Abrir ações de Aurora" }));
+    fireEvent.click(within(birdRow).getByRole("button", { name: "Inativar" }));
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar alteração" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("transferência pendente");
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("applies status and identification filters without exposing another tenant", async () => {
