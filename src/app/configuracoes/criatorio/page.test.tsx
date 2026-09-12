@@ -3,7 +3,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import BreedingFarmEditPage from "./page";
 
+const routerReplace = vi.hoisted(() => vi.fn());
+
 vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: routerReplace }),
   useSearchParams: () => new URLSearchParams(window.location.search)
 }));
 
@@ -11,6 +14,7 @@ afterEach(() => {
   cleanup();
   window.history.pushState({}, "", "/configuracoes/criatorio");
   window.sessionStorage.clear();
+  routerReplace.mockReset();
   vi.unstubAllGlobals();
 });
 
@@ -192,6 +196,7 @@ describe("BreedingFarmEditPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
     await waitFor(() => expect(screen.getByText("Dados do criatório atualizados com sucesso.", { exact: true })).toBeTruthy());
+    expect(routerReplace).toHaveBeenCalledWith("/configuracoes/criatorio");
     expect(fetchMock).toHaveBeenCalledTimes(4);
     const [, updateRequest] = fetchMock.mock.calls[3];
     expect(new Headers(updateRequest.headers).get("x-xsrf-token")).toBe("csrf-token");

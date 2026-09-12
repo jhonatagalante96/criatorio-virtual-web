@@ -2,7 +2,7 @@
 
 import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, ValidationErrors, createApiClient } from "../../../lib/http/api-client";
 import { formatPostalCode, normalizePostalCode } from "../../../lib/postal-code";
@@ -227,6 +227,7 @@ function FarmOverview({ email, settings }: Readonly<{ email: string; settings: B
 
 function EditBreedingFarmForm({ email, farmId }: Readonly<{ email: string; farmId: string }>) {
   const { refresh } = useAuth();
+  const router = useRouter();
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [fields, setFields] = useState<BreedingFarmFields>();
   const [formError, setFormError] = useState<string>();
@@ -318,6 +319,7 @@ function EditBreedingFarmForm({ email, farmId }: Readonly<{ email: string; farmI
       const nextFields = fieldsFromSettings(response);
       setPostalCodeLookupKnownValue(nextFields.postalCode);
       setFields(nextFields); setErrors({}); setFormError(undefined); setSuccessMessage("Dados do criatório atualizados com sucesso.");
+      router.replace("/configuracoes/criatorio");
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(localizeValidationErrors(error.fields));
