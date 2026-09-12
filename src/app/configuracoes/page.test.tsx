@@ -3,7 +3,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import SettingsPage from "./page";
 
+const routerReplace = vi.hoisted(() => vi.fn());
+
 vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: routerReplace }),
   useSearchParams: () => new URLSearchParams(window.location.search)
 }));
 
@@ -11,6 +14,7 @@ afterEach(() => {
   cleanup();
   window.history.replaceState({}, "", "/configuracoes");
   window.sessionStorage.clear();
+  routerReplace.mockReset();
   vi.unstubAllGlobals();
 });
 
@@ -168,5 +172,22 @@ describe("SettingsPage", () => {
     fireEvent.mouseDown(screen.getByRole("dialog").parentElement!, { target: screen.getByRole("dialog").parentElement });
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns to login through client-side navigation after logout", async () => {
+    window.history.replaceState({}, "", "/configuracoes?section=session");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(antiforgeryResponse())
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SettingsPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Sessão" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Sair da conta" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sair" }));
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/login"));
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });

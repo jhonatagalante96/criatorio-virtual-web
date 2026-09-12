@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
 import { BrandLockup } from "../../components/brand";
 import { SpeciesSelector, SpeciesSummary } from "../../components/species-selector";
@@ -27,7 +28,7 @@ function SpeciesAccessState({
             <h1 id="titulo-selecao-especie-estado" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href="/login">Voltar para o login</a>
+            <Link className="text-action" href="/login">Voltar para o login</Link>
           </div>
         </section>
       </div>
@@ -97,7 +98,7 @@ function SpeciesSelectionScreen() {
       <div className="auth-shell species-selection-shell">
         <section aria-labelledby="titulo-seletor-especie" className="auth-form-panel species-selection-panel">
           <div className="auth-form-content" id="conteudo-selecao-especie">
-            <a className="auth-mobile-back" href="/" aria-label="Voltar para o início">←</a>
+            <Link className="auth-mobile-back" href="/" aria-label="Voltar para o início">←</Link>
             <div className="auth-mobile-brand"><BrandLockup stacked /></div>
             <SpeciesSelector onSelected={setSelectedSpecies} onSessionExpired={handleSessionExpired} />
             <button

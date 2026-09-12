@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../../../lib/http/api-client";
 import { AuthenticatedShell } from "../../../components/authenticated-shell";
@@ -127,7 +128,7 @@ function AccessState({
             <h1 id="titulo-estado-cadastro-ave" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href={actionHref}>{actionLabel}</a>
+            <Link className="text-action" href={actionHref}>{actionLabel}</Link>
           </div>
         </section>
       </div>
@@ -409,9 +410,9 @@ function BirdRegistrationState({
           <h1>{heading}</h1>
           <p>{stateMessage}</p>
           <div className="bird-form-state-actions">
-            {farmState === "blocked" && <a className="auth-primary-action" href="/onboarding/criatorio/selecionar">Selecionar criatório</a>}
+            {farmState === "blocked" && <Link className="auth-primary-action" href="/onboarding/criatorio/selecionar">Selecionar criatório</Link>}
             {farmState === "error" && onRetry && <button className="auth-primary-action" onClick={onRetry} type="button">Tentar novamente</button>}
-            <a className="auth-secondary-action" href="/plantel/aves">Voltar para o plantel</a>
+            <Link className="auth-secondary-action" href="/plantel/aves">Voltar para o plantel</Link>
           </div>
         </div>
       </div>
@@ -439,7 +440,7 @@ function RegistrationSuccess({ bird, onRegisterAnother }: Readonly<{ bird: Creat
         </div>
       )}
       <button className="auth-primary-action" onClick={onRegisterAnother} type="button">Cadastrar outra ave</button>
-      <a className="text-action" href="/">Voltar para o início</a>
+      <Link className="text-action" href="/">Voltar para o início</Link>
     </div>
   );
 }
@@ -603,7 +604,7 @@ function BirdRegistrationForm() {
 
   return (
     <BirdRegistrationLayout email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"}>
-      <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><a href="/dashboard">Dashboard</a><span aria-hidden="true">/</span><a href="/plantel/aves">Aves</a><span aria-hidden="true">/</span><span aria-current="page">Cadastrar ave</span></nav>
+      <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">/</span><Link href="/plantel/aves">Aves</Link><span aria-hidden="true">/</span><span aria-current="page">Cadastrar ave</span></nav>
       <div className="bird-form-page-header">
         <p className="eyebrow">Plantel{farmName ? ` · ${farmName}` : ""}</p>
         <h1 id="titulo-cadastro-ave">Cadastrar ave</h1>

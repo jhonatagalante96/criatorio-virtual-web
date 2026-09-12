@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
 import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../../components/brand";
@@ -174,7 +175,7 @@ function OnboardingState({
             <h1 id="titulo-onboarding-estado" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href="/login">Voltar para o login</a>
+            <Link className="text-action" href="/login">Voltar para o login</Link>
           </div>
         </section>
       </div>
@@ -195,8 +196,8 @@ function CreationSuccess() {
       <p className="eyebrow">Etapa concluída</p>
       <h1 id="titulo-onboarding" ref={headingRef} tabIndex={-1}>Seu criatório foi criado.</h1>
       <p className="lede">O vínculo de responsável foi configurado com segurança. Você já pode continuar para o Criatório Virtual.</p>
-      <a className="auth-primary-action" href="/onboarding/criatorio/selecionar">Continuar onboarding</a>
-      <a className="text-action" href="/login">Voltar para a conta</a>
+      <Link className="auth-primary-action" href="/onboarding/criatorio/selecionar">Continuar onboarding</Link>
+      <Link className="text-action" href="/login">Voltar para a conta</Link>
     </div>
   );
 }
@@ -286,7 +287,7 @@ function CreateBreedingFarmForm() {
 
   return (
     <>
-      <a className="auth-mobile-back" href="/login" aria-label="Voltar para a conta"><BackIcon /></a>
+      <Link className="auth-mobile-back" href="/login" aria-label="Voltar para a conta"><BackIcon /></Link>
       <div className="auth-mobile-brand"><BrandLockup stacked /></div>
       <p className="eyebrow">Primeiro passo</p>
       <h1 id="titulo-onboarding">Vamos criar seu criatório</h1>

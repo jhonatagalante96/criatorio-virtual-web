@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../lib/http/api-client";
 import { AuthenticatedShell } from "../components/authenticated-shell";
@@ -177,7 +178,7 @@ function AccessState({
             <h1 id="titulo-dashboard-estado" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href={actionHref}>{actionLabel}</a>
+            <Link className="text-action" href={actionHref}>{actionLabel}</Link>
           </div>
         </section>
       </div>
@@ -217,7 +218,7 @@ function PendingSection({ pending }: Readonly<{ pending: DashboardPending[] }>) 
           <h2 id="titulo-pendencias">Pendências <span className="dashboard-heading-badge">{pending.length}</span></h2>
           <p className="dashboard-section-lede">Itens que precisam da sua atenção.</p>
         </div>
-        <a className="dashboard-section-action" href="/plantel/aves?identificationPending=true">Ver todas <span aria-hidden="true">›</span></a>
+        <Link className="dashboard-section-action" href="/plantel/aves?identificationPending=true">Ver todas <span aria-hidden="true">›</span></Link>
       </div>
       {pending.length === 0 ? (
         <div className="dashboard-empty-state">
@@ -244,7 +245,7 @@ function PendingSection({ pending }: Readonly<{ pending: DashboardPending[] }>) 
 
             return (
               <li key={`${item.code}-${item.resourceType}`}>
-                {href ? <a href={href}>{content}</a> : <div className="dashboard-pending-item">{content}</div>}
+                {href ? <Link href={href}>{content}</Link> : <div className="dashboard-pending-item">{content}</div>}
               </li>
             );
           })}
@@ -303,7 +304,7 @@ function ActivitiesSection({ activities }: Readonly<{ activities: DashboardActiv
 
             return (
               <li key={`${activity.resourceType}-${activity.resourceId}-${activity.occurredAtUtc}-${index}`}>
-                {href ? <a href={href}>{activityContent}</a> : <div className="dashboard-activity-item">{activityContent}</div>}
+                {href ? <Link href={href}>{activityContent}</Link> : <div className="dashboard-activity-item">{activityContent}</div>}
               </li>
             );
           })}
@@ -361,14 +362,14 @@ function QuickActionsSection() {
       <div className="dashboard-quick-action-grid">
         {quickActions.map((action) => (
           action.href ? (
-            <a className={`dashboard-quick-action dashboard-quick-action-${action.tone}`} href={action.href} key={action.title}>
+            <Link className={`dashboard-quick-action dashboard-quick-action-${action.tone}`} href={action.href} key={action.title}>
               <span aria-hidden="true" className="dashboard-quick-action-icon"><DashboardIcon name={action.icon} /></span>
               <span className="dashboard-quick-action-copy">
                 <strong>{action.title}</strong>
                 <span>{action.description}</span>
               </span>
               <span aria-hidden="true" className="dashboard-card-arrow">›</span>
-            </a>
+            </Link>
           ) : (
             <div aria-disabled="true" className={`dashboard-quick-action dashboard-quick-action-${action.tone} is-disabled`} key={action.title} title="Módulo em desenvolvimento">
               <span aria-hidden="true" className="dashboard-quick-action-icon"><DashboardIcon name={action.icon} /></span>
@@ -526,7 +527,18 @@ function DashboardScreen() {
   if (status === "forbidden") return <AccessState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar esta área."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
   if (status === "unauthenticated") return <AccessState heading="Entre para consultar o dashboard" message="Faça login para acompanhar os indicadores do seu criatório." />;
 
-  if (view.kind === "loading") return <AccessState heading="Carregando seu dashboard" message="Só um instante enquanto organizamos os dados do criatório." />;
+  if (view.kind === "loading") {
+    if (!session) return <AccessState heading="Carregando seu dashboard" message="Só um instante enquanto organizamos os dados do criatório." />;
+    return (
+      <AuthenticatedShell activeNav="dashboard" email={session.email} farmName="Criatório selecionado">
+        <div aria-busy="true" aria-live="polite" className="dashboard-loading-state" role="status">
+          <span className="bird-loading-dot" aria-hidden="true" />
+          <strong>Carregando seu dashboard</strong>
+          <span>Organizando os dados do criatório selecionado.</span>
+        </div>
+      </AuthenticatedShell>
+    );
+  }
   if (view.kind === "error") return <AccessState heading="Não foi possível carregar o dashboard" message={view.message} onRetry={() => void loadDashboard()} />;
   if (view.kind === "blocked") return <AccessState heading="Acesso bloqueado" message={view.message} onRetry={() => void loadDashboard()} retryLabel="Verificar novamente" />;
   if (view.kind === "empty") return <AccessState actionHref="/onboarding/criatorio" actionLabel="Criar meu criatório" heading="Crie seu primeiro criatório" message="Ainda não existe um criatório vinculado a esta conta. Crie um agora para liberar seu dashboard." />;

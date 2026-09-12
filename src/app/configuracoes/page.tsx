@@ -2,7 +2,7 @@
 
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, createApiClient } from "../../lib/http/api-client";
 import { validatePassword, validatePasswordConfirmation } from "../../lib/auth/password-validation";
@@ -48,7 +48,7 @@ function SettingsState({ heading, message, onRetry, retryLabel = "Tentar novamen
             <h1 id="titulo-configuracoes" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href="/login">Voltar para o login</a>
+            <Link className="text-action" href="/login">Voltar para o login</Link>
           </div>
         </section>
       </div>
@@ -213,6 +213,7 @@ function SecurityView() {
 
 function SessionView() {
   const { error, logout, session, status } = useAuth();
+  const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [logoutError, setLogoutError] = useState<string>();
 
@@ -229,7 +230,7 @@ function SessionView() {
     setLogoutError(undefined);
     const result = await logout();
     if (!result.ok) setLogoutError(result.error ?? "Não foi possível sair agora. Tente novamente.");
-    else window.location.assign("/login");
+    else router.replace("/login");
   }
 
   return (

@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { BrandLockup } from "./components/brand";
 import { GoogleAuthenticationCallback } from "./components/google-authentication-callback";
 
@@ -114,8 +115,8 @@ export default function Home() {
             </ul>
           </nav>
           <div className="landing-header-actions">
-            <a className="landing-login-link" href="/login">Entrar</a>
-            <a className="landing-header-cta" href="/cadastro">Começar agora <ArrowIcon /></a>
+            <Link className="landing-login-link" href="/login">Entrar</Link>
+            <Link className="landing-header-cta" href="/cadastro">Começar agora <ArrowIcon /></Link>
           </div>
           <details className="landing-mobile-menu">
             <summary aria-label="Abrir menu de navegação"><MenuIcon /></summary>
@@ -136,8 +137,8 @@ export default function Home() {
               <h1 id="titulo-principal">Seu criatório organizado, mais tempo para o que você ama.</h1>
               <p className="landing-lede">Gerencie seu plantel, documentos, pedigree, transferências e toda a rotina do seu criatório em um só lugar.</p>
               <div className="landing-actions">
-                <a className="primary-action" href="/cadastro">Começar agora <ArrowIcon /></a>
-                <a className="secondary-action landing-secondary-action" href="/login">Entrar</a>
+                <Link className="primary-action" href="/cadastro">Começar agora <ArrowIcon /></Link>
+                <Link className="secondary-action landing-secondary-action" href="/login">Entrar</Link>
               </div>
             </div>
             <DashboardPreview />
@@ -193,7 +194,7 @@ export default function Home() {
                   </div>
                   <p className="plan-price"><strong>R$ 199,90</strong><span>por ano</span></p>
                 </div>
-                <a className="primary-action plan-action" href="/cadastro">Criar minha conta <ArrowIcon /></a>
+                <Link className="primary-action plan-action" href="/cadastro">Criar minha conta <ArrowIcon /></Link>
               </div>
             </article>
           </section>

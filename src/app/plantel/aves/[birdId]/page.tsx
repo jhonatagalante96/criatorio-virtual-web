@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../../../components/brand";
@@ -155,7 +156,7 @@ function DetailStateView({
             <h1 id="titulo-estado-ficha-ave" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href={actionHref}>{actionLabel}</a>
+            <Link className="text-action" href={actionHref}>{actionLabel}</Link>
           </div>
         </section>
       </div>
@@ -196,7 +197,7 @@ function AuthenticatedDetailState({
           <p>{message}</p>
           <div className="bird-detail-state-actions">
             {onRetry && <button className="auth-primary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="auth-secondary-action" href={actionHref}>{actionLabel}</a>
+            <Link className="auth-secondary-action" href={actionHref}>{actionLabel}</Link>
           </div>
         </div>
       </div>
@@ -242,10 +243,10 @@ function ParentCard({
     return (
       <div className="bird-parent-card">
         <span className="bird-detail-label">{label}</span>
-        <a href={`/plantel/aves/${parent.birdId}`}>
+        <Link href={`/plantel/aves/${parent.birdId}`}>
           <strong>{parent.name}</strong>
           <span>{sexLabel(parent.sex)} · {statusLabel(parent.status)}</span>
-        </a>
+        </Link>
         <small>{parent.ringNumber ? `Anilha ${parent.ringNumber}` : "Anilha não informada"}{parent.birthDate ? ` · Nascimento ${formatDate(parent.birthDate)}` : ""}</small>
       </div>
     );
@@ -283,7 +284,7 @@ function GenealogyNodes({ genealogy }: Readonly<{ genealogy: BirdGenealogyRespon
         {ancestors.map((node) => (
           <li key={node.nodeKey}>
             {node.canNavigate && node.isAccessible && node.birdId
-              ? <a href={`/plantel/aves/${node.birdId}`}><strong>{node.name}</strong><span>{node.position === "father" ? "Pai" : node.position === "mother" ? "Mãe" : "Ancestral"} · geração {node.generation}</span></a>
+              ? <Link href={`/plantel/aves/${node.birdId}`}><strong>{node.name}</strong><span>{node.position === "father" ? "Pai" : node.position === "mother" ? "Mãe" : "Ancestral"} · geração {node.generation}</span></Link>
               : <div><strong>{node.name}</strong><span>{node.source === "External" ? "Ancestral externo" : "Snapshot histórico"} · geração {node.generation}</span></div>}
           </li>
         ))}
@@ -337,7 +338,7 @@ function BirdDetailActionMenu({ birdId }: Readonly<{ birdId: string }>) {
     <details className="bird-detail-action-menu" ref={menuRef}>
       <summary aria-label="Abrir mais ações">⋮</summary>
       <div className="bird-detail-action-menu-panel">
-        <a href={`/plantel/aves/${encodeURIComponent(birdId)}/editar`}>Editar dados</a>
+        <Link href={`/plantel/aves/${encodeURIComponent(birdId)}/editar`}>Editar dados</Link>
         <button disabled title="Módulo em desenvolvimento" type="button">Iniciar transferência</button>
         <button disabled title="Módulo em desenvolvimento" type="button">Registrar competição</button>
         <button disabled title="Módulo em desenvolvimento" type="button">Baixar ficha (PDF)</button>
@@ -543,7 +544,11 @@ function BirdDetailPage() {
   }
 
   if (farmState === "loading") {
-    return <AuthenticatedDetailState email={session.email} farmName={farmName ?? "Criatório selecionado"} actionHref="/plantel/aves" heading="Verificando o criatório" message="Só um instante enquanto buscamos a ave no criatório selecionado." />;
+    return (
+      <DetailLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
+        <div className="bird-detail-page-state"><LoadingSection label="ficha da ave" /></div>
+      </DetailLayout>
+    );
   }
   if (farmState === "blocked") {
     return <AuthenticatedDetailState email={session.email} farmName={farmName ?? "Criatório selecionado"} actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar criatório" heading="Selecione um criatório" message={farmError ?? "Escolha um criatório antes de consultar a ficha."} />;
@@ -564,7 +569,7 @@ function BirdDetailPage() {
 
   return (
     <DetailLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
-      <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><a href="/dashboard">Dashboard</a><span aria-hidden="true">›</span><a href="/plantel/aves">Aves</a><span aria-hidden="true">›</span><span aria-current="page">{bird.name}</span></nav>
+      <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span><Link href="/plantel/aves">Aves</Link><span aria-hidden="true">›</span><span aria-current="page">{bird.name}</span></nav>
 
       <section aria-labelledby="titulo-ficha-ave" className="bird-detail-profile">
         <BirdDetailPhoto status={bird.status} />
@@ -577,7 +582,7 @@ function BirdDetailPage() {
               <p className="bird-detail-profile-sex">{sexLabel(bird.sex)} · {bird.speciesPopularName}</p>
             </div>
             <div className="bird-detail-profile-actions">
-              <a className="bird-detail-outline-action" href={`/plantel/aves/${encodeURIComponent(bird.birdId)}/editar`}><DashboardIcon name="edit" />Editar</a>
+              <Link className="bird-detail-outline-action" href={`/plantel/aves/${encodeURIComponent(bird.birdId)}/editar`}><DashboardIcon name="edit" />Editar</Link>
               <button disabled title="Módulo em desenvolvimento" type="button"><DashboardIcon name="heart" />Registrar reprodução</button>
               <BirdDetailActionMenu birdId={bird.birdId} />
             </div>
@@ -597,7 +602,7 @@ function BirdDetailPage() {
       <div className="bird-detail-layout" id="visao-geral">
         <div className="bird-detail-main-column">
           <section aria-labelledby="titulo-dados-ave" className="bird-detail-section">
-            <div className="bird-detail-section-heading"><div><p className="eyebrow">Visão geral</p><h2 id="titulo-dados-ave">Informações da ave</h2></div><a className="bird-detail-section-action" href={`/plantel/aves/${encodeURIComponent(bird.birdId)}/editar`}>Editar</a></div>
+            <div className="bird-detail-section-heading"><div><p className="eyebrow">Visão geral</p><h2 id="titulo-dados-ave">Informações da ave</h2></div><Link className="bird-detail-section-action" href={`/plantel/aves/${encodeURIComponent(bird.birdId)}/editar`}>Editar</Link></div>
             <table className="bird-detail-info-table">
               <tbody>
                 <tr><th scope="row">Nome</th><td>{bird.name}</td></tr>

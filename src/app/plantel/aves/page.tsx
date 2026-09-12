@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../../components/brand";
@@ -197,7 +198,7 @@ function AccessState({
             <h1 id="titulo-estado-lista-aves" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href={actionHref}>{actionLabel}</a>
+            <Link className="text-action" href={actionHref}>{actionLabel}</Link>
           </div>
         </section>
       </div>
@@ -407,14 +408,14 @@ function BirdActionMenu({ bird }: Readonly<{ bird: BirdListItem }>) {
     <details className="bird-row-actions" ref={menuRef}>
       <summary aria-label={`Abrir ações de ${bird.name}`} role="button">⋯</summary>
       <div className="bird-row-actions-menu">
-        <a aria-label={`Ver detalhes de ${bird.name}`} className="bird-row-action" href={`/plantel/aves/${bird.birdId}`}>
+        <Link aria-label={`Ver detalhes de ${bird.name}`} className="bird-row-action" href={`/plantel/aves/${bird.birdId}`}>
           <DashboardIcon name="eye" />
           <span>Ver detalhes</span>
-        </a>
-        <a aria-label={`Editar ${bird.name}`} className="bird-row-action" href={`/plantel/aves/${bird.birdId}/editar`}>
+        </Link>
+        <Link aria-label={`Editar ${bird.name}`} className="bird-row-action" href={`/plantel/aves/${bird.birdId}/editar`}>
           <DashboardIcon name="edit" />
           <span>Editar</span>
-        </a>
+        </Link>
         <div aria-hidden="true" className="bird-row-action-divider" />
         <button className="bird-row-action" disabled title="Módulo em desenvolvimento" type="button">
           <DashboardIcon name="transfer" />
@@ -440,7 +441,7 @@ function BirdCard({ bird }: Readonly<{ bird: BirdListItem }>) {
       <article aria-label={`Ave ${bird.name}`} className="bird-list-card">
         <span aria-hidden="true" className="bird-list-card-photo"><DashboardIcon name="bird" /></span>
         <div className="bird-list-card-name">
-          <h2><a aria-label={`Abrir ficha de ${bird.name}`} href={`/plantel/aves/${bird.birdId}`}>{bird.name}</a></h2>
+          <h2><Link aria-label={`Abrir ficha de ${bird.name}`} href={`/plantel/aves/${bird.birdId}`}>{bird.name}</Link></h2>
           <span className="bird-list-card-mobile-species">{bird.speciesPopularName}</span>
         </div>
         <span aria-label={`Sexo: ${sexLabel(bird.sex)}`} className="bird-list-card-sex">{sexLabel(bird.sex)}</span>
@@ -500,7 +501,7 @@ function BirdListState({
         : "Cadastre sua primeira ave para começar a organizar o plantel."}</span>
       {hasActiveFilters
         ? <button className="auth-secondary-action" onClick={onClearFilters} type="button">Limpar filtros</button>
-        : <a className="auth-primary-action" href="/plantel/aves/novo">Cadastrar primeira ave</a>}
+        : <Link className="auth-primary-action" href="/plantel/aves/novo">Cadastrar primeira ave</Link>}
     </div>
   );
 }
@@ -681,8 +682,20 @@ function BirdListPage() {
     return [filters.search, filters.sex, filters.speciesId, filters.status, filters.identificationPending].filter(Boolean).length;
   }
 
+  if (!session) return null;
+
   if (farmState === "loading") {
-    return <AccessState actionHref="/" actionLabel="Voltar para o início" heading="Verificando o criatório" message="Só um instante enquanto buscamos o criatório selecionado." />;
+    return (
+      <BirdListLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
+        <div className="bird-list-view">
+          <div aria-busy="true" aria-live="polite" className="bird-list-state bird-list-loading" role="status">
+            <span className="bird-loading-dot" aria-hidden="true" />
+            <strong>Carregando plantel</strong>
+            <span>Buscando os registros do criatório selecionado.</span>
+          </div>
+        </div>
+      </BirdListLayout>
+    );
   }
   if (farmState === "blocked") {
     return <AccessState actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar criatório" heading="Selecione um criatório" message={farmError ?? "Escolha um criatório antes de consultar o plantel."} />;
@@ -693,12 +706,10 @@ function BirdListPage() {
 
   const resultLabel = totalCount === 1 ? "1 ave encontrada" : `${totalCount} aves encontradas`;
 
-  if (!session) return null;
-
   return (
     <BirdListLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
       <nav aria-label="Navegação estrutural" className="bird-list-breadcrumb">
-        <a href="/dashboard">Dashboard</a>
+        <Link href="/dashboard">Dashboard</Link>
         <span aria-hidden="true">›</span>
         <span aria-current="page">Aves</span>
       </nav>
@@ -708,7 +719,7 @@ function BirdListPage() {
           <h1 id="titulo-lista-aves">Aves</h1>
           <p className="lede">Gerencie as aves cadastradas no seu criatório.</p>
         </div>
-        <a className="auth-primary-action bird-list-register-action" href="/plantel/aves/novo"><span aria-hidden="true">＋</span> Cadastrar ave</a>
+        <Link className="auth-primary-action bird-list-register-action" href="/plantel/aves/novo"><span aria-hidden="true">＋</span> Cadastrar ave</Link>
       </header>
 
       <section aria-labelledby="titulo-busca-aves" className="bird-list-toolbar">

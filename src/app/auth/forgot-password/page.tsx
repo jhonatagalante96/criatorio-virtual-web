@@ -1,6 +1,7 @@
 "use client";
 
 import React, { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ApiClient, ApiError, createApiClient } from "../../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../../components/brand";
 
@@ -77,7 +78,7 @@ export default function ForgotPasswordPage() {
         <BrandPanel />
         <section aria-labelledby="titulo-recuperacao" className="auth-form-panel">
           <div className="auth-form-content password-recovery-card" id="conteudo-recuperacao">
-            <a className="auth-mobile-back" href="/login" aria-label="Voltar para o login"><BackIcon /></a>
+            <Link className="auth-mobile-back" href="/login" aria-label="Voltar para o login"><BackIcon /></Link>
             <div className="auth-mobile-brand"><BrandLockup stacked /></div>
 
             {!isSubmitted ? (
@@ -114,7 +115,7 @@ export default function ForgotPasswordPage() {
                   </button>
                 </form>
 
-                <p className="auth-footer"><a href="/login">Voltar para o login</a></p>
+                <p className="auth-footer"><Link href="/login">Voltar para o login</Link></p>
               </>
             ) : (
               <>
@@ -127,7 +128,7 @@ export default function ForgotPasswordPage() {
                   <strong>Não recebeu a mensagem?</strong>
                   <span>Verifique sua caixa de spam ou lixo eletrônico.</span>
                 </div>
-                <a className="auth-primary-action confirmation-primary-action" href="/login">Voltar para o login</a>
+                <Link className="auth-primary-action confirmation-primary-action" href="/login">Voltar para o login</Link>
               </>
             )}
           </div>

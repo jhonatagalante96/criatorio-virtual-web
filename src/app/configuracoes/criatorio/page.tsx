@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, ValidationErrors, createApiClient } from "../../../lib/http/api-client";
 import { AuthenticatedShell } from "../../components/authenticated-shell";
@@ -175,14 +176,14 @@ function FarmSettingsField({ autoComplete, disabled = false, error, id, label, m
 
 function FarmState({ email, farmName = "Criatório selecionado", heading, message, onRetry }: Readonly<{ email?: string; farmName?: string; heading: string; message: string; onRetry?: () => void }>) {
   if (!email) {
-    return <main className="auth-page farm-state-page"><div className="farm-state-card"><h1>{heading}</h1><p>{message}</p>{onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">Tentar novamente</button>}<a className="text-action" href="/login">Ir para o login</a></div></main>;
+    return <main className="auth-page farm-state-page"><div className="farm-state-card"><h1>{heading}</h1><p>{message}</p>{onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">Tentar novamente</button>}<Link className="text-action" href="/login">Ir para o login</Link></div></main>;
   }
 
   return <AuthenticatedShell activeNav="farm" email={email} farmName={farmName}><div className="farm-state-card farm-state-card-authenticated"><p className="eyebrow">Meu Criatório</p><h1>{heading}</h1><p>{message}</p>{onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">Tentar novamente</button>}</div></AuthenticatedShell>;
 }
 
 function FarmBreadcrumb({ current, farmName }: Readonly<{ current: string; farmName?: string }>) {
-  return <nav aria-label="Navegação estrutural" className="farm-breadcrumb"><a href="/dashboard">Dashboard</a><span aria-hidden="true">›</span>{farmName && <><a href="/configuracoes/criatorio">Meu Criatório</a><span aria-hidden="true">›</span></>}<span aria-current="page">{current}</span></nav>;
+  return <nav aria-label="Navegação estrutural" className="farm-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span>{farmName && <><Link href="/configuracoes/criatorio">Meu Criatório</Link><span aria-hidden="true">›</span></>}<span aria-current="page">{current}</span></nav>;
 }
 
 function DetailList({ items }: Readonly<{ items: Array<[string, string]> }>) {
@@ -200,7 +201,7 @@ function FarmOverview({ email, settings }: Readonly<{ email: string; settings: B
           <div className="farm-profile-cover"><img src="/assets/imagery/birds/bird-flock-hd.webp" alt="Aves em um galho" /><button className="farm-cover-action" disabled type="button">Alterar foto de capa</button></div>
           <div className="farm-profile-body">
             <div className="farm-profile-identity"><div className="farm-profile-symbol"><img src="/assets/brand/png/criatorio-virtual-symbol.png" alt="" /></div><div><div className="farm-profile-name-row"><h2 id="titulo-perfil-criatorio">{settings.name}</h2><span className="farm-profile-code">CV</span></div><p>Criatório Virtual</p><span className="farm-active-badge"><span aria-hidden="true" /> Ativo</span></div></div>
-            <div className="farm-profile-actions"><a className="farm-outline-action" href={`/configuracoes/criatorio?breedingFarmId=${encodeURIComponent(settings.breedingFarmId)}`}><DashboardIcon name="edit" /> Editar criatório</a><button aria-label="Mais ações" className="farm-more-action" disabled type="button">⋮</button></div>
+            <div className="farm-profile-actions"><Link className="farm-outline-action" href={`/configuracoes/criatorio?breedingFarmId=${encodeURIComponent(settings.breedingFarmId)}`}><DashboardIcon name="edit" /> Editar criatório</Link><button aria-label="Mais ações" className="farm-more-action" disabled type="button">⋮</button></div>
           </div>
           <nav aria-label="Seções do criatório" className="farm-tabs"><a aria-current="page" href="#informacoes">Informações</a><span aria-disabled="true">Estatísticas</span><span aria-disabled="true">Galeria</span></nav>
         </section>
@@ -299,7 +300,7 @@ function EditBreedingFarmForm({ email, farmId }: Readonly<{ email: string; farmI
             <fieldset className="farm-edit-card"><legend>Endereço</legend><div className="farm-edit-fields-two"><FarmSettingsField disabled={isSubmitting} error={fieldError("address.postalCode")} id="address-postalCode" label="CEP" maxLength={20} name="address.postalCode" onChange={(event) => updateField("postalCode", event.target.value)} placeholder="00000-000" value={fields.postalCode} /><FarmSettingsField disabled={isSubmitting} error={fieldError("address.state")} id="address-state" label="UF" maxLength={2} name="address.state" onChange={(event) => updateField("state", event.target.value)} placeholder="SP" value={fields.state} /></div><FarmSettingsField disabled={isSubmitting} error={fieldError("address.street")} id="address-street" label="Endereço" maxLength={200} name="address.street" onChange={(event) => updateField("street", event.target.value)} placeholder="Rua ou avenida" value={fields.street} /><div className="farm-edit-fields-two"><FarmSettingsField disabled={isSubmitting} error={fieldError("address.number")} id="address-number" label="Número" maxLength={32} name="address.number" onChange={(event) => updateField("number", event.target.value)} placeholder="Número" value={fields.number} /><FarmSettingsField disabled={isSubmitting} error={fieldError("address.complement")} id="address-complement" label="Complemento" maxLength={100} name="address.complement" onChange={(event) => updateField("complement", event.target.value)} optional placeholder="Opcional" value={fields.complement} /></div><div className="farm-edit-fields-two"><FarmSettingsField disabled={isSubmitting} error={fieldError("address.neighborhood")} id="address-neighborhood" label="Bairro" maxLength={120} name="address.neighborhood" onChange={(event) => updateField("neighborhood", event.target.value)} placeholder="Bairro" value={fields.neighborhood} /><FarmSettingsField disabled={isSubmitting} error={fieldError("address.city")} id="address-city" label="Cidade" maxLength={120} name="address.city" onChange={(event) => updateField("city", event.target.value)} placeholder="Cidade" value={fields.city} /></div></fieldset>
             <fieldset className="farm-edit-card"><legend>Contato</legend><FarmSettingsField autoComplete="name" disabled={isSubmitting} error={fieldError("responsibleName")} id="responsibleName" label="Nome do responsável" maxLength={200} name="responsibleName" onChange={(event) => updateField("responsibleName", event.target.value)} placeholder="Nome do responsável" value={fields.responsibleName} /><FarmSettingsField autoComplete="tel" disabled={isSubmitting} error={fieldError("contactPhone")} id="contactPhone" label="Telefone/WhatsApp" maxLength={32} name="contactPhone" onChange={(event) => updateField("contactPhone", event.target.value)} optional placeholder="(11) 99999-0000" value={fields.contactPhone} /><FarmSettingsField autoComplete="email" disabled={isSubmitting} error={fieldError("contactEmail")} id="contactEmail" label="E-mail" maxLength={320} name="contactEmail" onChange={(event) => updateField("contactEmail", event.target.value)} optional placeholder="voce@exemplo.com" type="email" value={fields.contactEmail} /><p className="farm-edit-help">Os dados de contato ajudam a manter o criatório atualizado para sua rotina.</p></fieldset>
           </div>
-          <div className="farm-edit-actions"><a className="farm-cancel-action" href="/configuracoes/criatorio">Cancelar</a><button className="auth-primary-action" disabled={isSubmitting} type="submit">{isSubmitting ? "Salvando alterações…" : "Salvar alterações"}</button></div>
+          <div className="farm-edit-actions"><Link className="farm-cancel-action" href="/configuracoes/criatorio">Cancelar</Link><button className="auth-primary-action" disabled={isSubmitting} type="submit">{isSubmitting ? "Salvando alterações…" : "Salvar alterações"}</button></div>
         </form>
       </div>
     </AuthenticatedShell>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ApiClient, ApiError, createApiClient } from "../../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../../components/brand";
 
@@ -184,7 +185,7 @@ export default function ConfirmEmailPage() {
         <BrandPanel />
         <section aria-labelledby="titulo-confirmacao-email" className="auth-form-panel">
           <div className="auth-form-content confirmation-card email-confirmation-card" id="conteudo-confirmacao-email">
-            <a className="auth-mobile-back" href="/login" aria-label="Voltar para o login"><BackIcon /></a>
+            <Link className="auth-mobile-back" href="/login" aria-label="Voltar para o login"><BackIcon /></Link>
             <div className="auth-mobile-brand"><BrandLockup stacked /></div>
 
             {isLoading && (
@@ -202,7 +203,7 @@ export default function ConfirmEmailPage() {
                 <ConfirmationIcon variant="success" />
                 <h1 id="titulo-confirmacao-email" ref={headingRef} tabIndex={-1}>E-mail confirmado!</h1>
                 <p className="lede">Sua conta foi ativada com sucesso. Agora você já pode entrar no Criatório Virtual.</p>
-                <a className="auth-primary-action confirmation-primary-action" href="/login">Ir para o login</a>
+                <Link className="auth-primary-action confirmation-primary-action" href="/login">Ir para o login</Link>
               </>
             )}
 
@@ -212,7 +213,7 @@ export default function ConfirmEmailPage() {
                 <h1 id="titulo-confirmacao-email" ref={headingRef} tabIndex={-1}>Link inválido ou expirado</h1>
                 <p className="lede">Esse link não é mais válido. Solicite um novo link para confirmar seu e-mail.</p>
                 <ResendForm />
-                <a className="text-action confirmation-back" href="/login">Voltar para o login</a>
+                <Link className="text-action confirmation-back" href="/login">Voltar para o login</Link>
               </>
             )}
 
@@ -222,7 +223,7 @@ export default function ConfirmEmailPage() {
                 <h1 id="titulo-confirmacao-email" ref={headingRef} tabIndex={-1}>Não foi possível confirmar seu e-mail</h1>
                 <p className="lede">O serviço está indisponível no momento. Você pode solicitar um novo link para tentar novamente.</p>
                 <ResendForm />
-                <a className="text-action confirmation-back" href="/login">Voltar para o login</a>
+                <Link className="text-action confirmation-back" href="/login">Voltar para o login</Link>
               </>
             )}
           </div>

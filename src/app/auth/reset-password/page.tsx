@@ -1,6 +1,7 @@
 "use client";
 
 import React, { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ApiClient, ApiError, createApiClient } from "../../../lib/http/api-client";
 import { validatePassword, validatePasswordConfirmation } from "../../../lib/auth/password-validation";
 import { BrandLockup, BrandPanel } from "../../components/brand";
@@ -112,7 +113,7 @@ export default function ResetPasswordPage() {
         <BrandPanel />
         <section aria-labelledby="titulo-redefinicao" className="auth-form-panel">
           <div className="auth-form-content password-recovery-card" id="conteudo-redefinicao">
-            <a className="auth-mobile-back" href="/login" aria-label="Voltar para o login"><BackIcon /></a>
+            <Link className="auth-mobile-back" href="/login" aria-label="Voltar para o login"><BackIcon /></Link>
             <div className="auth-mobile-brand"><BrandLockup stacked /></div>
 
             {status === "loading" && (
@@ -130,8 +131,8 @@ export default function ResetPasswordPage() {
                 <ErrorIcon />
                 <h1 id="titulo-redefinicao" ref={headingRef} tabIndex={-1}>Link inválido ou expirado</h1>
                 <p className="lede">Esse link não é mais válido. Solicite uma nova mensagem para redefinir sua senha.</p>
-                <a className="auth-primary-action confirmation-primary-action" href="/auth/forgot-password">Solicitar novo link</a>
-                <a className="text-action confirmation-back" href="/login">Voltar para o login</a>
+                <Link className="auth-primary-action confirmation-primary-action" href="/auth/forgot-password">Solicitar novo link</Link>
+                <Link className="text-action confirmation-back" href="/login">Voltar para o login</Link>
               </>
             )}
 
@@ -142,7 +143,7 @@ export default function ResetPasswordPage() {
                 </div>
                 <h1 id="titulo-redefinicao" ref={headingRef} tabIndex={-1}>Senha redefinida!</h1>
                 <p className="lede">Sua nova senha foi salva. Use-a para entrar no Criatório Virtual.</p>
-                <a className="auth-primary-action confirmation-primary-action" href="/login">Ir para o login</a>
+                <Link className="auth-primary-action confirmation-primary-action" href="/login">Ir para o login</Link>
               </>
             )}
 
@@ -185,7 +186,7 @@ export default function ResetPasswordPage() {
                     {isSubmitting ? "Redefinindo…" : "Redefinir senha"}
                   </button>
                 </form>
-                <p className="auth-footer"><a href="/login">Voltar para o login</a></p>
+                <p className="auth-footer"><Link href="/login">Voltar para o login</Link></p>
               </>
             )}
           </div>

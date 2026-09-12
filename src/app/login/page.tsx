@@ -1,6 +1,8 @@
 "use client";
 
 import React, { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, createApiClient, getApiUrl } from "../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../components/brand";
@@ -78,13 +80,14 @@ function AuthState({
       <h1 ref={headingRef} tabIndex={-1}>{heading}</h1>
       <p className="lede">{message}</p>
       {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-      <a className="text-action" href="/">Voltar para a página inicial</a>
+      <Link className="text-action" href="/">Voltar para a página inicial</Link>
     </div>
   );
 }
 
 function LoginDestination() {
   const { refresh, session } = useAuth();
+  const router = useRouter();
   const [message, setMessage] = useState("Só um instante enquanto abrimos o espaço certo para você.");
   const [isRetrying, setIsRetrying] = useState(0);
   const client = useRef<ApiClient | null>(null);
@@ -103,24 +106,24 @@ function LoginDestination() {
         if (cancelled) return;
         if (selection.breedingFarms.length === 0) {
           hasRedirected.current = true;
-          window.location.assign("/onboarding/criatorio");
+          router.replace("/onboarding/criatorio");
           return;
         }
         if (selection.breedingFarms.length > 1 || !selection.selectedBreedingFarmId) {
           hasRedirected.current = true;
-          window.location.assign("/onboarding/criatorio/selecionar");
+          router.replace("/onboarding/criatorio/selecionar");
           return;
         }
 
         const onlyFarmId = selection.breedingFarms[0].breedingFarmId;
         if (selection.selectedBreedingFarmId !== onlyFarmId) {
           hasRedirected.current = true;
-          window.location.assign("/onboarding/criatorio/selecionar");
+          router.replace("/onboarding/criatorio/selecionar");
           return;
         }
         if (cancelled) return;
         hasRedirected.current = true;
-        window.location.assign("/dashboard");
+        router.replace("/dashboard");
       } catch (error) {
         if (cancelled) return;
         if (error instanceof ApiError && error.status === 401) {
@@ -137,7 +140,7 @@ function LoginDestination() {
 
     void openDestination();
     return () => { cancelled = true; };
-  }, [isRetrying, refresh, session]);
+  }, [isRetrying, refresh, router, session]);
 
   return <AuthState heading="Abrindo seu espaço" message={message} onRetry={() => setIsRetrying((current) => current + 1)} />;
 }
@@ -300,7 +303,7 @@ function LoginForm() {
 
   return (
     <div className="auth-form-content">
-      <a className="auth-mobile-back" href="/" aria-label="Voltar para a página inicial"><BackIcon /></a>
+      <Link className="auth-mobile-back" href="/" aria-label="Voltar para a página inicial"><BackIcon /></Link>
       <div className="auth-mobile-brand"><BrandLockup stacked /></div>
       <h1 id="titulo-login">Entre na sua conta</h1>
       <p className="lede">Acompanhe seu criatório com mais clareza, de onde estiver.</p>
@@ -362,7 +365,7 @@ function LoginForm() {
         </button>
       </form>
 
-      <p className="password-recovery-link"><a href="/auth/forgot-password">Esqueci minha senha</a></p>
+      <p className="password-recovery-link"><Link href="/auth/forgot-password">Esqueci minha senha</Link></p>
 
       <div aria-label="outras opções de entrada" className="auth-divider" role="separator"><span>ou</span></div>
       <button className="google-action" disabled={isSubmitting || isGooglePending} onClick={startGoogleAuthentication} type="button">
@@ -377,7 +380,7 @@ function LoginForm() {
         </div>
       )}
 
-      <p className="auth-footer">Ainda não tem uma conta? <a href="/cadastro">Criar conta</a></p>
+      <p className="auth-footer">Ainda não tem uma conta? <Link href="/cadastro">Criar conta</Link></p>
     </div>
   );
 }

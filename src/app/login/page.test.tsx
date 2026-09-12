@@ -3,12 +3,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import LoginPage from "./page";
 
+const routerReplace = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: routerReplace }) }));
+
 afterEach(() => {
   cleanup();
-  if (originalLocation) {
-    Object.defineProperty(window, "location", { configurable: true, value: originalLocation });
-    originalLocation = undefined;
-  }
+  routerReplace.mockReset();
   window.history.replaceState({}, "", "/");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -33,20 +34,11 @@ function authenticatedSession(): Response {
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
-let originalLocation: Location | undefined;
-
 function breedingFarmsResponse(farms: string[], selectedBreedingFarmId: string | null = null): Response {
   return new Response(JSON.stringify({
     breedingFarms: farms.map((breedingFarmId) => ({ breedingFarmId })),
     selectedBreedingFarmId
   }), { headers: { "content-type": "application/json" }, status: 200 });
-}
-
-function mockLocationAssign(): ReturnType<typeof vi.fn> {
-  const assign = vi.fn();
-  originalLocation = window.location;
-  Object.defineProperty(window, "location", { configurable: true, value: { ...window.location, assign } });
-  return assign;
 }
 
 describe("LoginPage", () => {
@@ -65,7 +57,6 @@ describe("LoginPage", () => {
   });
 
   it("starts Google authentication in a popup and confirms the server session", async () => {
-    const assign = mockLocationAssign();
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(authenticatedSession())
@@ -88,12 +79,11 @@ describe("LoginPage", () => {
     expect(screen.getByRole("status").textContent).toContain("Conclua a entrada");
 
     fireEvent.click(screen.getByRole("button", { name: "Verificar sessão" }));
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
     expect(popup.close).toHaveBeenCalledTimes(1);
   });
 
   it("automatically verifies the session when the Google popup returns to the frontend", async () => {
-    const assign = mockLocationAssign();
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(authenticatedSession())
@@ -108,14 +98,13 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
     popupLocation.href = `${window.location.origin}/`;
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
     expect(screen.queryByRole("status")).toBeNull();
     expect(popup.close).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("refreshes the session when the Google callback popup notifies the login page", async () => {
-    const assign = mockLocationAssign();
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(authenticatedSession())
@@ -132,12 +121,11 @@ describe("LoginPage", () => {
       origin: window.location.origin
     }));
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
     expect(popup.close).toHaveBeenCalledTimes(1);
   });
 
   it("checks the session before reporting that the callback popup closed", async () => {
-    const assign = mockLocationAssign();
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(authenticatedSession())
@@ -152,7 +140,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
     popupClosed = true;
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
     expect(screen.queryByText("A janela do Google foi fechada antes da conclusão. Tente novamente.")).toBeNull();
     expect(popup.close).toHaveBeenCalledTimes(1);
   });
@@ -253,7 +241,6 @@ describe("LoginPage", () => {
   });
 
   it("opens the only associated breeding farm directly in the dashboard", async () => {
-    const assign = mockLocationAssign();
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
@@ -268,7 +255,7 @@ describe("LoginPage", () => {
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
     expect(screen.getByRole("heading", { name: "Abrindo seu espaço" })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(5);
 
@@ -278,7 +265,6 @@ describe("LoginPage", () => {
   });
 
   it("opens the breeding-farm selector after login when there is more than one farm", async () => {
-    const assign = mockLocationAssign();
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
@@ -293,12 +279,11 @@ describe("LoginPage", () => {
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("/onboarding/criatorio/selecionar"));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/onboarding/criatorio/selecionar"));
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it("resumes onboarding when the only farm has not been selected yet", async () => {
-    const assign = mockLocationAssign();
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
@@ -313,19 +298,18 @@ describe("LoginPage", () => {
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("/onboarding/criatorio/selecionar"));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/onboarding/criatorio/selecionar"));
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it("opens onboarding automatically when the authenticated user has no farm", async () => {
-    const assign = mockLocationAssign();
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(breedingFarmsResponse([]));
     vi.stubGlobal("fetch", fetchMock);
     render(<LoginPage />);
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("/onboarding/criatorio"));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/onboarding/criatorio"));
     expect(screen.queryByRole("link", { name: /Continuar onboarding/i })).toBeNull();
   });
 

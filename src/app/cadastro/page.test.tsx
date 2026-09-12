@@ -62,7 +62,7 @@ describe("RegistrationPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Verifique seu e-mail" })).toBeTruthy());
-    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Verifique seu e-mail" }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Verifique seu e-mail" })));
     expect(screen.getByText("owner@example.com")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Voltar para o login" }).getAttribute("href")).toBe("/login");
 

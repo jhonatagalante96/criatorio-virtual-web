@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, ValidationErrors, createApiClient } from "../../../../../lib/http/api-client";
 import { AuthenticatedShell } from "../../../../components/authenticated-shell";
@@ -172,7 +173,7 @@ function EditState({
             <h1 id="titulo-estado-edicao-ave" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href={actionHref}>{actionLabel}</a>
+            <Link className="text-action" href={actionHref}>{actionLabel}</Link>
           </div>
         </section>
       </div>
@@ -213,7 +214,7 @@ function AuthenticatedEditState({
           <p>{message}</p>
           <div className="bird-form-state-actions">
             {onRetry && <button className="auth-primary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="auth-secondary-action" href={actionHref}>{actionLabel}</a>
+            <Link className="auth-secondary-action" href={actionHref}>{actionLabel}</Link>
           </div>
         </div>
       </div>
@@ -447,7 +448,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
   return (
     <AuthenticatedShell activeNav="birds" email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"}>
       <div className="bird-form-view" id="conteudo-edicao-ave">
-        <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><a href="/dashboard">Dashboard</a><span aria-hidden="true">/</span><a href="/plantel/aves">Aves</a><span aria-hidden="true">/</span><a href={`/plantel/aves/${encodeURIComponent(birdId)}`}>{bird.name}</a><span aria-hidden="true">/</span><span aria-current="page">Editar</span></nav>
+        <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">/</span><Link href="/plantel/aves">Aves</Link><span aria-hidden="true">/</span><Link href={`/plantel/aves/${encodeURIComponent(birdId)}`}>{bird.name}</Link><span aria-hidden="true">/</span><span aria-current="page">Editar</span></nav>
         <div className="bird-form-page-header">
           <p className="eyebrow">Ficha privada{farmName ? ` · ${farmName}` : ""}</p>
           <h1 id="titulo-edicao-ave">Editar dados da ave</h1>
@@ -510,7 +511,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
               </fieldset>
 
             <div className="bird-edit-actions">
-                <a className="auth-secondary-action" href={`/plantel/aves/${encodeURIComponent(birdId)}`}>Cancelar</a>
+                <Link className="auth-secondary-action" href={`/plantel/aves/${encodeURIComponent(birdId)}`}>Cancelar</Link>
                 <button className="auth-primary-action submit-action" disabled={isSubmitting} type="submit">{isSubmitting ? "Salvando alterações…" : "Salvar alterações"}</button>
             </div>
             </form>
