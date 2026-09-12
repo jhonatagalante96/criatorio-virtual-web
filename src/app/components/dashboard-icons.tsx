@@ -2,14 +2,18 @@ import React from "react";
 
 export type DashboardIconName =
   | "alert"
+  | "ban"
   | "bird"
   | "calendar"
   | "crown"
   | "document"
+  | "edit"
+  | "eye"
   | "farm"
   | "heart"
   | "home"
   | "leaf"
+  | "search"
   | "settings"
   | "transfer"
   | "trophy";
@@ -36,6 +40,18 @@ export function DashboardIcon({ name, className = "" }: Readonly<{ name: Dashboa
     return <svg {...props}><rect height="15" rx="2" width="17" x="3.5" y="5.5" /><path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17" /></svg>;
   }
 
+  if (name === "eye") {
+    return <svg {...props}><path d="M2.8 12s3.2-5 9.2-5 9.2 5 9.2 5-3.2 5-9.2 5-9.2-5-9.2-5Z" /><circle cx="12" cy="12" r="2.2" /></svg>;
+  }
+
+  if (name === "edit") {
+    return <svg {...props}><path d="m4.2 16.9-.8 3.7 3.7-.8L18.2 8.7a2.1 2.1 0 0 0-3-3L4.2 16.9Z" /><path d="m13.8 7.2 3 3" /></svg>;
+  }
+
+  if (name === "ban") {
+    return <svg {...props}><circle cx="12" cy="12" r="8.6" /><path d="m6 6 12 12" /></svg>;
+  }
+
   if (name === "bird") {
     return <svg {...props}><path d="M4 17.7c3.3-4.2 7.4-6.3 12.6-6.2-1.4 4.5-4.4 7.2-8.8 7.4-1.7.1-2.9-.3-3.8-1.2Z" fill="currentColor" stroke="none" /><path d="M14 11.6c.4-3.5 2.1-5.9 5.1-7.3.8 3.4-.1 6.2-2.5 7.8-1 .7-1.8.9-2.6.8Z" fill="currentColor" stroke="none" /><path d="M3 20c4.7-2.7 8.1-6.1 10.2-10.1" /></svg>;
   }
@@ -46,6 +62,10 @@ export function DashboardIcon({ name, className = "" }: Readonly<{ name: Dashboa
 
   if (name === "leaf") {
     return <svg {...props}><path d="M20.5 3.5C12.7 3.9 7.5 7.1 6.3 12.3c-.8 3.5 1.5 6.1 4.7 6.1 5.6 0 8.8-5.2 9.5-14.9Z" fill="currentColor" stroke="none" /><path d="M4 20c3.2-4.5 6.9-7.7 11.3-10.5" /></svg>;
+  }
+
+  if (name === "search") {
+    return <svg {...props}><circle cx="10.7" cy="10.7" r="6.2" /><path d="m15.4 15.4 5 5" /></svg>;
   }
 
   if (name === "transfer") {
