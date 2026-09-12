@@ -559,29 +559,14 @@ h1, h2 { line-height: 1.08; }
 .auth-secondary-action:hover { background: #f8ffff; border-color: #a8cfd2; }
 .auth-primary-action:disabled,
 .auth-secondary-action:disabled { cursor: wait; opacity: .68; transform: none; }
-.auth-state-card,
-.session-card { text-align: center; width: 100%; }
-.auth-state-card .brand-lockup,
-.session-card .brand-lockup { margin-bottom: 1.4rem; }
-.auth-state-card .brand-lockup-stacked img,
-.session-card .brand-lockup-stacked img { width: 10rem; }
-.auth-state-card h1,
-.session-card h1 { text-align: center; }
-.auth-state-card h1:focus,
-.session-card h1:focus { outline: 0; }
-.auth-state-card > .lede,
-.session-card > .lede { margin-inline: auto; max-width: 34ch; }
+.auth-state-card { text-align: center; width: 100%; }
+.auth-state-card .brand-lockup { margin-bottom: 1.4rem; }
+.auth-state-card .brand-lockup-stacked img { width: 10rem; }
+.auth-state-card h1 { text-align: center; }
+.auth-state-card h1:focus { outline: 0; }
+.auth-state-card > .lede { margin-inline: auto; max-width: 34ch; }
 .auth-state-card .auth-secondary-action { margin-top: .4rem; width: 100%; }
-.auth-state-card .text-action,
-.session-card .text-action { display: block; }
-.session-card .eyebrow { margin-bottom: .55rem; }
-.session-identity { background: #f0f8fa; border: 1px solid #e0edef; border-radius: .55rem; display: grid; gap: .18rem; margin: 1.1rem 0 .85rem; padding: .8rem .9rem; text-align: left; }
-.session-identity-label { color: #637d8b; font-size: .65rem; }
-.session-identity strong { color: var(--ink); font-size: .85rem; overflow-wrap: anywhere; }
-.session-identity span:last-child { color: #66808d; font-size: .68rem; }
-.session-card .auth-primary-action { width: 100%; }
-.session-card .settings-action { margin-top: .55rem; width: 100%; }
-.session-card .form-error { margin-bottom: .8rem; text-align: left; }
+.auth-state-card .text-action { display: block; }
 .logout-dialog-backdrop { align-items: center; background: rgb(6 58 86 / 36%); display: flex; inset: 0; justify-content: center; padding: 1rem; position: fixed; z-index: 20; }
 .logout-dialog { background: #fff; border: 1px solid var(--line); border-radius: 1rem; box-shadow: 0 1.2rem 3rem rgb(6 58 86 / 23%); max-width: 25rem; padding: 1.4rem; width: 100%; }
 .logout-dialog h2 { color: var(--ink); font-size: 1.25rem; margin: 0; }
@@ -679,7 +664,6 @@ h1, h2 { line-height: 1.08; }
 .onboarding-state-card > .lede { margin-inline: auto; max-width: 35ch; }
 .onboarding-state-card .auth-secondary-action { margin-top: .4rem; width: 100%; }
 .onboarding-state-card .text-action { display: block; }
-.session-card .onboarding-action { margin-top: .55rem; width: 100%; }
 
 /* Breeding farm selection */
 
@@ -1572,10 +1556,8 @@ h1, h2 { line-height: 1.08; }
 
 @media (max-width: 47.99rem) {
   .auth-form-panel-content { max-width: 32rem; padding-top: .1rem; position: relative; width: 100%; z-index: 1; }
-  .auth-state-card,
-  .session-card { padding-top: 2rem; }
-  .auth-state-card .brand-lockup,
-  .session-card .brand-lockup { margin-bottom: 2rem; }
+  .auth-state-card { padding-top: 2rem; }
+  .auth-state-card .brand-lockup { margin-bottom: 2rem; }
   .logout-dialog-actions { grid-template-columns: 1fr; }
 
   .password-recovery-link { margin-top: .7rem; text-align: center; }

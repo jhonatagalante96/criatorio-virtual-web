@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { AuthenticatedNav, AuthenticatedShell } from "./authenticated-shell";
 
