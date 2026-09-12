@@ -450,6 +450,23 @@ function BirdRegistrationLayout({ children, email, farmName }: Readonly<{ childr
   );
 }
 
+function BirdRegistrationGuidance() {
+  return (
+    <aside aria-label="Orientações do cadastro" className="bird-form-aside">
+      <section className="bird-form-aside-card">
+        <p className="eyebrow">ORIENTAÇÕES</p>
+        <h2>Dados principais</h2>
+        <p>Nome, sexo e espécie são obrigatórios. A anilha, nascimento, genealogia e observações podem ser preenchidos depois.</p>
+      </section>
+      <section className="bird-form-aside-card bird-form-aside-card-soft">
+        <p className="eyebrow">IDENTIFICAÇÃO</p>
+        <h2>Anilha opcional</h2>
+        <p>Sem anilha, o cadastro continua válido e a ave fica marcada com identificação pendente.</p>
+      </section>
+    </aside>
+  );
+}
+
 function BirdRegistrationForm() {
   const { refresh, session } = useAuth();
   const [farmName, setFarmName] = useState<string>();
@@ -609,6 +626,7 @@ function BirdRegistrationForm() {
       </div>
 
       <div className="bird-form-layout">
+        <BirdRegistrationGuidance />
         <div className="bird-form-main">
           <form aria-label="Cadastro de ave" className="onboarding-form bird-registration-form bird-form-card" noValidate onSubmit={handleSubmit}>
         {formError && <div className="form-error" role="alert">{formError}</div>}
@@ -717,19 +735,6 @@ function BirdRegistrationForm() {
         </button>
           </form>
         </div>
-
-        <aside aria-label="Resumo do cadastro" className="bird-form-aside">
-          <section className="bird-form-aside-card">
-            <p className="eyebrow">ORIENTAÇÕES</p>
-            <h2>Dados principais</h2>
-            <p>Nome, sexo e espécie são obrigatórios. A anilha, nascimento, genealogia e observações podem ser preenchidos depois.</p>
-          </section>
-          <section className="bird-form-aside-card bird-form-aside-card-soft">
-            <p className="eyebrow">IDENTIFICAÇÃO</p>
-            <h2>Anilha opcional</h2>
-            <p>Sem anilha, o cadastro continua válido e a ave fica marcada com identificação pendente.</p>
-          </section>
-        </aside>
       </div>
 
       <p className="auth-footer">Os dados ficam vinculados somente ao criatório selecionado.</p>

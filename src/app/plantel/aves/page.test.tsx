@@ -142,12 +142,17 @@ describe("BirdListPage", () => {
 
     const birdRow = screen.getByRole("article", { name: "Ave Aurora" });
     expect(birdRow.querySelector(".bird-list-card-name a")?.getAttribute("href")).toBe("/plantel/aves/bird-a");
+    expect(birdRow.querySelector(".bird-list-card-arrow")?.getAttribute("href")).toBe("/plantel/aves/bird-a");
+    expect(birdRow.querySelector(".bird-list-card-photo img")?.getAttribute("src")).toBe("/assets/imagery/birds/great-tit-header-hd.webp");
+    expect(birdRow.querySelector(".bird-list-card-sex")?.getAttribute("aria-label")).toBe("Sexo: Fêmea");
     fireEvent.click(within(birdRow).getByRole("button", { name: "Abrir ações de Aurora" }));
-    expect(within(birdRow).getByRole("link", { name: "Ver detalhes de Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a");
-    expect(within(birdRow).getByRole("link", { name: "Editar Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
-    expect(within(birdRow).getByRole("button", { name: "Iniciar transferência" }).hasAttribute("disabled")).toBe(true);
-    expect(within(birdRow).getByRole("button", { name: "Registrar competição" }).hasAttribute("disabled")).toBe(true);
-    expect(within(birdRow).getByRole("button", { name: "Inativar" }).hasAttribute("disabled")).toBe(true);
+    const actionMenu = birdRow.querySelector(".bird-row-actions-menu");
+    if (!(actionMenu instanceof HTMLElement)) throw new Error("Menu de ações não encontrado.");
+    expect(within(actionMenu).getByRole("link", { name: "Ver detalhes de Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a");
+    expect(within(actionMenu).getByRole("link", { name: "Editar Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
+    expect(within(actionMenu).getByRole("button", { name: "Iniciar transferência" }).hasAttribute("disabled")).toBe(true);
+    expect(within(actionMenu).getByRole("button", { name: "Registrar competição" }).hasAttribute("disabled")).toBe(true);
+    expect(within(actionMenu).getByRole("button", { name: "Inativar" }).hasAttribute("disabled")).toBe(true);
     fireEvent.pointerDown(document.body);
     expect(birdRow.querySelector(".bird-row-actions")?.hasAttribute("open")).toBe(false);
   });
@@ -179,7 +184,7 @@ describe("BirdListPage", () => {
 
     await openList(fetchMock);
     fireEvent.click(screen.getByText("Filtros e ordenação"));
-    fireEvent.change(screen.getByLabelText("Situação"), { target: { value: "Archived" } });
+    fireEvent.change(document.getElementById("bird-status-filter") as HTMLSelectElement, { target: { value: "Archived" } });
 
     await waitFor(() => expect(screen.getByRole("article", { name: "Ave Ave Arquivada" })).toBeTruthy());
     expect(window.location.search).toContain("status=Archived");

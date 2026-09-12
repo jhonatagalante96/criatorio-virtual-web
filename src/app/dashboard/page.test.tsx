@@ -156,10 +156,10 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Personalizar atalhos")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Atividades recentes" })).toBeTruthy();
     expect(screen.getByText("Que tal fazer hoje um grande dia para o seu criatório?")).toBeTruthy();
-    fireEvent.click(screen.getByLabelText("Abrir menu de Owner"));
-    expect(screen.getAllByRole("link", { name: "Meu Criatório" }).filter((element) => element.closest(".authenticated-account-menu-panel"))).toHaveLength(1);
-    expect(screen.getAllByRole("link", { name: "Configurações" }).filter((element) => element.closest(".authenticated-account-menu-panel"))).toHaveLength(1);
-    expect(screen.getAllByRole("link", { name: "Gerenciar sessão" }).filter((element) => element.closest(".authenticated-account-menu-panel"))).toHaveLength(1);
+    fireEvent.click(screen.getAllByLabelText("Abrir menu de Owner")[0]);
+    expect(screen.getAllByRole("link", { name: "Meu Criatório" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Configurações" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Gerenciar sessão" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
 
     expect(screen.getAllByRole("link", { name: /^Dashboard$/ })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: /^Aves$/ })).toHaveLength(2);

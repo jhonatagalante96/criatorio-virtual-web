@@ -35,6 +35,7 @@ interface BirdListItem {
   birdId: string;
   identificationPending: boolean;
   name: string;
+  photoUrl?: string | null;
   ringNumber: string | null;
   sex: BirdSex;
   speciesId: string;
@@ -300,6 +301,7 @@ function SpeciesFilter({
   return (
     <div className="bird-species-filter" ref={filterRef}>
       <span className="bird-filter-label" id="bird-species-filter-label">Espécie</span>
+      <span aria-hidden="true" className="bird-filter-mobile-label">Espécie</span>
       {selection ? (
         <div className="bird-species-filter-selected" role="status">
           <span>
@@ -370,6 +372,7 @@ function BirdFilterSelect({
   disabled,
   id,
   label,
+  mobileLabel,
   onChange,
   options,
   value
@@ -378,6 +381,7 @@ function BirdFilterSelect({
   disabled: boolean;
   id: string;
   label: string;
+  mobileLabel?: string;
   onChange: (value: string) => void;
   options: Array<{ label: string; value: string }>;
   value: string;
@@ -385,6 +389,7 @@ function BirdFilterSelect({
   return (
     <label className={`bird-filter-select${className ? ` ${className}` : ""}`} htmlFor={id}>
       <span>{label}</span>
+      <span aria-hidden="true" className="bird-filter-mobile-label">{mobileLabel ?? label}</span>
       <select disabled={disabled} id={id} onChange={(event) => onChange(event.target.value)} value={value}>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -440,20 +445,33 @@ function BirdCard({ bird }: Readonly<{ bird: BirdListItem }>) {
   return (
     <li>
       <article aria-label={`Ave ${bird.name}`} className="bird-list-card">
-        <span aria-hidden="true" className="bird-list-card-photo"><DashboardIcon name="bird" /></span>
+        <span aria-hidden="true" className="bird-list-card-photo">
+          <img alt="" src={bird.photoUrl ?? "/assets/imagery/birds/great-tit-header-hd.webp"} />
+        </span>
         <div className="bird-list-card-name">
           <h2><Link aria-label={`Abrir ficha de ${bird.name}`} href={`/plantel/aves/${bird.birdId}`}>{bird.name}</Link></h2>
           <span className="bird-list-card-mobile-species">{bird.speciesPopularName}</span>
         </div>
-        <span aria-label={`Sexo: ${sexLabel(bird.sex)}`} className="bird-list-card-sex">{sexLabel(bird.sex)}</span>
-        <span aria-label={`Espécie ou raça: ${bird.speciesPopularName}`} className="bird-list-card-species">{bird.speciesPopularName}</span>
-        <span aria-label={`Anilha: ${bird.identificationPending ? "pendente" : bird.ringNumber ?? "não informada"}`} className="bird-list-card-ring">{bird.identificationPending ? "—" : bird.ringNumber ?? "—"}</span>
+        <span aria-label={`Sexo: ${sexLabel(bird.sex)}`} className="bird-list-card-sex">
+          <span aria-hidden="true" className="bird-list-card-field-icon">{bird.sex === "Female" ? "♀" : bird.sex === "Male" ? "♂" : "•"}</span>
+          {sexLabel(bird.sex)}
+        </span>
+        <span aria-label={`Espécie ou raça: ${bird.speciesPopularName}`} className="bird-list-card-species">
+          <DashboardIcon name="leaf" />
+          {bird.speciesPopularName}
+        </span>
+        <span aria-label={`Anilha: ${bird.identificationPending ? "pendente" : bird.ringNumber ?? "não informada"}`} className={`bird-list-card-ring${bird.identificationPending ? " is-pending" : ""}`}>
+          <span aria-hidden="true" className="bird-list-card-field-icon">⌑</span>
+          <span aria-hidden="true" className="bird-list-card-ring-value-desktop">{bird.identificationPending ? "—" : bird.ringNumber ?? "—"}</span>
+          <span aria-hidden="true" className="bird-list-card-ring-value-mobile">{bird.identificationPending ? "Sem anilha" : `Anilha: ${bird.ringNumber ?? "não informada"}`}</span>
+        </span>
         <span aria-label={`Status: ${statusLabel(bird.status)}`} className={`bird-status-badge bird-status-${bird.status.toLowerCase()}`}><span aria-hidden="true" />{statusLabel(bird.status)}</span>
         <span aria-label={`Nascimento: ${formatDate(bird.birthDate)}`} className="bird-list-card-birth">{formatDate(bird.birthDate)}</span>
         <span className={`bird-identification${bird.identificationPending ? " is-pending" : ""}`}>
           <span aria-hidden="true">{bird.identificationPending ? "!" : "#"}</span>
           <strong>{bird.identificationPending ? "Identificação pendente" : `Anilha ${bird.ringNumber}`}</strong>
         </span>
+        <Link aria-label={`Ver detalhes de ${bird.name}`} className="bird-list-card-arrow" href={`/plantel/aves/${bird.birdId}`}><span aria-hidden="true">›</span></Link>
         <BirdActionMenu bird={bird} />
       </article>
     </li>
@@ -741,7 +759,12 @@ function BirdListPage() {
         </div>
 
         <details className="bird-filter-panel" onToggle={(event) => setIsFilterPanelOpen(event.currentTarget.open)} open={isFilterPanelOpen}>
-          <summary>Filtros e ordenação{activeFilterCount() > 0 && <span>{activeFilterCount()} ativo{activeFilterCount() === 1 ? "" : "s"}</span>}</summary>
+          <summary>
+            <DashboardIcon name="filter" />
+            <span className="bird-filter-panel-title">Filtros e ordenação</span>
+            <span aria-hidden="true" className="bird-filter-panel-mobile-title">Mais filtros</span>
+            {activeFilterCount() > 0 && <span>{activeFilterCount()} ativo{activeFilterCount() === 1 ? "" : "s"}</span>}
+          </summary>
           <div className="bird-filter-grid">
             <SpeciesFilter
               client={client.current!}
@@ -769,6 +792,7 @@ function BirdListPage() {
               disabled={listState === "loading"}
               id="bird-status-filter"
               label="Situação"
+              mobileLabel="Status"
               onChange={(value) => changeFilter("status", value)}
               options={[{ label: "Todas as situações", value: "" }, ...birdStatuses]}
               value={filters.status}
@@ -777,6 +801,7 @@ function BirdListPage() {
               disabled={listState === "loading"}
               id="bird-identification-filter"
               label="Identificação"
+              mobileLabel="Anilha"
               onChange={(value) => changeFilter("identificationPending", value)}
               options={[{ label: "Todas", value: "" }, { label: "Com anilha", value: "false" }, { label: "Pendente", value: "true" }]}
               value={filters.identificationPending}
@@ -807,7 +832,7 @@ function BirdListPage() {
       <section aria-labelledby="titulo-resultados-aves" className="bird-list-results" aria-busy={listState === "loading"}>
         <div className="bird-list-results-heading">
           <div>
-            <h2 id="titulo-resultados-aves">{listState === "ready" ? resultLabel : "Aves cadastradas"}</h2>
+            <h2 id="titulo-resultados-aves"><span aria-hidden="true" className="bird-list-results-heading-icon"><DashboardIcon name="bird" /></span>{listState === "ready" ? resultLabel : "Aves cadastradas"}</h2>
             <span>Registros do criatório selecionado</span>
           </div>
           <label className="bird-list-inline-sort" htmlFor="bird-inline-sort">Ordenar por

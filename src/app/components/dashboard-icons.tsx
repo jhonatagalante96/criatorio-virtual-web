@@ -10,6 +10,7 @@ export type DashboardIconName =
   | "edit"
   | "eye"
   | "farm"
+  | "filter"
   | "heart"
   | "home"
   | "leaf"
@@ -86,6 +87,10 @@ export function DashboardIcon({ name, className = "" }: Readonly<{ name: Dashboa
 
   if (name === "farm") {
     return <svg {...props}><path d="m3.5 10.5 8.5-6.8 8.5 6.8" /><path d="M5.2 9.5v10.2h13.6V9.5M9.2 19.7v-5.2h5.6v5.2M16.7 4.8h2v3" /></svg>;
+  }
+
+  if (name === "filter") {
+    return <svg {...props}><path d="M4 5h16l-6.4 7v5.8L10.4 19v-7L4 5Z" /></svg>;
   }
 
   if (name === "crown") {
