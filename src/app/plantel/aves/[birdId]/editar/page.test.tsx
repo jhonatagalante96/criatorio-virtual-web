@@ -50,7 +50,9 @@ async function openEditForm(fetchMock: ReturnType<typeof vi.fn>) {
   await waitFor(() => expect(screen.getByRole("heading", { name: "Editar dados da ave" })).toBeTruthy());
   expect(fetchMock).toHaveBeenCalledTimes(3);
   expect(screen.getByDisplayValue("Aurora")).toBeTruthy();
-  expect(screen.getByText("Sabiá-laranjeira")).toBeTruthy();
+  expect(screen.getAllByText("Sabiá-laranjeira").length).toBeGreaterThan(0);
+  expect(screen.getByRole("complementary", { name: "Navegação principal" })).toBeTruthy();
+  expect(screen.getByRole("complementary", { name: "Resumo da ficha" })).toBeTruthy();
 }
 
 describe("BirdEditPage", () => {
@@ -91,7 +93,7 @@ describe("BirdEditPage", () => {
     expect(screen.getByDisplayValue("123456")).toBeTruthy();
     expect((screen.getByRole("radio", { name: "Fêmea" }) as HTMLInputElement).checked).toBe(true);
     expect(screen.getByDisplayValue("Ave acompanhada desde o primeiro cadastro.")).toBeTruthy();
-    expect(screen.getByText("Plantel · Criatório Aurora")).toBeTruthy();
+    expect(screen.getAllByText("Criatório Aurora").length).toBeGreaterThan(0);
   });
 
   it("blocks all edits for a transferred bird", async () => {

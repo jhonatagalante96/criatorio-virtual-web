@@ -3,6 +3,7 @@
 import React, { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AuthProvider, useAuth } from "../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../../../lib/http/api-client";
+import { AuthenticatedShell } from "../../../components/authenticated-shell";
 import { BrandLockup, BrandPanel } from "../../../components/brand";
 import { SpeciesSelector, SpeciesSummary } from "../../../components/species-selector";
 
@@ -99,10 +100,6 @@ function validateFields(fields: BirdFields, species?: SpeciesSummary): Validatio
   if (fields.ringNumber && !/^\d{6}$/.test(fields.ringNumber)) errors.ringNumber = ["A anilha deve ter exatamente seis dígitos."];
   if (fields.notes.trim().length > 2000) errors.notes = ["As observações não podem exceder 2.000 caracteres."];
   return errors;
-}
-
-function BackIcon() {
-  return <img src="/assets/icons/ui/arrow-left.svg" alt="" aria-hidden="true" />;
 }
 
 function AccessState({
@@ -380,17 +377,46 @@ function ParentPicker({
 }
 
 function BirdRegistrationState({
+  email,
+  farmName,
   farmState,
   onRetry,
   message
-}: Readonly<{ farmState: Exclude<FarmState, "ready">; message?: string; onRetry?: () => void }>) {
+}: Readonly<{ email: string; farmName: string; farmState: Exclude<FarmState, "ready">; message?: string; onRetry?: () => void }>) {
+  const heading = farmState === "loading"
+    ? "Verificando o criatório"
+    : farmState === "blocked"
+      ? "Selecione um criatório"
+      : "Não foi possível abrir o cadastro";
+  const stateMessage = message ?? (farmState === "loading"
+    ? "Só um instante enquanto verificamos o criatório selecionado."
+    : farmState === "blocked"
+      ? "Escolha um criatório antes de cadastrar uma ave."
+      : "Tente novamente para continuar.");
+
   if (farmState === "loading") {
-    return <AccessState heading="Verificando o criatório" message={message ?? "Só um instante enquanto verificamos o criatório selecionado."} />;
+    return (
+      <AuthenticatedShell activeNav="birds" email={email} farmName={farmName}>
+        <div className="bird-form-view"><div className="bird-form-state" id="conteudo-cadastro-ave"><h1>{heading}</h1><p>{stateMessage}</p></div></div>
+      </AuthenticatedShell>
+    );
   }
-  if (farmState === "blocked") {
-    return <AccessState actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar criatório" heading="Selecione um criatório" message={message ?? "Escolha um criatório antes de cadastrar uma ave."} />;
-  }
-  return <AccessState heading="Não foi possível abrir o cadastro" message={message ?? "Tente novamente para continuar."} onRetry={onRetry} />;
+
+  return (
+    <AuthenticatedShell activeNav="birds" email={email} farmName={farmName}>
+      <div className="bird-form-view">
+        <div className="bird-form-state" id="conteudo-cadastro-ave">
+          <h1>{heading}</h1>
+          <p>{stateMessage}</p>
+          <div className="bird-form-state-actions">
+            {farmState === "blocked" && <a className="auth-primary-action" href="/onboarding/criatorio/selecionar">Selecionar criatório</a>}
+            {farmState === "error" && onRetry && <button className="auth-primary-action" onClick={onRetry} type="button">Tentar novamente</button>}
+            <a className="auth-secondary-action" href="/plantel/aves">Voltar para o plantel</a>
+          </div>
+        </div>
+      </div>
+    </AuthenticatedShell>
+  );
 }
 
 function RegistrationSuccess({ bird, onRegisterAnother }: Readonly<{ bird: CreatedBirdResponse; onRegisterAnother: () => void }>) {
@@ -402,7 +428,6 @@ function RegistrationSuccess({ bird, onRegisterAnother }: Readonly<{ bird: Creat
 
   return (
     <div className="bird-registration-success">
-      <div className="auth-mobile-brand"><BrandLockup stacked /></div>
       <div aria-hidden="true" className="onboarding-success-icon">✓</div>
       <p className="eyebrow">Cadastro concluído</p>
       <h1 id="titulo-cadastro-ave" ref={headingRef} tabIndex={-1}>{bird.name} foi cadastrada.</h1>
@@ -419,24 +444,16 @@ function RegistrationSuccess({ bird, onRegisterAnother }: Readonly<{ bird: Creat
   );
 }
 
-function BirdRegistrationLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+function BirdRegistrationLayout({ children, email, farmName }: Readonly<{ children: React.ReactNode; email: string; farmName: string }>) {
   return (
-    <main className="auth-page onboarding-page bird-registration-page">
-      <a className="skip-link" href="#conteudo-cadastro-ave">Pular para o conteúdo</a>
-      <div className="auth-shell onboarding-shell bird-registration-shell">
-        <BrandPanel />
-        <section aria-labelledby="titulo-cadastro-ave" className="auth-form-panel onboarding-form-panel">
-          <div className="onboarding-form-content" id="conteudo-cadastro-ave">
-            {children}
-          </div>
-        </section>
-      </div>
-    </main>
+    <AuthenticatedShell activeNav="birds" email={email} farmName={farmName}>
+      <div className="bird-form-view" id="conteudo-cadastro-ave">{children}</div>
+    </AuthenticatedShell>
   );
 }
 
 function BirdRegistrationForm() {
-  const { refresh } = useAuth();
+  const { refresh, session } = useAuth();
   const [farmName, setFarmName] = useState<string>();
   const [farmState, setFarmState] = useState<FarmState>("loading");
   const [farmError, setFarmError] = useState<string>();
@@ -574,30 +591,28 @@ function BirdRegistrationForm() {
   }
 
   if (farmState !== "ready") {
-    return <BirdRegistrationState farmState={farmState} message={farmState === "loading" ? "Só um instante enquanto verificamos o criatório selecionado." : farmError} onRetry={farmState === "error" ? () => void loadFarm() : undefined} />;
+    return <BirdRegistrationState email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"} farmState={farmState} message={farmState === "loading" ? "Só um instante enquanto verificamos o criatório selecionado." : farmError} onRetry={farmState === "error" ? () => void loadFarm() : undefined} />;
   }
 
   if (createdBird) {
-    return <BirdRegistrationLayout><RegistrationSuccess bird={createdBird} onRegisterAnother={resetForm} /></BirdRegistrationLayout>;
+    return <BirdRegistrationLayout email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"}><RegistrationSuccess bird={createdBird} onRegisterAnother={resetForm} /></BirdRegistrationLayout>;
   }
 
   const fieldError = (field: string) => firstError(errors, field);
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <BirdRegistrationLayout>
-      <a className="auth-mobile-back" href="/" aria-label="Voltar para o início"><BackIcon /></a>
-      <div className="auth-mobile-brand"><BrandLockup stacked /></div>
-      <p className="eyebrow">Plantel{farmName ? ` · ${farmName}` : ""}</p>
-      <h1 id="titulo-cadastro-ave">Cadastrar ave</h1>
-      <p className="lede">Registre uma ave e mantenha sua genealogia organizada desde o primeiro dado.</p>
-
-      <div aria-label="Etapa 1 de 1" className="onboarding-progress">
-        <span aria-hidden="true">1</span>
-        <span>Dados da ave</span>
+    <BirdRegistrationLayout email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"}>
+      <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><a href="/dashboard">Dashboard</a><span aria-hidden="true">/</span><a href="/plantel/aves">Aves</a><span aria-hidden="true">/</span><span aria-current="page">Cadastrar ave</span></nav>
+      <div className="bird-form-page-header">
+        <p className="eyebrow">Plantel{farmName ? ` · ${farmName}` : ""}</p>
+        <h1 id="titulo-cadastro-ave">Cadastrar ave</h1>
+        <p className="lede">Registre uma ave e mantenha sua genealogia organizada desde o primeiro dado.</p>
       </div>
 
-      <form aria-label="Cadastro de ave" className="onboarding-form bird-registration-form" noValidate onSubmit={handleSubmit}>
+      <div className="bird-form-layout">
+        <div className="bird-form-main">
+          <form aria-label="Cadastro de ave" className="onboarding-form bird-registration-form bird-form-card" noValidate onSubmit={handleSubmit}>
         {formError && <div className="form-error" role="alert">{formError}</div>}
 
         <fieldset className="onboarding-fieldset">
@@ -702,7 +717,22 @@ function BirdRegistrationForm() {
         <button className="auth-primary-action submit-action" disabled={isSubmitting} type="submit">
           {isSubmitting ? "Cadastrando ave…" : "Cadastrar ave"}
         </button>
-      </form>
+          </form>
+        </div>
+
+        <aside aria-label="Resumo do cadastro" className="bird-form-aside">
+          <section className="bird-form-aside-card">
+            <p className="eyebrow">ORIENTAÇÕES</p>
+            <h2>Dados principais</h2>
+            <p>Nome, sexo e espécie são obrigatórios. A anilha, nascimento, genealogia e observações podem ser preenchidos depois.</p>
+          </section>
+          <section className="bird-form-aside-card bird-form-aside-card-soft">
+            <p className="eyebrow">IDENTIFICAÇÃO</p>
+            <h2>Anilha opcional</h2>
+            <p>Sem anilha, o cadastro continua válido e a ave fica marcada com identificação pendente.</p>
+          </section>
+        </aside>
+      </div>
 
       <p className="auth-footer">Os dados ficam vinculados somente ao criatório selecionado.</p>
     </BirdRegistrationLayout>
