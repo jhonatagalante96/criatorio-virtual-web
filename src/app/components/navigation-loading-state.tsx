@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import RouteLoadingState from "./route-loading-state";
 
@@ -13,8 +13,13 @@ export default function NavigationLoadingState({ children }: Readonly<{ children
   const routeKey = pathname ?? "";
   const [isNavigating, setIsNavigating] = useState(false);
   const [targetPathname, setTargetPathname] = useState<string>();
+  const navigationTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
+    if (navigationTimer.current !== undefined) {
+      window.clearTimeout(navigationTimer.current);
+      navigationTimer.current = undefined;
+    }
     setIsNavigating(false);
     setTargetPathname(undefined);
   }, [routeKey]);
@@ -35,7 +40,13 @@ export default function NavigationLoadingState({ children }: Readonly<{ children
       if (destination.pathname === window.location.pathname) return;
 
       setTargetPathname(destination.pathname);
-      setIsNavigating(true);
+      // Let Next's Link handler receive the same click before replacing the
+      // current tree with the loading shell. Replacing it during capture can
+      // cancel client-side navigation and force a full document reload.
+      navigationTimer.current = window.setTimeout(() => {
+        navigationTimer.current = undefined;
+        setIsNavigating(true);
+      }, 0);
     }
 
     function handlePopState() {
@@ -46,6 +57,7 @@ export default function NavigationLoadingState({ children }: Readonly<{ children
     document.addEventListener("click", handleDocumentClick, true);
     window.addEventListener("popstate", handlePopState);
     return () => {
+      if (navigationTimer.current !== undefined) window.clearTimeout(navigationTimer.current);
       document.removeEventListener("click", handleDocumentClick, true);
       window.removeEventListener("popstate", handlePopState);
     };

@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { getLastKnownShellIdentity, isKnownFarmName, rememberShellIdentity } from "../../lib/auth/shell-identity";
 import { BrandLockup } from "./brand";
 import { DashboardIcon } from "./dashboard-icons";
 import type { DashboardIconName } from "./dashboard-icons";
@@ -86,11 +87,11 @@ function NavigationLinks({ activeNav, items = primaryNavigation }: Readonly<{ ac
 function AccountMenu({ displayName, email, farmName }: Readonly<{ displayName: string; email: string; farmName: string }>) {
   return (
     <details className="authenticated-account-menu">
-      <summary aria-label={`Abrir menu de ${displayName}`} className="authenticated-account-summary">
-        <span aria-hidden="true" className="authenticated-account-avatar">{initialsFromName(displayName)}</span>
+      <summary aria-label={`Abrir menu de ${displayName}`} className="authenticated-account-summary" suppressHydrationWarning>
+        <span aria-hidden="true" className="authenticated-account-avatar" suppressHydrationWarning>{initialsFromName(displayName)}</span>
         <span className="authenticated-account-copy">
-          <strong>{displayName}</strong>
-          <small>{farmName}</small>
+          <strong suppressHydrationWarning>{displayName}</strong>
+          <small suppressHydrationWarning>{farmName}</small>
         </span>
         <span aria-hidden="true" className="authenticated-account-chevron">
           <svg viewBox="0 0 16 16"><path d="m4.5 6.25 3.5 3.5 3.5-3.5" /></svg>
@@ -98,9 +99,9 @@ function AccountMenu({ displayName, email, farmName }: Readonly<{ displayName: s
       </summary>
       <div className="authenticated-account-menu-panel">
         <div className="authenticated-account-menu-heading">
-          <strong>{displayName}</strong>
-          <small>{email}</small>
-          <span>{farmName}</span>
+          <strong suppressHydrationWarning>{displayName}</strong>
+          <small suppressHydrationWarning>{email}</small>
+          <span suppressHydrationWarning>{farmName}</span>
         </div>
         <nav aria-label="Ações da conta" className="authenticated-account-menu-links">
           <Link href="/configuracoes/criatorio">Meu Criatório</Link>
@@ -113,7 +114,14 @@ function AccountMenu({ displayName, email, farmName }: Readonly<{ displayName: s
 }
 
 export function AuthenticatedShell({ activeNav, children, email, farmName }: Readonly<AuthenticatedShellProps>) {
-  const displayName = displayNameFromEmail(email);
+  const cachedIdentity = getLastKnownShellIdentity();
+  const resolvedEmail = email || cachedIdentity.email || "";
+  const resolvedFarmName = isKnownFarmName(farmName) ? farmName : cachedIdentity.farmName || farmName;
+  const displayName = displayNameFromEmail(resolvedEmail);
+
+  useEffect(() => {
+    rememberShellIdentity({ email, farmName });
+  }, [email, farmName]);
 
   return (
     <main className="authenticated-page">
@@ -143,7 +151,7 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
               <span>Buscar no sistema...</span>
             </div>
             <div className="authenticated-topbar-actions">
-              <AccountMenu displayName={displayName} email={email} farmName={farmName} />
+              <AccountMenu displayName={displayName} email={resolvedEmail} farmName={resolvedFarmName} />
             </div>
           </header>
           <header className="authenticated-mobile-header">
@@ -158,7 +166,7 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
               <div className="authenticated-mobile-menu-panel">
                 <div className="authenticated-farm-context">
                   <span className="authenticated-context-label">Criatório selecionado</span>
-                  <strong title={farmName}>{farmName}</strong>
+                  <strong suppressHydrationWarning title={resolvedFarmName}>{resolvedFarmName}</strong>
                 </div>
                 <nav aria-label="Módulos disponíveis no celular">
                   <NavigationLinks activeNav={activeNav} />
@@ -167,8 +175,8 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
                   <NavigationLinks activeNav={activeNav} items={secondaryNavigation} />
                 </nav>
                 <div className="authenticated-mobile-account">
-                  <strong>{displayName}</strong>
-                  <small>{email}</small>
+                  <strong suppressHydrationWarning>{displayName}</strong>
+                  <small suppressHydrationWarning>{resolvedEmail}</small>
                   <Link href="/configuracoes?section=session">Gerenciar sessão</Link>
                 </div>
               </div>

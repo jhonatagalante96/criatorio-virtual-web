@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { ApiClient, ApiError, createApiClient } from "../http/api-client";
+import { clearShellIdentity } from "./shell-identity";
 
 export interface AccountSession {
   email: string;
@@ -79,6 +80,7 @@ function AuthProviderInner({ children }: Readonly<{ children: React.ReactNode }>
   const clearSession = useCallback(() => {
     csrfToken.current = undefined;
     client.current?.clearCache();
+    clearShellIdentity();
     rememberAuthenticationProvider(undefined);
     setSession(undefined);
   }, [rememberAuthenticationProvider]);
@@ -118,6 +120,7 @@ function AuthProviderInner({ children }: Readonly<{ children: React.ReactNode }>
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+    clearShellIdentity();
     setStatus("authenticating");
     setError(undefined);
 
