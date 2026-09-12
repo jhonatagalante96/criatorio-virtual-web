@@ -795,15 +795,15 @@ h1, h2 { line-height: 1.08; }
 .bird-list-header-side { display: grid; gap: .8rem; justify-items: end; min-width: min(22.5rem, 100%); }
 .bird-list-register-action { align-items: center; display: inline-flex; font-size: .82rem; gap: .35rem; justify-content: center; min-height: 2.7rem; padding: .55rem 1.2rem; }
 .bird-list-register-action > span { font-size: 1.25rem; font-weight: 400; line-height: 1; }
-.bird-list-query-row { align-items: start; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem); }
+.bird-list-query-row { align-items: center; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) minmax(15rem, 18rem); }
 .bird-list-query-row .bird-list-search-form { grid-column: 1; grid-row: 1; }
 .bird-list-summary { align-items: flex-start; background: linear-gradient(135deg, #f1fbf5, #fbfefd); border: 1px solid #d9ebdf; border-radius: .7rem; display: flex; gap: .75rem; max-width: 22.5rem; padding: .72rem .85rem; width: 100%; }
-.bird-list-query-row .bird-list-summary { align-self: stretch; grid-column: 2; grid-row: 1; max-width: none; }
+.bird-list-query-row .bird-list-summary { grid-column: 2; grid-row: 1; max-width: none; }
 .bird-list-summary-icon { align-items: center; background: #d9f3dd; border-radius: 50%; color: var(--green-dark); display: flex; flex: 0 0 auto; height: 2.4rem; justify-content: center; width: 2.4rem; }
 .bird-list-summary-icon .dashboard-icon { height: 1.3rem; width: 1.3rem; }
 .bird-list-summary strong { color: var(--ink); display: block; font-size: .76rem; }
 .bird-list-summary p { color: #5f7188; font-size: .68rem; line-height: 1.45; margin: .22rem 0 0; }
-.bird-list-toolbar { gap: .55rem; margin-top: .15rem; }
+.bird-list-toolbar { gap: 0; margin-top: .15rem; }
 .bird-list-search-form { gap: 0; }
 .bird-list-search-control { display: block; }
 .bird-list-search-control input { border-color: #d8e0e7; border-radius: .45rem; font-size: .8rem; min-height: 2.7rem; padding-left: 2.6rem; padding-right: 3.2rem; }
@@ -879,7 +879,7 @@ h1, h2 { line-height: 1.08; }
   .bird-list-header .lede { font-size: .82rem; }
   .bird-list-header-side { justify-items: stretch; min-width: 0; }
   .bird-list-register-action { width: 100%; }
-  .bird-list-query-row { display: flex; flex-direction: column; gap: .8rem; }
+  .bird-list-query-row { align-items: stretch; display: flex; flex-direction: column; gap: .8rem; }
   .bird-list-query-row .bird-list-summary { max-width: none; order: 0; }
   .bird-list-query-row .bird-list-search-form { order: 1; }
   .bird-filter-panel > summary { display: flex; }
