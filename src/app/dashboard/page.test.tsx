@@ -135,7 +135,7 @@ describe("DashboardPage", () => {
     const activeBirdMetric = screen.getByText("Aves cadastradas").closest("article");
     if (!activeBirdMetric) throw new Error("Indicador de aves cadastradas não encontrado.");
     expect(within(activeBirdMetric).getByText("3")).toBeTruthy();
-    expect(within(activeBirdMetric).getByRole("link", { name: "Ver aves cadastradas" }).getAttribute("href")).toBe("/plantel/aves");
+    expect(screen.getByRole("link", { name: "Ver aves cadastradas" }).getAttribute("href")).toBe("/plantel/aves");
 
     const pendingMetric = screen.getByText("Pendências", { selector: ".dashboard-metric-label" }).parentElement;
     if (!pendingMetric) throw new Error("Indicador de pendências não encontrado.");

@@ -4,8 +4,10 @@ import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from "reac
 import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
 import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../../lib/http/api-client";
+import { formatPostalCode, normalizePostalCode } from "../../../lib/postal-code";
 import { AppLoadingState } from "../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../components/brand";
+import { postalCodeLookupMessage, usePostalCodeLookup } from "../../components/use-postal-code-lookup";
 
 interface AddressFields {
   city: string;
@@ -58,6 +60,10 @@ function firstError(errors: ValidationErrors, field: string): string | undefined
 
 function clearError(errors: ValidationErrors, field: string): ValidationErrors {
   return Object.fromEntries(Object.entries(errors).filter(([key]) => key.toLowerCase() !== field.toLowerCase()));
+}
+
+function clearAddressErrors(errors: ValidationErrors): ValidationErrors {
+  return Object.fromEntries(Object.entries(errors).filter(([key]) => !key.toLowerCase().startsWith("address.")));
 }
 
 function normalizeOptional(value: string): string | null {
@@ -212,6 +218,14 @@ function CreateBreedingFarmForm() {
   const [creation, setCreation] = useState<CreateBreedingFarmResponse | undefined>();
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
+  const postalCodeLookup = usePostalCodeLookup(fields.postalCode);
+  const addressFieldsEnabled = postalCodeLookup.state === "ready";
+
+  useEffect(() => {
+    if (!postalCodeLookup.address) return;
+    setFields((current) => ({ ...current, ...postalCodeLookup.address }));
+    setErrors((current) => clearAddressErrors(current));
+  }, [postalCodeLookup.address]);
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
 
@@ -221,9 +235,30 @@ function CreateBreedingFarmForm() {
     setFormError(undefined);
   }
 
+  function updatePostalCode(value: string) {
+    setFields((current) => ({
+      ...current,
+      city: "",
+      complement: "",
+      neighborhood: "",
+      number: "",
+      postalCode: formatPostalCode(value),
+      state: "",
+      street: ""
+    }));
+    setErrors((current) => clearAddressErrors(current));
+    setFormError(undefined);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const validationErrors = validateFields(fields);
+    const normalizedPostalCode = normalizePostalCode(fields.postalCode);
+    if (normalizedPostalCode.length === 8 && postalCodeLookup.state !== "ready") {
+      validationErrors["address.postalCode"] = [postalCodeLookup.state === "loading"
+        ? "Aguarde a consulta do CEP terminar."
+        : "Consulte um CEP válido para preencher o endereço."];
+    }
     setErrors(validationErrors);
     setFormError(undefined);
 
@@ -377,12 +412,24 @@ function CreateBreedingFarmForm() {
           </div>
         </fieldset>
 
-        <details className="onboarding-address">
+        <details className="onboarding-address" open>
           <summary>Adicionar endereço <span>(opcional)</span></summary>
-          <p className="onboarding-address-help">Você pode informar o endereço agora ou deixar esta etapa para depois.</p>
-          <div className="onboarding-address-grid">
+          <p className="onboarding-address-help">Comece pelo CEP para preencher o endereço automaticamente. Você pode deixar esta etapa para depois.</p>
+          <OnboardingField
+            disabled={isSubmitting}
+            error={fieldError("address.postalCode")}
+            id="address-postalCode"
+            label="CEP"
+            maxLength={9}
+            name="address.postalCode"
+            onChange={(event) => updatePostalCode(event.target.value)}
+            placeholder="00000-000"
+            value={fields.postalCode}
+          />
+          <p className={`postal-code-feedback postal-code-feedback-${postalCodeLookup.state}`} role={postalCodeLookup.state === "error" || postalCodeLookup.state === "not-found" ? "alert" : "status"}>{postalCodeLookupMessage(postalCodeLookup.state)}</p>
+          <div aria-disabled={!addressFieldsEnabled} className="onboarding-address-grid postal-code-gated-fields">
             <OnboardingField
-              disabled={isSubmitting}
+              disabled={isSubmitting || !addressFieldsEnabled}
               error={fieldError("address.street")}
               id="address-street"
               label="Rua"
@@ -393,7 +440,7 @@ function CreateBreedingFarmForm() {
               value={fields.street}
             />
             <OnboardingField
-              disabled={isSubmitting}
+              disabled={isSubmitting || !addressFieldsEnabled}
               error={fieldError("address.number")}
               id="address-number"
               label="Número"
@@ -404,7 +451,7 @@ function CreateBreedingFarmForm() {
               value={fields.number}
             />
             <OnboardingField
-              disabled={isSubmitting}
+              disabled={isSubmitting || !addressFieldsEnabled}
               error={fieldError("address.complement")}
               id="address-complement"
               label="Complemento"
@@ -416,7 +463,7 @@ function CreateBreedingFarmForm() {
               value={fields.complement}
             />
             <OnboardingField
-              disabled={isSubmitting}
+              disabled={isSubmitting || !addressFieldsEnabled}
               error={fieldError("address.neighborhood")}
               id="address-neighborhood"
               label="Bairro"
@@ -427,7 +474,7 @@ function CreateBreedingFarmForm() {
               value={fields.neighborhood}
             />
             <OnboardingField
-              disabled={isSubmitting}
+              disabled={isSubmitting || !addressFieldsEnabled}
               error={fieldError("address.city")}
               id="address-city"
               label="Cidade"
@@ -438,7 +485,7 @@ function CreateBreedingFarmForm() {
               value={fields.city}
             />
             <OnboardingField
-              disabled={isSubmitting}
+              disabled={isSubmitting || !addressFieldsEnabled}
               error={fieldError("address.state")}
               id="address-state"
               label="UF"
@@ -447,17 +494,6 @@ function CreateBreedingFarmForm() {
               onChange={(event) => updateField("state", event.target.value)}
               placeholder="SP"
               value={fields.state}
-            />
-            <OnboardingField
-              disabled={isSubmitting}
-              error={fieldError("address.postalCode")}
-              id="address-postalCode"
-              label="CEP"
-              maxLength={20}
-              name="address.postalCode"
-              onChange={(event) => updateField("postalCode", event.target.value)}
-              placeholder="00000-000"
-              value={fields.postalCode}
             />
           </div>
         </details>

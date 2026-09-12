@@ -199,22 +199,24 @@ function DashboardMetric({ detail, href, icon, label, value, tone = "green" }: R
   tone?: "green" | "orange" | "blue" | "rose";
   value: number;
 }>) {
-  return (
+  const metric = (
     <article className={`dashboard-metric dashboard-metric-${tone}`}>
       <span aria-hidden="true" className="dashboard-metric-icon"><DashboardIcon name={icon} /></span>
       <div className="dashboard-metric-main">
         <strong>{value}</strong>
         <span className="dashboard-metric-label">{label}</span>
       </div>
-      {href
-        ? <Link aria-label={`Ver ${label.toLowerCase()}`} className="dashboard-metric-arrow" href={href}>›</Link>
-        : <span aria-hidden="true" className="dashboard-metric-arrow">›</span>}
+      <span aria-hidden="true" className="dashboard-metric-arrow">›</span>
       <div className="dashboard-metric-trend">
         <span aria-hidden="true">—</span>
         <small>{detail}</small>
       </div>
     </article>
   );
+
+  return href
+    ? <Link aria-label={`Ver ${label.toLowerCase()}`} className="dashboard-metric-link" href={href}>{metric}</Link>
+    : metric;
 }
 
 function PendingSection({ pending }: Readonly<{ pending: DashboardPending[] }>) {

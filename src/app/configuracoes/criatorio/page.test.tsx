@@ -3,6 +3,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import BreedingFarmEditPage from "./page";
 
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(window.location.search)
+}));
+
 afterEach(() => {
   cleanup();
   window.history.pushState({}, "", "/configuracoes/criatorio");
@@ -41,6 +45,16 @@ function settingsResponse(overrides: Partial<Record<string, unknown>> = {}): Res
     responsibleName: "Ana Souza",
     updatedAtUtc: "2026-09-10T20:00:00Z",
     ...overrides
+  }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
+function viaCepResponse(): Response {
+  return new Response(JSON.stringify({
+    bairro: "Bela Vista",
+    complemento: "lado par",
+    localidade: "São Paulo",
+    logradouro: "Avenida Paulista",
+    uf: "SP"
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
@@ -95,6 +109,24 @@ describe("BreedingFarmEditPage", () => {
     expect(screen.getAllByRole("link", { name: "Meu Criatório" }).length).toBeGreaterThan(0);
   });
 
+  it("switches from the overview to the edit screen when the farm query changes", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectionResponse())
+      .mockResolvedValueOnce(settingsResponse())
+      .mockResolvedValueOnce(settingsResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    const view = render(<BreedingFarmEditPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Meu Criatório" })).toBeTruthy());
+    window.history.pushState({}, "", "/configuracoes/criatorio?breedingFarmId=farm-id");
+    view.rerender(<BreedingFarmEditPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Editar criatório" })).toBeTruthy());
+    expect(screen.getByLabelText("Nome do criatório")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
   it("loads the selected farm settings into an editable form", async () => {
     useFarmRoute();
     const fetchMock = vi.fn()
@@ -108,6 +140,28 @@ describe("BreedingFarmEditPage", () => {
     expect((screen.getByLabelText("Nome do responsável") as HTMLInputElement).value).toBe("Ana Souza");
     expect((screen.getByLabelText("Endereço") as HTMLInputElement).value).toBe("Rua das Flores");
     expect(screen.getByRole("link", { name: "Cancelar" })).toBeTruthy();
+  });
+
+  it("fills the address after changing the CEP", async () => {
+    useFarmRoute();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(settingsResponse())
+      .mockResolvedValueOnce(viaCepResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BreedingFarmEditPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Editar criatório" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "01001001" } });
+
+    await waitFor(() => {
+      expect((screen.getByLabelText("Endereço") as HTMLInputElement).value).toBe("Avenida Paulista");
+      expect((screen.getByLabelText("Endereço") as HTMLInputElement).disabled).toBe(false);
+    });
+    expect((screen.getByLabelText("Cidade") as HTMLInputElement).value).toBe("São Paulo");
+    expect((screen.getByLabelText("UF") as HTMLInputElement).value).toBe("SP");
+    expect(screen.getByText("Endereço preenchido automaticamente.", { exact: false })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("updates settings with the contract payload and shows confirmation", async () => {
@@ -135,11 +189,9 @@ describe("BreedingFarmEditPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Editar criatório" })).toBeTruthy());
     fireEvent.change(screen.getByLabelText("Nome do criatório"), { target: { value: " Sítio Aurora Atualizado " } });
     fireEvent.change(screen.getByLabelText("Nome do responsável"), { target: { value: " Nova Responsável " } });
-    fireEvent.change(screen.getByLabelText("UF"), { target: { value: "RJ" } });
-    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "98765 432" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
-    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("atualizados com sucesso"));
+    await waitFor(() => expect(screen.getByText("Dados do criatório atualizados com sucesso.", { exact: true })).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(4);
     const [, updateRequest] = fetchMock.mock.calls[3];
     expect(new Headers(updateRequest.headers).get("x-xsrf-token")).toBe("csrf-token");
@@ -149,8 +201,8 @@ describe("BreedingFarmEditPage", () => {
         complement: null,
         neighborhood: "Centro",
         number: "10",
-        postalCode: "98765 432",
-        state: "RJ",
+        postalCode: "01001-000",
+        state: "SP",
         street: "Rua das Flores"
       },
       contactEmail: "owner@example.com",
