@@ -109,7 +109,8 @@ describe("BirdDetailPage", () => {
     expect(screen.getByText(/Ficha privada · Criatório Aurora/)).toBeTruthy();
     expect(screen.getByLabelText("Navegação principal")).toBeTruthy();
     expect(screen.getByLabelText("Foto da ave não cadastrada")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Dados cadastrais" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Informações da ave" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Linhagem (Genealogia)" })).toBeTruthy();
     expect(screen.getByText("Ave acompanhada desde o primeiro cadastro.")).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /Pai Azul/ }).some((link) => link.getAttribute("href") === "/plantel/aves/father-a")).toBe(true);
     expect(screen.getByRole("link", { name: "Editar dados" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
@@ -119,7 +120,7 @@ describe("BirdDetailPage", () => {
     expect(String(detailRequest[0])).toContain("/api/birds/bird-a");
   });
 
-  it("renders external parents and honest empty related sections", async () => {
+  it("renders external parents and honest empty profile resources", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectedFarmResponse())
@@ -138,8 +139,11 @@ describe("BirdDetailPage", () => {
 
     expect(screen.getByText("Pai não cadastrado")).toBeTruthy();
     expect(screen.getByText("Identificação pendente")).toBeTruthy();
-    expect(screen.getByText("Nenhuma observação foi registrada para esta ave.")).toBeTruthy();
-    expect(screen.getAllByText("Nenhum registro disponível")).toHaveLength(6);
+    expect(screen.getByText("Nenhuma observação registrada.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Fotos" })).toBeTruthy();
+    expect(screen.getByText("Nenhuma foto cadastrada.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "QR Code da ave" })).toBeTruthy();
+    expect(screen.getByText(/geração de documentos for liberada/)).toBeTruthy();
   });
 
   it("does not expose a bird outside the selected farm", async () => {
