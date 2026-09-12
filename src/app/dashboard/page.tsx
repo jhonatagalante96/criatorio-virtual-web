@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../lib/http/api-client";
 import { AuthenticatedShell } from "../components/authenticated-shell";
+import { AppLoadingState } from "../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../components/brand";
 import { DashboardIcon } from "../components/dashboard-icons";
 import type { DashboardIconName } from "../components/dashboard-icons";
@@ -68,6 +70,10 @@ function stringValue(value: unknown, fallback: string): string {
 
 function countValue(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+}
+
+function sameTenantId(left: string, right: string): boolean {
+  return left.trim().toLowerCase() === right.trim().toLowerCase();
 }
 
 function normalizeDashboard(value: unknown): DashboardData {
@@ -177,7 +183,7 @@ function AccessState({
             <h1 id="titulo-dashboard-estado" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href={actionHref}>{actionLabel}</a>
+            <Link className="text-action" href={actionHref}>{actionLabel}</Link>
           </div>
         </section>
       </div>
@@ -217,7 +223,7 @@ function PendingSection({ pending }: Readonly<{ pending: DashboardPending[] }>) 
           <h2 id="titulo-pendencias">Pendências <span className="dashboard-heading-badge">{pending.length}</span></h2>
           <p className="dashboard-section-lede">Itens que precisam da sua atenção.</p>
         </div>
-        <a className="dashboard-section-action" href="/plantel/aves?identificationPending=true">Ver todas <span aria-hidden="true">›</span></a>
+        <Link className="dashboard-section-action" href="/plantel/aves?identificationPending=true">Ver todas <span aria-hidden="true">›</span></Link>
       </div>
       {pending.length === 0 ? (
         <div className="dashboard-empty-state">
@@ -244,7 +250,7 @@ function PendingSection({ pending }: Readonly<{ pending: DashboardPending[] }>) 
 
             return (
               <li key={`${item.code}-${item.resourceType}`}>
-                {href ? <a href={href}>{content}</a> : <div className="dashboard-pending-item">{content}</div>}
+                {href ? <Link href={href}>{content}</Link> : <div className="dashboard-pending-item">{content}</div>}
               </li>
             );
           })}
@@ -303,7 +309,7 @@ function ActivitiesSection({ activities }: Readonly<{ activities: DashboardActiv
 
             return (
               <li key={`${activity.resourceType}-${activity.resourceId}-${activity.occurredAtUtc}-${index}`}>
-                {href ? <a href={href}>{activityContent}</a> : <div className="dashboard-activity-item">{activityContent}</div>}
+                {href ? <Link href={href}>{activityContent}</Link> : <div className="dashboard-activity-item">{activityContent}</div>}
               </li>
             );
           })}
@@ -361,14 +367,14 @@ function QuickActionsSection() {
       <div className="dashboard-quick-action-grid">
         {quickActions.map((action) => (
           action.href ? (
-            <a className={`dashboard-quick-action dashboard-quick-action-${action.tone}`} href={action.href} key={action.title}>
+            <Link className={`dashboard-quick-action dashboard-quick-action-${action.tone}`} href={action.href} key={action.title}>
               <span aria-hidden="true" className="dashboard-quick-action-icon"><DashboardIcon name={action.icon} /></span>
               <span className="dashboard-quick-action-copy">
                 <strong>{action.title}</strong>
                 <span>{action.description}</span>
               </span>
               <span aria-hidden="true" className="dashboard-card-arrow">›</span>
-            </a>
+            </Link>
           ) : (
             <div aria-disabled="true" className={`dashboard-quick-action dashboard-quick-action-${action.tone} is-disabled`} key={action.title} title="Módulo em desenvolvimento">
               <span aria-hidden="true" className="dashboard-quick-action-icon"><DashboardIcon name={action.icon} /></span>
@@ -457,14 +463,20 @@ function DashboardScreen() {
   const [view, setView] = useState<DashboardView>({ kind: "loading" });
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
+  const loadRequestId = useRef(0);
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
 
-  const loadDashboard = useCallback(async (recoverSession = true) => {
+  const loadDashboard = useCallback(async (recoverSession = true, staleRetry = 0) => {
+    const requestId = ++loadRequestId.current;
+    const isCurrentRequest = () => loadRequestId.current === requestId;
+
     setView({ kind: "loading" });
 
     try {
       const selection = await client.current!.request<BreedingFarmSelectionResponse>("api/breeding-farms");
+      if (!isCurrentRequest()) return;
+
       client.current!.setTenant(selection.selectedBreedingFarmId ?? undefined);
 
       if (selection.breedingFarms.length === 0) {
@@ -479,13 +491,23 @@ function DashboardScreen() {
       }
 
       const dashboard = normalizeDashboard(await client.current!.request<unknown>("api/dashboard"));
-      if (dashboard.breedingFarmId !== selectedFarm.breedingFarmId) {
+      if (!isCurrentRequest()) return;
+      if (!sameTenantId(dashboard.breedingFarmId, selectedFarm.breedingFarmId)) {
         throw new StaleTenantResponseError();
       }
       setView({ dashboard, farm: selectedFarm, kind: "ready" });
     } catch (requestError) {
+      if (!isCurrentRequest()) return;
+
+      if (requestError instanceof StaleTenantResponseError && staleRetry < 1) {
+        client.current!.clearCache();
+        await loadDashboard(false, staleRetry + 1);
+        return;
+      }
+
       if (requestError instanceof ApiError && requestError.status === 401 && recoverSession) {
         const refreshResult = await refresh();
+        if (!isCurrentRequest()) return;
         if (refreshResult.ok) await loadDashboard(false);
         return;
       }
@@ -519,14 +541,21 @@ function DashboardScreen() {
   useEffect(() => {
     if (status !== "authenticated") return;
     void loadDashboard();
+    return () => {
+      loadRequestId.current += 1;
+    };
   }, [loadDashboard, status]);
 
-  if (status === "loading") return <AccessState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+  if (status === "loading" || status === "authenticating" || status === "signing-out") {
+    return <AppLoadingState activeNav="dashboard" email={session?.email} label="Carregando dashboard" message="Um instante enquanto preparamos seu espaço." />;
+  }
   if (status === "error") return <AccessState heading="Não foi possível abrir o dashboard" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
   if (status === "forbidden") return <AccessState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar esta área."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
   if (status === "unauthenticated") return <AccessState heading="Entre para consultar o dashboard" message="Faça login para acompanhar os indicadores do seu criatório." />;
 
-  if (view.kind === "loading") return <AccessState heading="Carregando seu dashboard" message="Só um instante enquanto organizamos os dados do criatório." />;
+  if (view.kind === "loading") {
+    return <AppLoadingState activeNav="dashboard" email={session?.email} label="Carregando dashboard" message="Um instante enquanto preparamos seu espaço." />;
+  }
   if (view.kind === "error") return <AccessState heading="Não foi possível carregar o dashboard" message={view.message} onRetry={() => void loadDashboard()} />;
   if (view.kind === "blocked") return <AccessState heading="Acesso bloqueado" message={view.message} onRetry={() => void loadDashboard()} retryLabel="Verificar novamente" />;
   if (view.kind === "empty") return <AccessState actionHref="/onboarding/criatorio" actionLabel="Criar meu criatório" heading="Crie seu primeiro criatório" message="Ainda não existe um criatório vinculado a esta conta. Crie um agora para liberar seu dashboard." />;

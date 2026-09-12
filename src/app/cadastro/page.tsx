@@ -1,6 +1,7 @@
 "use client";
 
 import React, { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../lib/http/api-client";
 import { BrandLockup, BrandPanel } from "../components/brand";
 
@@ -167,7 +168,7 @@ export default function RegistrationPage() {
           <BrandPanel />
           <section className="auth-form-panel" aria-labelledby="titulo-confirmacao">
             <div className="auth-form-content confirmation-card" id="conteudo-cadastro">
-              <a className="auth-mobile-back" href="/" aria-label="Voltar para a página inicial"><BackIcon /></a>
+              <Link className="auth-mobile-back" href="/" aria-label="Voltar para a página inicial"><BackIcon /></Link>
               <div className="auth-mobile-brand"><BrandLockup stacked /></div>
               <div className="confirmation-icon" aria-hidden="true">
                 <img src="/assets/icons/ui/envelope-check.svg" alt="" />
@@ -193,7 +194,7 @@ export default function RegistrationPage() {
               )}
               {resendMessage && <p className="confirmation-feedback" role="status">{resendMessage}</p>}
               {resendError && <p className="confirmation-feedback confirmation-feedback-error" role="alert">{resendError}</p>}
-              <a className="text-action confirmation-back" href="/login">Voltar para o login</a>
+                <Link className="text-action confirmation-back" href="/login">Voltar para o login</Link>
             </div>
           </section>
         </div>
@@ -212,7 +213,7 @@ export default function RegistrationPage() {
         <BrandPanel />
         <section className="auth-form-panel" aria-labelledby="titulo-cadastro">
           <div className="auth-form-content" id="conteudo-cadastro">
-            <a className="auth-mobile-back" href="/" aria-label="Voltar para a página inicial"><BackIcon /></a>
+              <Link className="auth-mobile-back" href="/" aria-label="Voltar para a página inicial"><BackIcon /></Link>
             <div className="auth-mobile-brand"><BrandLockup stacked /></div>
             <h1 id="titulo-cadastro">Crie sua conta</h1>
             <p className="lede">É rápido e o primeiro passo para um criatório mais organizado.</p>
@@ -222,7 +223,7 @@ export default function RegistrationPage() {
               {confirmationRequiredEmail && (
                 <div className="form-error" role="alert">
                   Esta conta já foi criada, mas o e-mail ainda não foi confirmado. Confirme o endereço antes de entrar.
-                  <a className="text-action" href={`/auth/confirm-email?email=${encodeURIComponent(confirmationRequiredEmail)}`}>Reenviar e-mail de confirmação</a>
+                  <Link className="text-action" href={`/auth/confirm-email?email=${encodeURIComponent(confirmationRequiredEmail)}`}>Reenviar e-mail de confirmação</Link>
                 </div>
               )}
 
@@ -316,7 +317,7 @@ export default function RegistrationPage() {
                   onChange={(event) => setAcceptedTerms(event.target.checked)}
                   type="checkbox"
                 />
-                <span>Li e aceito os <a href="/termos-de-uso">Termos de Uso</a> e a <a href="/politica-de-privacidade">Política de Privacidade</a>.</span>
+                <span>Li e aceito os <Link href="/termos-de-uso">Termos de Uso</Link> e a <Link href="/politica-de-privacidade">Política de Privacidade</Link>.</span>
               </label>
               {termsError && <p className="field-error terms-error" id="terms-error">{termsError}</p>}
 
@@ -325,7 +326,7 @@ export default function RegistrationPage() {
               </button>
             </form>
 
-            <p className="auth-footer">Já tem uma conta? <a href="/login">Entrar</a></p>
+            <p className="auth-footer">Já tem uma conta? <Link href="/login">Entrar</Link></p>
           </div>
         </section>
       </div>

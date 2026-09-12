@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { ApiClient, ApiError, createApiClient } from "../http/api-client";
+import { clearShellIdentity } from "./shell-identity";
 
 export interface AccountSession {
   email: string;
@@ -48,7 +49,7 @@ function messageForFailure(error: unknown, action: "login" | "logout" | "session
   return "Não foi possível restaurar sua sessão. Tente novamente.";
 }
 
-export function AuthProvider({ children }: Readonly<{ children: React.ReactNode }>) {
+function AuthProviderInner({ children }: Readonly<{ children: React.ReactNode }>) {
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
   const [error, setError] = useState<string | undefined>();
@@ -79,6 +80,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
   const clearSession = useCallback(() => {
     csrfToken.current = undefined;
     client.current?.clearCache();
+    clearShellIdentity();
     rememberAuthenticationProvider(undefined);
     setSession(undefined);
   }, [rememberAuthenticationProvider]);
@@ -118,6 +120,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+    clearShellIdentity();
     setStatus("authenticating");
     setError(undefined);
 
@@ -183,6 +186,12 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function AuthProvider({ children }: Readonly<{ children: React.ReactNode }>) {
+  const parentContext = useContext(AuthContext);
+  if (parentContext) return <>{children}</>;
+  return <AuthProviderInner>{children}</AuthProviderInner>;
 }
 
 export function useAuth(): AuthContextValue {

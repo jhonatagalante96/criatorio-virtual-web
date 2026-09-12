@@ -54,6 +54,8 @@ function createdBirdResponse(identificationPending = false): Response {
 async function openForm(fetchMock: ReturnType<typeof vi.fn>) {
   render(<BirdRegistrationPage />);
   await waitFor(() => expect(screen.getByRole("heading", { name: "Cadastrar ave" })).toBeTruthy());
+  expect(screen.getByRole("complementary", { name: "Navegação principal" })).toBeTruthy();
+  expect(screen.getByRole("complementary", { name: "Resumo do cadastro" })).toBeTruthy();
   expect(fetchMock).toHaveBeenCalledTimes(2);
 }
 

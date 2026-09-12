@@ -1,8 +1,11 @@
 "use client";
 
 import React, { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, ValidationErrors, createApiClient } from "../../../../../lib/http/api-client";
+import { AuthenticatedShell } from "../../../../components/authenticated-shell";
+import { AppLoadingState } from "../../../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../../../components/brand";
 import { SpeciesSelector, SpeciesSummary } from "../../../../components/species-selector";
 
@@ -139,10 +142,6 @@ function readBirdIdFromPathname(): string {
   return decodeURIComponent(segments[editIndex - 1] ?? "");
 }
 
-function BackIcon() {
-  return <img src="/assets/icons/ui/arrow-left.svg" alt="" aria-hidden="true" />;
-}
-
 function EditState({
   actionHref,
   actionLabel = "Voltar para a ficha",
@@ -175,11 +174,52 @@ function EditState({
             <h1 id="titulo-estado-edicao-ave" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href={actionHref}>{actionLabel}</a>
+            <Link className="text-action" href={actionHref}>{actionLabel}</Link>
           </div>
         </section>
       </div>
     </main>
+  );
+}
+
+function AuthenticatedEditState({
+  email,
+  farmName,
+  actionHref,
+  actionLabel = "Voltar para a ficha",
+  heading,
+  message,
+  onRetry,
+  retryLabel = "Tentar novamente"
+}: Readonly<{
+  actionHref: string;
+  actionLabel?: string;
+  email: string;
+  farmName: string;
+  heading: string;
+  message: string;
+  onRetry?: () => void;
+  retryLabel?: string;
+}>) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
+  return (
+    <AuthenticatedShell activeNav="birds" email={email} farmName={farmName}>
+      <div className="bird-form-view">
+        <div className="bird-form-state" id="conteudo-edicao-ave">
+          <h1 ref={headingRef} tabIndex={-1}>{heading}</h1>
+          <p>{message}</p>
+          <div className="bird-form-state-actions">
+            {onRetry && <button className="auth-primary-action" onClick={onRetry} type="button">{retryLabel}</button>}
+            <Link className="auth-secondary-action" href={actionHref}>{actionLabel}</Link>
+          </div>
+        </div>
+      </div>
+    </AuthenticatedShell>
   );
 }
 
@@ -232,7 +272,7 @@ function Field({
 }
 
 function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
-  const { refresh } = useAuth();
+  const { refresh, session } = useAuth();
   const [bird, setBird] = useState<BirdDetailsResponse>();
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [fields, setFields] = useState<BirdFields>();
@@ -387,19 +427,19 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
   }
 
   if (farmState === "loading" || (farmState === "ready" && loadState === "loading")) {
-    return <EditState actionHref={`/plantel/aves/${encodeURIComponent(birdId)}`} heading="Carregando dados da ave" message="Só um instante enquanto buscamos as informações para edição." />;
+    return <AppLoadingState activeNav="birds" email={session?.email} farmName={farmName ?? "Criatório selecionado"} label="Carregando edição" message="Buscando as informações da ave para edição." />;
   }
   if (farmState === "blocked") {
-    return <EditState actionHref={`/plantel/aves/${encodeURIComponent(birdId)}`} heading="Edição indisponível" message={farmError ?? "Não foi possível editar esta ave."} actionLabel="Voltar para a ficha" />;
+    return <AuthenticatedEditState actionHref={`/plantel/aves/${encodeURIComponent(birdId)}`} email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"} heading="Edição indisponível" message={farmError ?? "Não foi possível editar esta ave."} actionLabel="Voltar para a ficha" />;
   }
   if (farmState === "error") {
-    return <EditState actionHref={`/plantel/aves/${encodeURIComponent(birdId)}`} heading="Não foi possível carregar a ave" message={farmError ?? "Tente novamente para continuar."} onRetry={() => setReloadVersion((value) => value + 1)} />;
+    return <AuthenticatedEditState actionHref={`/plantel/aves/${encodeURIComponent(birdId)}`} email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"} heading="Não foi possível carregar a ave" message={farmError ?? "Tente novamente para continuar."} onRetry={() => setReloadVersion((value) => value + 1)} />;
   }
   if (loadState === "not-found" || !bird || !fields || !selectedSpecies) {
-    return <EditState actionHref="/plantel/aves" actionLabel="Voltar para o plantel" heading="Ave não encontrada" message="Não foi possível localizar esta ave no criatório selecionado." />;
+    return <AuthenticatedEditState actionHref="/plantel/aves" email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"} actionLabel="Voltar para o plantel" heading="Ave não encontrada" message="Não foi possível localizar esta ave no criatório selecionado." />;
   }
   if (bird.status === "Transferred") {
-    return <EditState actionHref={`/plantel/aves/${encodeURIComponent(birdId)}`} heading="Edição bloqueada" message="Esta ave está transferida. Atualizações cadastrais ficam bloqueadas durante o fluxo de transferência." />;
+    return <AuthenticatedEditState actionHref={`/plantel/aves/${encodeURIComponent(birdId)}`} email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"} heading="Edição bloqueada" message="Esta ave está transferida. Atualizações cadastrais ficam bloqueadas durante o fluxo de transferência." />;
   }
 
   const fieldError = (field: string) => firstError(errors, field);
@@ -407,23 +447,18 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
   const isTerminalStatus = bird.status !== "Active";
 
   return (
-    <main className="auth-page onboarding-page bird-registration-page bird-edit-page">
-      <a className="skip-link" href="#conteudo-edicao-ave">Pular para o conteúdo</a>
-      <div className="auth-shell onboarding-shell bird-registration-shell">
-        <BrandPanel />
-        <section aria-labelledby="titulo-edicao-ave" className="auth-form-panel onboarding-form-panel">
-          <div className="onboarding-form-content" id="conteudo-edicao-ave">
-            <a aria-label="Voltar para a ficha" className="auth-mobile-back" href={`/plantel/aves/${encodeURIComponent(birdId)}`}><BackIcon /></a>
-            <div className="auth-mobile-brand"><BrandLockup stacked /></div>
-            <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><a href="/plantel/aves">Plantel</a><span aria-hidden="true">/</span><a href={`/plantel/aves/${encodeURIComponent(birdId)}`}>Ficha da ave</a><span aria-hidden="true">/</span><span aria-current="page">Editar</span></nav>
-            <p className="eyebrow">Plantel{farmName ? ` · ${farmName}` : ""}</p>
-            <h1 id="titulo-edicao-ave">Editar dados da ave</h1>
-            <p className="lede">Atualize os dados cadastrais de {bird.name} sem alterar a genealogia ou a situação registrada.</p>
+    <AuthenticatedShell activeNav="birds" email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"}>
+      <div className="bird-form-view" id="conteudo-edicao-ave">
+        <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">/</span><Link href="/plantel/aves">Aves</Link><span aria-hidden="true">/</span><Link href={`/plantel/aves/${encodeURIComponent(birdId)}`}>{bird.name}</Link><span aria-hidden="true">/</span><span aria-current="page">Editar</span></nav>
+        <div className="bird-form-page-header">
+          <p className="eyebrow">Ficha privada{farmName ? ` · ${farmName}` : ""}</p>
+          <h1 id="titulo-edicao-ave">Editar dados da ave</h1>
+          <p className="lede">Atualize os dados cadastrais de {bird.name} sem alterar a genealogia ou a situação registrada.</p>
+        </div>
 
-            <div aria-label="Etapa 1 de 1" className="onboarding-progress">
-              <span aria-hidden="true">1</span>
-              <span>Dados cadastrais</span>
-            </div>
+        <div className="bird-form-layout">
+          <div className="bird-form-main">
+            <div className="bird-form-card bird-form-card-edit">
 
             {isTerminalStatus && (
               <div className="bird-pending-feedback" role="status">
@@ -476,28 +511,46 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
                 </div>
               </fieldset>
 
-              <div className="bird-edit-actions">
-                <a className="auth-secondary-action" href={`/plantel/aves/${encodeURIComponent(birdId)}`}>Cancelar</a>
+            <div className="bird-edit-actions">
+                <Link className="auth-secondary-action" href={`/plantel/aves/${encodeURIComponent(birdId)}`}>Cancelar</Link>
                 <button className="auth-primary-action submit-action" disabled={isSubmitting} type="submit">{isSubmitting ? "Salvando alterações…" : "Salvar alterações"}</button>
-              </div>
+            </div>
             </form>
-
-            <p className="auth-footer">Os dados ficam vinculados somente ao criatório selecionado.</p>
+            </div>
           </div>
-        </section>
+
+          <aside aria-label="Resumo da ficha" className="bird-form-aside">
+            <section className="bird-form-aside-card">
+              <p className="eyebrow">FICHA ATUAL</p>
+              <h2>{bird.name}</h2>
+              <dl className="bird-form-summary-list">
+                <div><dt>Espécie/Raça</dt><dd>{bird.speciesPopularName}</dd></div>
+                <div><dt>Situação</dt><dd>{statusLabels[bird.status]}</dd></div>
+                <div><dt>Anilha</dt><dd>{bird.ringNumber ?? "Não informada"}</dd></div>
+              </dl>
+            </section>
+            <section className="bird-form-aside-card bird-form-aside-card-soft">
+              <p className="eyebrow">ATENÇÃO</p>
+              <h2>Dados cadastrais</h2>
+              <p>A edição mantém o criatório e a genealogia. A situação da ave é alterada em um fluxo separado.</p>
+            </section>
+          </aside>
+        </div>
+
+        <p className="auth-footer">Os dados ficam vinculados somente ao criatório selecionado.</p>
       </div>
-    </main>
+    </AuthenticatedShell>
   );
 }
 
 function BirdEditScreen() {
-  const { error, refresh, status } = useAuth();
+  const { error, refresh, session, status } = useAuth();
   const [birdId, setBirdId] = useState("");
 
   useEffect(() => { setBirdId(readBirdIdFromPathname()); }, []);
 
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
-    return <EditState actionHref="/plantel/aves" heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+    return <AppLoadingState activeNav="birds" email={session?.email} label="Carregando edição" message="Um instante enquanto verificamos seu acesso." />;
   }
   if (status === "error") {
     return <EditState actionHref="/plantel/aves" heading="Não foi possível abrir a edição" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;

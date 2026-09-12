@@ -3,8 +3,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import LoginPage from "./page";
 
+const routerReplace = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: routerReplace }) }));
+
 afterEach(() => {
   cleanup();
+  routerReplace.mockReset();
   window.history.replaceState({}, "", "/");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -29,6 +34,13 @@ function authenticatedSession(): Response {
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
+function breedingFarmsResponse(farms: string[], selectedBreedingFarmId: string | null = null): Response {
+  return new Response(JSON.stringify({
+    breedingFarms: farms.map((breedingFarmId) => ({ breedingFarmId })),
+    selectedBreedingFarmId
+  }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
 describe("LoginPage", () => {
   it("restores an anonymous session and validates the form accessibly", async () => {
     const fetchMock = vi.fn().mockResolvedValue(unauthenticatedResponse());
@@ -47,7 +59,8 @@ describe("LoginPage", () => {
   it("starts Google authentication in a popup and confirms the server session", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
-      .mockResolvedValueOnce(authenticatedSession());
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
     const popup = { close: vi.fn(), closed: false } as unknown as Window;
     const openMock = vi.spyOn(window, "open").mockReturnValue(popup);
     vi.stubGlobal("fetch", fetchMock);
@@ -66,14 +79,15 @@ describe("LoginPage", () => {
     expect(screen.getByRole("status").textContent).toContain("Conclua a entrada");
 
     fireEvent.click(screen.getByRole("button", { name: "Verificar sessão" }));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
     expect(popup.close).toHaveBeenCalledTimes(1);
   });
 
   it("automatically verifies the session when the Google popup returns to the frontend", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
-      .mockResolvedValueOnce(authenticatedSession());
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
     const popupLocation = { href: "https://accounts.google.com/o/oauth2/auth" };
     const popup = { close: vi.fn(), closed: false, location: popupLocation } as unknown as Window;
     vi.spyOn(window, "open").mockReturnValue(popup);
@@ -84,16 +98,17 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
     popupLocation.href = `${window.location.origin}/`;
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
-    expect(screen.queryByRole("status")).toBeNull();
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
+    expect(screen.getByRole("status").textContent).toContain("Abrindo seu espaço");
     expect(popup.close).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("refreshes the session when the Google callback popup notifies the login page", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
-      .mockResolvedValueOnce(authenticatedSession());
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
     const popup = { close: vi.fn(), closed: false } as unknown as Window;
     vi.spyOn(window, "open").mockReturnValue(popup);
     vi.stubGlobal("fetch", fetchMock);
@@ -106,14 +121,15 @@ describe("LoginPage", () => {
       origin: window.location.origin
     }));
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
     expect(popup.close).toHaveBeenCalledTimes(1);
   });
 
   it("checks the session before reporting that the callback popup closed", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
-      .mockResolvedValueOnce(authenticatedSession());
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
     let popupClosed = false;
     const popup = { close: vi.fn(), get closed() { return popupClosed; } } as unknown as Window;
     vi.spyOn(window, "open").mockReturnValue(popup);
@@ -124,7 +140,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar com Google" }));
     popupClosed = true;
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
     expect(screen.queryByText("A janela do Google foi fechada antes da conclusão. Tente novamente.")).toBeNull();
     expect(popup.close).toHaveBeenCalledTimes(1);
   });
@@ -224,12 +240,13 @@ describe("LoginPage", () => {
     expect(screen.getByRole("alert").textContent).toContain("Permita pop-ups");
   });
 
-  it("logs in with a fresh antiforgery token and renders the restored session", async () => {
+  it("opens the only associated breeding farm directly in the dashboard", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
-      .mockResolvedValueOnce(authenticatedSession());
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
     vi.stubGlobal("fetch", fetchMock);
     render(<LoginPage />);
 
@@ -238,15 +255,62 @@ describe("LoginPage", () => {
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Olá, você está conectado." })).toBeTruthy());
-    expect(screen.getByText("owner@example.com")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Abrir dashboard" }).getAttribute("href")).toBe("/dashboard");
-    expect(screen.getByRole("link", { name: "Continuar onboarding" }).getAttribute("href")).toBe("/onboarding/criatorio/selecionar");
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
+    expect(screen.getByRole("status").textContent).toContain("Abrindo seu espaço");
+    expect(fetchMock).toHaveBeenCalledTimes(5);
 
     const [, loginRequest] = fetchMock.mock.calls[2];
     expect(new Headers(loginRequest.headers).get("x-xsrf-token")).toBe("before-login");
     expect(JSON.parse(loginRequest.body as string)).toEqual({ email: "owner@example.com", password: "StrongPassword!123" });
+  });
+
+  it("opens the breeding-farm selector after login when there is more than one farm", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-a", "farm-b"], "farm-a"));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/onboarding/criatorio/selecionar"));
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("resumes onboarding when the only farm has not been selected yet", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"]));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/onboarding/criatorio/selecionar"));
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("opens onboarding automatically when the authenticated user has no farm", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse([]));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/onboarding/criatorio"));
+    expect(screen.queryByRole("link", { name: /Continuar onboarding/i })).toBeNull();
   });
 
   it("shows a generic invalid-credentials message for a 401 response", async () => {
@@ -280,83 +344,4 @@ describe("LoginPage", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("confirms logout, refreshes antiforgery, and clears the session context", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(unauthenticatedResponse())
-      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }))
-      .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-logout" }, status: 204 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
-    vi.stubGlobal("fetch", fetchMock);
-    render(<LoginPage />);
-
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
-    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
-    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
-    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy());
-
-    fireEvent.click(screen.getByRole("button", { name: "Sair da conta" }));
-    expect(screen.getByRole("dialog")).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(4);
-    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
-    expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "Sair da conta" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar saída" }));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
-
-    const [, logoutRequest] = fetchMock.mock.calls[5];
-    expect(new Headers(logoutRequest.headers).get("x-xsrf-token")).toBe("before-logout");
-  });
-
-  it("keeps the authenticated session visible when logout is forbidden", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(unauthenticatedResponse())
-      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }))
-      .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-logout" }, status: 204 }))
-      .mockResolvedValueOnce(new Response(null, { status: 403 }));
-    vi.stubGlobal("fetch", fetchMock);
-    render(<LoginPage />);
-
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
-    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
-    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
-    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy());
-
-    fireEvent.click(screen.getByRole("button", { name: "Sair da conta" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar saída" }));
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("não está autorizado"));
-    expect(screen.getByText("owner@example.com")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy();
-  });
-
-  it("clears an expired session when logout returns 401", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(unauthenticatedResponse())
-      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }))
-      .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-logout" }, status: 204 }))
-      .mockResolvedValueOnce(new Response(null, { status: 401 }));
-    vi.stubGlobal("fetch", fetchMock);
-    render(<LoginPage />);
-
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
-    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
-    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
-    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Sair da conta" })).toBeTruthy());
-
-    fireEvent.click(screen.getByRole("button", { name: "Sair da conta" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar saída" }));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
-
-    expect(screen.getByRole("alert").textContent).toContain("Sua sessão expirou");
-    expect(screen.queryByText("owner@example.com")).toBeNull();
-  });
 });

@@ -1,9 +1,12 @@
 "use client";
 
 import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
-import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../../lib/http/api-client";
-import { BrandLockup, BrandPanel } from "../../components/brand";
+import { ApiClient, ApiError, StaleTenantResponseError, ValidationErrors, createApiClient } from "../../../lib/http/api-client";
+import { AppLoadingState } from "../../components/app-loading-state";
+import { AuthenticatedShell } from "../../components/authenticated-shell";
+import { DashboardIcon } from "../../components/dashboard-icons";
 
 interface AddressFields {
   city: string;
@@ -44,11 +47,14 @@ interface BreedingFarmSettingsResponse {
   updatedAtUtc: string;
 }
 
-const addressKeys: Array<keyof AddressFields> = ["street", "number", "complement", "neighborhood", "city", "state", "postalCode"];
-
-function BackIcon() {
-  return <img src="/assets/icons/ui/arrow-left.svg" alt="" aria-hidden="true" />;
+interface BreedingFarmSelectionResponse {
+  breedingFarms: Array<{ breedingFarmId: string; isSelected: boolean; name: string; responsibleName: string }>;
+  selectedBreedingFarmId: string | null;
 }
+
+type FarmLoadState = "blocked" | "error" | "loading" | "ready";
+
+const addressKeys: Array<keyof AddressFields> = ["street", "number", "complement", "neighborhood", "city", "state", "postalCode"];
 
 function firstError(errors: ValidationErrors, field: string): string | undefined {
   const matchingKey = Object.keys(errors).find((key) => key.toLowerCase() === field.toLowerCase());
@@ -93,33 +99,17 @@ function validateFields(fields: BreedingFarmFields): ValidationErrors {
 
   if (!name) errors.name = ["Informe o nome do criatório."];
   else if (name.length > 200) errors.name = ["O nome do criatório deve ter no máximo 200 caracteres."];
-
   if (!responsibleName) errors.responsibleName = ["Informe o nome do responsável."];
   else if (responsibleName.length > 200) errors.responsibleName = ["O nome do responsável deve ter no máximo 200 caracteres."];
-
-  if (contactEmail && (!/^\S+@\S+\.\S+$/.test(contactEmail) || contactEmail.length > 320)) {
-    errors.contactEmail = ["Informe um e-mail de contato válido."];
-  }
-
+  if (contactEmail && (!/^\S+@\S+\.\S+$/.test(contactEmail) || contactEmail.length > 320)) errors.contactEmail = ["Informe um e-mail de contato válido."];
   if (fields.contactPhone.trim().length > 32) errors.contactPhone = ["O telefone deve ter no máximo 32 caracteres."];
-  if (fields.officialRegistrationNumber.trim().length > 100) {
-    errors.officialRegistrationNumber = ["O registro oficial deve ter no máximo 100 caracteres."];
-  }
+  if (fields.officialRegistrationNumber.trim().length > 100) errors.officialRegistrationNumber = ["O registro oficial deve ter no máximo 100 caracteres."];
 
   for (const [field, maxLength] of [["street", 200], ["number", 32], ["complement", 100], ["neighborhood", 120], ["city", 120], ["state", 100], ["postalCode", 20]] as const) {
-    if (fields[field].trim().length > maxLength) {
-      errors[`address.${field}`] = [`Este campo deve ter no máximo ${maxLength} caracteres.`];
-    }
+    if (fields[field].trim().length > maxLength) errors[`address.${field}`] = [`Este campo deve ter no máximo ${maxLength} caracteres.`];
   }
-
-  const state = fields.state.trim();
-  if (state && !/^[A-Za-z]{2}$/.test(state)) errors["address.state"] = ["Informe a UF com duas letras."];
-
-  const postalCode = fields.postalCode.trim();
-  if (postalCode && !/^\d{8}$/.test(postalCode.replace(/[ -]/g, ""))) {
-    errors["address.postalCode"] = ["Informe um CEP com oito números."];
-  }
-
+  if (fields.state.trim() && !/^[A-Za-z]{2}$/.test(fields.state.trim())) errors["address.state"] = ["Informe a UF com duas letras."];
+  if (fields.postalCode.trim() && !/^\d{8}$/.test(fields.postalCode.trim().replace(/[ -]/g, ""))) errors["address.postalCode"] = ["Informe um CEP com oito números."];
   return errors;
 }
 
@@ -127,7 +117,6 @@ function localizeValidationErrors(errors: ValidationErrors): ValidationErrors {
   return Object.fromEntries(Object.entries(errors).map(([field, messages]) => {
     const normalizedField = field.toLowerCase();
     let message = messages[0] ?? "Confira este campo e tente novamente.";
-
     if (normalizedField === "name") message = "Confira o nome do criatório.";
     if (normalizedField === "responsiblename") message = "Confira o nome do responsável.";
     if (normalizedField === "contactemail") message = "Informe um e-mail de contato válido.";
@@ -135,16 +124,12 @@ function localizeValidationErrors(errors: ValidationErrors): ValidationErrors {
     if (normalizedField === "officialregistrationnumber") message = "Confira o registro oficial informado.";
     if (normalizedField === "address.state") message = "Informe a UF com duas letras.";
     if (normalizedField === "address.postalcode") message = "Informe um CEP com oito números.";
-
     return [field, [message]];
   }));
 }
 
 function requestBody(fields: BreedingFarmFields) {
-  const address = hasAddress(fields)
-    ? Object.fromEntries(addressKeys.map((key) => [key, normalizeOptional(fields[key])]))
-    : null;
-
+  const address = hasAddress(fields) ? Object.fromEntries(addressKeys.map((key) => [key, normalizeOptional(fields[key])])) : null;
   return {
     address,
     contactEmail: normalizeOptional(fields.contactEmail),
@@ -155,20 +140,18 @@ function requestBody(fields: BreedingFarmFields) {
   };
 }
 
-function FarmSettingsField({
-  autoComplete,
-  disabled = false,
-  error,
-  id,
-  label,
-  maxLength,
-  name,
-  onChange,
-  optional,
-  placeholder,
-  type = "text",
-  value
-}: Readonly<{
+function formatValue(value: string | null | undefined): string {
+  return value?.trim() || "Não informado";
+}
+
+function formatAddress(settings: BreedingFarmSettingsResponse): string {
+  const { address } = settings;
+  const street = [address.street, address.number].filter(Boolean).join(", ");
+  const locality = [address.neighborhood, address.city, address.state].filter(Boolean).join(" · ");
+  return [street, locality, address.postalCode].filter(Boolean).join(" | ") || "Endereço ainda não informado";
+}
+
+function FarmSettingsField({ autoComplete, disabled = false, error, id, label, maxLength, name, onChange, optional, placeholder, type = "text", value }: Readonly<{
   autoComplete?: string;
   disabled?: boolean;
   error?: string;
@@ -183,70 +166,68 @@ function FarmSettingsField({
   value: string;
 }>) {
   const errorId = `${id}-error`;
-
   return (
-    <div className="onboarding-field">
+    <div className="farm-edit-field">
       <label htmlFor={id}>{label}{optional && <span> (opcional)</span>}</label>
-      <input
-        autoComplete={autoComplete}
-        aria-describedby={error ? errorId : undefined}
-        aria-invalid={Boolean(error)}
-        disabled={disabled}
-        id={id}
-        maxLength={maxLength}
-        name={name}
-        onChange={onChange}
-        placeholder={placeholder}
-        type={type}
-        value={value}
-      />
+      <input autoComplete={autoComplete} aria-describedby={error ? errorId : undefined} aria-invalid={Boolean(error)} disabled={disabled} id={id} maxLength={maxLength} name={name} onChange={onChange} placeholder={placeholder} type={type} value={value} />
       {error && <p className="field-error" id={errorId}>{error}</p>}
     </div>
   );
 }
 
-function FarmSettingsState({
-  heading,
-  message,
-  onRetry,
-  retryLabel = "Tentar novamente"
-}: Readonly<{ heading: string; message: string; onRetry?: () => void; retryLabel?: string }>) {
-  const headingRef = useRef<HTMLHeadingElement>(null);
+function FarmState({ email, farmName = "Criatório selecionado", heading, message, onRetry }: Readonly<{ email?: string; farmName?: string; heading: string; message: string; onRetry?: () => void }>) {
+  if (!email) {
+    return <main className="auth-page farm-state-page"><div className="farm-state-card"><h1>{heading}</h1><p>{message}</p>{onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">Tentar novamente</button>}<Link className="text-action" href="/login">Ir para o login</Link></div></main>;
+  }
 
-  useEffect(() => {
-    headingRef.current?.focus();
-  }, []);
+  return <AuthenticatedShell activeNav="farm" email={email} farmName={farmName}><div className="farm-state-card farm-state-card-authenticated"><p className="eyebrow">Meu Criatório</p><h1>{heading}</h1><p>{message}</p>{onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">Tentar novamente</button>}</div></AuthenticatedShell>;
+}
 
+function FarmBreadcrumb({ current, farmName }: Readonly<{ current: string; farmName?: string }>) {
+  return <nav aria-label="Navegação estrutural" className="farm-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span>{farmName && <><Link href="/configuracoes/criatorio">Meu Criatório</Link><span aria-hidden="true">›</span></>}<span aria-current="page">{current}</span></nav>;
+}
+
+function DetailList({ items }: Readonly<{ items: Array<[string, string]> }>) {
+  return <dl className="farm-detail-list">{items.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
+}
+
+function FarmOverview({ email, settings }: Readonly<{ email: string; settings: BreedingFarmSettingsResponse }>) {
   return (
-    <main className="auth-page onboarding-page farm-edit-page">
-      <a className="skip-link" href="#conteudo-edicao-criatorio">Pular para o conteúdo</a>
-      <div className="auth-shell onboarding-shell farm-edit-shell">
-        <BrandPanel />
-        <section aria-labelledby="titulo-edicao-estado" className="auth-form-panel onboarding-form-panel">
-          <div className="onboarding-form-content onboarding-state-card" id="conteudo-edicao-criatorio">
-            <div className="auth-mobile-brand"><BrandLockup stacked /></div>
-            <h1 id="titulo-edicao-estado" ref={headingRef} tabIndex={-1}>{heading}</h1>
-            <p className="lede">{message}</p>
-            {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href="/configuracoes">Voltar para configurações</a>
+    <AuthenticatedShell activeNav="farm" email={email} farmName={settings.name}>
+      <div className="farm-view">
+        <FarmBreadcrumb current="Meu Criatório" />
+        <header className="farm-page-header"><div><h1>Meu Criatório</h1><p>Visualize e gerencie as informações do seu criatório.</p></div></header>
+
+        <section aria-labelledby="titulo-perfil-criatorio" className="farm-profile">
+          <div className="farm-profile-cover"><img src="/assets/imagery/birds/bird-flock-hd.webp" alt="Aves em um galho" /><button className="farm-cover-action" disabled type="button">Alterar foto de capa</button></div>
+          <div className="farm-profile-body">
+            <div className="farm-profile-identity"><div className="farm-profile-symbol"><img src="/assets/brand/png/criatorio-virtual-symbol.png" alt="" /></div><div><div className="farm-profile-name-row"><h2 id="titulo-perfil-criatorio">{settings.name}</h2><span className="farm-profile-code">CV</span></div><p>Criatório Virtual</p><span className="farm-active-badge"><span aria-hidden="true" /> Ativo</span></div></div>
+            <div className="farm-profile-actions"><Link className="farm-outline-action" href={`/configuracoes/criatorio?breedingFarmId=${encodeURIComponent(settings.breedingFarmId)}`}><DashboardIcon name="edit" /> Editar criatório</Link><button aria-label="Mais ações" className="farm-more-action" disabled type="button">⋮</button></div>
           </div>
+          <nav aria-label="Seções do criatório" className="farm-tabs"><a aria-current="page" href="#informacoes">Informações</a><span aria-disabled="true">Estatísticas</span><span aria-disabled="true">Galeria</span></nav>
         </section>
+
+        <div className="farm-overview-grid" id="informacoes">
+          <section aria-labelledby="titulo-dados-basicos" className="farm-info-card"><div className="farm-card-heading"><h2 id="titulo-dados-basicos">Dados básicos</h2></div><DetailList items={[["Nome", settings.name], ["Responsável", settings.responsibleName], ["Tipo de criatório", "Comercial"], ["Registro oficial", formatValue(settings.officialRegistrationNumber)]]} /></section>
+          <section aria-labelledby="titulo-endereco" className="farm-info-card"><div className="farm-card-heading"><h2 id="titulo-endereco">Endereço</h2></div><DetailList items={[["Endereço", formatAddress(settings)], ["CEP", formatValue(settings.address.postalCode)], ["Cidade", formatValue(settings.address.city)], ["Estado", formatValue(settings.address.state)]]} /></section>
+          <section aria-labelledby="titulo-contato" className="farm-info-card"><div className="farm-card-heading"><h2 id="titulo-contato">Contato</h2></div><DetailList items={[["Nome do responsável", settings.responsibleName], ["Telefone", formatValue(settings.contactPhone)], ["E-mail", formatValue(settings.contactEmail)], ["Site e redes sociais", "Não informados"]]} /></section>
+        </div>
+        <p className="farm-page-footer">As informações exibidas pertencem somente ao criatório selecionado.</p>
       </div>
-    </main>
+    </AuthenticatedShell>
   );
 }
 
-function EditBreedingFarmForm({ farmId }: Readonly<{ farmId: string }>) {
+function EditBreedingFarmForm({ email, farmId }: Readonly<{ email: string; farmId: string }>) {
   const { refresh } = useAuth();
-  const [addressOpen, setAddressOpen] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
-  const [fields, setFields] = useState<BreedingFarmFields | undefined>();
-  const [formError, setFormError] = useState<string | undefined>();
+  const [fields, setFields] = useState<BreedingFarmFields>();
+  const [formError, setFormError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loadError, setLoadError] = useState<string | undefined>();
+  const [loadError, setLoadError] = useState<string>();
   const [loadState, setLoadState] = useState<"loading" | "not-found" | "ready" | "error">("loading");
   const [reloadNonce, setReloadNonce] = useState(0);
-  const [successMessage, setSuccessMessage] = useState<string | undefined>();
+  const [successMessage, setSuccessMessage] = useState<string>();
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
 
@@ -255,335 +236,134 @@ function EditBreedingFarmForm({ farmId }: Readonly<{ farmId: string }>) {
   useEffect(() => {
     client.current?.setTenant(farmId);
     let cancelled = false;
-
-    setLoadState("loading");
-    setLoadError(undefined);
-    setFormError(undefined);
-    setErrors({});
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+    setLoadState("loading"); setLoadError(undefined); setFormError(undefined); setErrors({});
 
     async function loadSettings() {
       try {
-        const response = await client.current!.request<BreedingFarmSettingsResponse>(`api/breeding-farms/${encodeURIComponent(farmId)}/settings`);
+        const response = await client.current!.request<BreedingFarmSettingsResponse>(`api/breeding-farms/${encodeURIComponent(farmId)}/settings`, { signal: controller.signal });
         if (cancelled) return;
-
-        const nextFields = fieldsFromSettings(response);
-        setFields(nextFields);
-        setAddressOpen(hasAddress(nextFields));
-        setLoadState("ready");
+        setFields(fieldsFromSettings(response)); setLoadState("ready");
       } catch (error) {
         if (cancelled) return;
-
-        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-          await refresh();
-          return;
-        }
-
-        if (error instanceof ApiError && error.status === 404) {
-          setLoadState("not-found");
-          return;
-        }
-
-        setLoadError(error instanceof ApiError && error.status >= 500
-          ? "O serviço está indisponível no momento. Tente novamente em instantes."
-          : "Não foi possível carregar os dados do criatório. Verifique sua conexão e tente novamente.");
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) { await refresh(); return; }
+        if (error instanceof ApiError && error.status === 404) { setLoadState("not-found"); return; }
+        setLoadError(error instanceof ApiError && error.status >= 500 ? "O serviço está indisponível no momento. Tente novamente em instantes." : "Não foi possível carregar os dados do criatório. Verifique sua conexão e tente novamente.");
         setLoadState("error");
       }
     }
-
     void loadSettings();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); window.clearTimeout(timeoutId); };
   }, [farmId, refresh, reloadNonce]);
 
   function updateField(field: keyof BreedingFarmFields, value: string) {
     setFields((current) => current ? { ...current, [field]: value } : current);
-    setErrors((current) => clearError(current, field));
-    setFormError(undefined);
-    setSuccessMessage(undefined);
+    setErrors((current) => clearError(current, field)); setFormError(undefined); setSuccessMessage(undefined);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!fields) return;
-
     const validationErrors = validateFields(fields);
-    setErrors(validationErrors);
-    setFormError(undefined);
-    setSuccessMessage(undefined);
-    if (Object.keys(validationErrors).length > 0) {
-      if (Object.keys(validationErrors).some((field) => field.toLowerCase().startsWith("address."))) setAddressOpen(true);
-      return;
-    }
-
+    setErrors(validationErrors); setFormError(undefined); setSuccessMessage(undefined);
+    if (Object.keys(validationErrors).length > 0) return;
     setIsSubmitting(true);
-
     try {
       if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
-
-      const response = await client.current!.request<BreedingFarmSettingsResponse>(`api/breeding-farms/${encodeURIComponent(farmId)}/settings`, {
-        body: JSON.stringify(requestBody(fields)),
-        headers: { "content-type": "application/json" },
-        method: "PUT"
-      });
-      const nextFields = fieldsFromSettings(response);
-      setFields(nextFields);
-      setAddressOpen(hasAddress(nextFields));
-      setErrors({});
-      setFormError(undefined);
-      setSuccessMessage("Dados do criatório atualizados com sucesso.");
+      const response = await client.current!.request<BreedingFarmSettingsResponse>(`api/breeding-farms/${encodeURIComponent(farmId)}/settings`, { body: JSON.stringify(requestBody(fields)), headers: { "content-type": "application/json" }, method: "PUT" });
+      setFields(fieldsFromSettings(response)); setErrors({}); setFormError(undefined); setSuccessMessage("Dados do criatório atualizados com sucesso.");
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(localizeValidationErrors(error.fields));
-
-        if (error.status === 401 || error.status === 403) {
-          await refresh();
-          return;
-        }
-
-        if (error.status === 404) {
-          setLoadState("not-found");
-          return;
-        }
-
-        setFormError(error.status === 400
-          ? "Confira os dados informados e tente novamente."
-          : error.status === 409
-            ? "O registro oficial informado já está em uso. Confira o número e tente novamente."
-            : error.status >= 500
-              ? "O serviço está indisponível no momento. Tente novamente em instantes."
-              : "Não foi possível atualizar o criatório agora. Tente novamente.");
-      } else {
-        setFormError("Não foi possível atualizar o criatório agora. Verifique sua conexão e tente novamente.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+        if (error.status === 401 || error.status === 403) { await refresh(); return; }
+        if (error.status === 404) { setLoadState("not-found"); return; }
+        setFormError(error.status === 400 ? "Confira os dados informados e tente novamente." : error.status === 409 ? "O registro oficial informado já está em uso. Confira o número e tente novamente." : error.status >= 500 ? "O serviço está indisponível no momento. Tente novamente em instantes." : "Não foi possível atualizar o criatório agora. Tente novamente.");
+      } else setFormError("Não foi possível atualizar o criatório agora. Verifique sua conexão e tente novamente.");
+    } finally { setIsSubmitting(false); }
   }
 
-  if (loadState === "loading") return <FarmSettingsState heading="Carregando dados do criatório" message="Só um instante enquanto buscamos as informações para edição." />;
-  if (loadState === "not-found") return <FarmSettingsState heading="Criatório não encontrado" message="Não foi possível localizar este criatório ou você não tem permissão para editá-lo." />;
-  if (loadState === "error") return <FarmSettingsState heading="Não foi possível carregar o criatório" message={loadError ?? "Tente novamente para continuar."} onRetry={() => setReloadNonce((current) => current + 1)} />;
+  if (loadState === "loading") return <AppLoadingState activeNav="farm" email={email} label="Carregando edição" message="Só um instante enquanto buscamos as informações do criatório." />;
+  if (loadState === "not-found") return <FarmState email={email} heading="Criatório não encontrado" message="Não foi possível localizar este criatório ou você não tem permissão para editá-lo." />;
+  if (loadState === "error") return <FarmState email={email} heading="Não foi possível carregar o criatório" message={loadError ?? "Tente novamente para continuar."} onRetry={() => setReloadNonce((current) => current + 1)} />;
   if (!fields) return null;
-
   const fieldError = (field: string) => firstError(errors, field);
 
   return (
-    <main className="auth-page onboarding-page farm-edit-page">
-      <a className="skip-link" href="#conteudo-edicao-criatorio">Pular para o conteúdo</a>
-      <div className="auth-shell onboarding-shell farm-edit-shell">
-        <BrandPanel />
-        <section aria-labelledby="titulo-edicao-criatorio" className="auth-form-panel onboarding-form-panel">
-          <div className="onboarding-form-content" id="conteudo-edicao-criatorio">
-            <a className="auth-mobile-back" href="/configuracoes" aria-label="Voltar para configurações"><BackIcon /></a>
-            <div className="auth-mobile-brand"><BrandLockup stacked /></div>
-            <p className="eyebrow">Configurações do criatório</p>
-            <h1 id="titulo-edicao-criatorio">Editar criatório</h1>
-            <p className="lede">Mantenha os dados do criatório e do responsável atualizados para sua rotina.</p>
-
-            <div aria-label="Etapa 1 de 1" className="onboarding-progress">
-              <span aria-hidden="true">1</span>
-              <span>Dados do criatório</span>
-            </div>
-
-            <form className="onboarding-form farm-settings-form" noValidate onSubmit={handleSubmit}>
-              {formError && <div className="form-error" role="alert">{formError}</div>}
-              {successMessage && <p className="confirmation-feedback" role="status">{successMessage}</p>}
-
-              <fieldset className="onboarding-fieldset">
-                <legend>Identificação</legend>
-                <div className="onboarding-fields-grid">
-                  <FarmSettingsField
-                    autoComplete="organization"
-                    disabled={isSubmitting}
-                    error={fieldError("name")}
-                    id="name"
-                    label="Nome do criatório"
-                    maxLength={200}
-                    name="name"
-                    onChange={(event) => updateField("name", event.target.value)}
-                    placeholder="Ex.: Criatório Aurora"
-                    value={fields.name}
-                  />
-                  <FarmSettingsField
-                    autoComplete="name"
-                    disabled={isSubmitting}
-                    error={fieldError("responsibleName")}
-                    id="responsibleName"
-                    label="Nome do responsável"
-                    maxLength={200}
-                    name="responsibleName"
-                    onChange={(event) => updateField("responsibleName", event.target.value)}
-                    placeholder="Ex.: Ana Souza"
-                    value={fields.responsibleName}
-                  />
-                </div>
-              </fieldset>
-
-              <fieldset className="onboarding-fieldset">
-                <legend>Contato e registro</legend>
-                <div className="onboarding-fields-grid">
-                  <FarmSettingsField
-                    autoComplete="email"
-                    disabled={isSubmitting}
-                    error={fieldError("contactEmail")}
-                    id="contactEmail"
-                    label="E-mail de contato"
-                    maxLength={320}
-                    name="contactEmail"
-                    onChange={(event) => updateField("contactEmail", event.target.value)}
-                    optional
-                    placeholder="voce@exemplo.com"
-                    type="email"
-                    value={fields.contactEmail}
-                  />
-                  <FarmSettingsField
-                    autoComplete="tel"
-                    disabled={isSubmitting}
-                    error={fieldError("contactPhone")}
-                    id="contactPhone"
-                    label="Telefone"
-                    maxLength={32}
-                    name="contactPhone"
-                    onChange={(event) => updateField("contactPhone", event.target.value)}
-                    optional
-                    placeholder="(11) 99999-0000"
-                    value={fields.contactPhone}
-                  />
-                  <FarmSettingsField
-                    disabled={isSubmitting}
-                    error={fieldError("officialRegistrationNumber")}
-                    id="officialRegistrationNumber"
-                    label="Registro oficial"
-                    maxLength={100}
-                    name="officialRegistrationNumber"
-                    onChange={(event) => updateField("officialRegistrationNumber", event.target.value)}
-                    optional
-                    placeholder="Ex.: REG-001"
-                    value={fields.officialRegistrationNumber}
-                  />
-                </div>
-              </fieldset>
-
-              <details className="onboarding-address" onToggle={(event) => setAddressOpen(event.currentTarget.open)} open={addressOpen}>
-                <summary>Editar endereço <span>(opcional)</span></summary>
-                <p className="onboarding-address-help">Atualize o endereço quando quiser. Os campos podem ficar em branco.</p>
-                <div className="onboarding-address-grid">
-                  <FarmSettingsField
-                    disabled={isSubmitting}
-                    error={fieldError("address.street")}
-                    id="address-street"
-                    label="Rua"
-                    maxLength={200}
-                    name="address.street"
-                    onChange={(event) => updateField("street", event.target.value)}
-                    placeholder="Nome da rua"
-                    value={fields.street}
-                  />
-                  <FarmSettingsField
-                    disabled={isSubmitting}
-                    error={fieldError("address.number")}
-                    id="address-number"
-                    label="Número"
-                    maxLength={32}
-                    name="address.number"
-                    onChange={(event) => updateField("number", event.target.value)}
-                    placeholder="Número"
-                    value={fields.number}
-                  />
-                  <FarmSettingsField
-                    disabled={isSubmitting}
-                    error={fieldError("address.complement")}
-                    id="address-complement"
-                    label="Complemento"
-                    maxLength={100}
-                    name="address.complement"
-                    onChange={(event) => updateField("complement", event.target.value)}
-                    optional
-                    placeholder="Sítio, sala…"
-                    value={fields.complement}
-                  />
-                  <FarmSettingsField
-                    disabled={isSubmitting}
-                    error={fieldError("address.neighborhood")}
-                    id="address-neighborhood"
-                    label="Bairro"
-                    maxLength={120}
-                    name="address.neighborhood"
-                    onChange={(event) => updateField("neighborhood", event.target.value)}
-                    placeholder="Bairro"
-                    value={fields.neighborhood}
-                  />
-                  <FarmSettingsField
-                    disabled={isSubmitting}
-                    error={fieldError("address.city")}
-                    id="address-city"
-                    label="Cidade"
-                    maxLength={120}
-                    name="address.city"
-                    onChange={(event) => updateField("city", event.target.value)}
-                    placeholder="Cidade"
-                    value={fields.city}
-                  />
-                  <FarmSettingsField
-                    disabled={isSubmitting}
-                    error={fieldError("address.state")}
-                    id="address-state"
-                    label="UF"
-                    maxLength={2}
-                    name="address.state"
-                    onChange={(event) => updateField("state", event.target.value)}
-                    placeholder="SP"
-                    value={fields.state}
-                  />
-                  <FarmSettingsField
-                    disabled={isSubmitting}
-                    error={fieldError("address.postalCode")}
-                    id="address-postalCode"
-                    label="CEP"
-                    maxLength={20}
-                    name="address.postalCode"
-                    onChange={(event) => updateField("postalCode", event.target.value)}
-                    placeholder="00000-000"
-                    value={fields.postalCode}
-                  />
-                </div>
-              </details>
-
-              <button className="auth-primary-action submit-action" disabled={isSubmitting} type="submit">
-                {isSubmitting ? "Salvando alterações…" : "Salvar alterações"}
-              </button>
-            </form>
-
-            <p className="auth-footer">A edição está disponível somente para o responsável autorizado.</p>
+    <AuthenticatedShell activeNav="farm" email={email} farmName={fields.name}>
+      <div className="farm-view farm-edit-view">
+        <FarmBreadcrumb current="Editar criatório" farmName={fields.name} />
+        <header className="farm-page-header"><div><p className="eyebrow">Meu Criatório · {fields.name}</p><h1>Editar criatório</h1><p>Atualize as informações do seu criatório.</p></div></header>
+        <form className="farm-edit-form" noValidate onSubmit={handleSubmit}>
+          {formError && <div className="form-error" role="alert">{formError}</div>}{successMessage && <p className="confirmation-feedback" role="status">{successMessage}</p>}
+          <div className="farm-edit-grid">
+            <fieldset className="farm-edit-card"><legend>Dados básicos</legend><FarmSettingsField autoComplete="organization" disabled={isSubmitting} error={fieldError("name")} id="name" label="Nome do criatório" maxLength={200} name="name" onChange={(event) => updateField("name", event.target.value)} placeholder="Nome do criatório" value={fields.name} /><FarmSettingsField disabled={isSubmitting} error={fieldError("officialRegistrationNumber")} id="officialRegistrationNumber" label="Registro oficial" maxLength={100} name="officialRegistrationNumber" onChange={(event) => updateField("officialRegistrationNumber", event.target.value)} optional placeholder="Número do registro" value={fields.officialRegistrationNumber} /><p className="farm-edit-help">O registro oficial é opcional e pode ser informado quando estiver disponível.</p></fieldset>
+            <fieldset className="farm-edit-card"><legend>Endereço</legend><div className="farm-edit-fields-two"><FarmSettingsField disabled={isSubmitting} error={fieldError("address.postalCode")} id="address-postalCode" label="CEP" maxLength={20} name="address.postalCode" onChange={(event) => updateField("postalCode", event.target.value)} placeholder="00000-000" value={fields.postalCode} /><FarmSettingsField disabled={isSubmitting} error={fieldError("address.state")} id="address-state" label="UF" maxLength={2} name="address.state" onChange={(event) => updateField("state", event.target.value)} placeholder="SP" value={fields.state} /></div><FarmSettingsField disabled={isSubmitting} error={fieldError("address.street")} id="address-street" label="Endereço" maxLength={200} name="address.street" onChange={(event) => updateField("street", event.target.value)} placeholder="Rua ou avenida" value={fields.street} /><div className="farm-edit-fields-two"><FarmSettingsField disabled={isSubmitting} error={fieldError("address.number")} id="address-number" label="Número" maxLength={32} name="address.number" onChange={(event) => updateField("number", event.target.value)} placeholder="Número" value={fields.number} /><FarmSettingsField disabled={isSubmitting} error={fieldError("address.complement")} id="address-complement" label="Complemento" maxLength={100} name="address.complement" onChange={(event) => updateField("complement", event.target.value)} optional placeholder="Opcional" value={fields.complement} /></div><div className="farm-edit-fields-two"><FarmSettingsField disabled={isSubmitting} error={fieldError("address.neighborhood")} id="address-neighborhood" label="Bairro" maxLength={120} name="address.neighborhood" onChange={(event) => updateField("neighborhood", event.target.value)} placeholder="Bairro" value={fields.neighborhood} /><FarmSettingsField disabled={isSubmitting} error={fieldError("address.city")} id="address-city" label="Cidade" maxLength={120} name="address.city" onChange={(event) => updateField("city", event.target.value)} placeholder="Cidade" value={fields.city} /></div></fieldset>
+            <fieldset className="farm-edit-card"><legend>Contato</legend><FarmSettingsField autoComplete="name" disabled={isSubmitting} error={fieldError("responsibleName")} id="responsibleName" label="Nome do responsável" maxLength={200} name="responsibleName" onChange={(event) => updateField("responsibleName", event.target.value)} placeholder="Nome do responsável" value={fields.responsibleName} /><FarmSettingsField autoComplete="tel" disabled={isSubmitting} error={fieldError("contactPhone")} id="contactPhone" label="Telefone/WhatsApp" maxLength={32} name="contactPhone" onChange={(event) => updateField("contactPhone", event.target.value)} optional placeholder="(11) 99999-0000" value={fields.contactPhone} /><FarmSettingsField autoComplete="email" disabled={isSubmitting} error={fieldError("contactEmail")} id="contactEmail" label="E-mail" maxLength={320} name="contactEmail" onChange={(event) => updateField("contactEmail", event.target.value)} optional placeholder="voce@exemplo.com" type="email" value={fields.contactEmail} /><p className="farm-edit-help">Os dados de contato ajudam a manter o criatório atualizado para sua rotina.</p></fieldset>
           </div>
-        </section>
+          <div className="farm-edit-actions"><Link className="farm-cancel-action" href="/configuracoes/criatorio">Cancelar</Link><button className="auth-primary-action" disabled={isSubmitting} type="submit">{isSubmitting ? "Salvando alterações…" : "Salvar alterações"}</button></div>
+        </form>
       </div>
-    </main>
+    </AuthenticatedShell>
   );
 }
 
-function BreedingFarmEditScreen() {
-  const { error, refresh, status } = useAuth();
-  const [farmId, setFarmId] = useState<string | null | undefined>(undefined);
+function BreedingFarmOverviewScreen({ email }: Readonly<{ email: string }>) {
+  const { refresh } = useAuth();
+  const [loadState, setLoadState] = useState<FarmLoadState>("loading");
+  const [settings, setSettings] = useState<BreedingFarmSettingsResponse>();
+  const [message, setMessage] = useState<string>();
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const client = useRef<ApiClient | null>(null);
+  const requestVersion = useRef(0);
+  if (!client.current) client.current = createApiClient(() => undefined);
 
   useEffect(() => {
-    const queryFarmId = new URLSearchParams(window.location.search).get("breedingFarmId");
-    setFarmId(queryFarmId?.trim() || null);
-  }, []);
+    const currentRequest = requestVersion.current + 1;
+    requestVersion.current = currentRequest;
+    let cancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+    setLoadState("loading"); setMessage(undefined);
+    async function loadOverview() {
+      try {
+        const selection = await client.current!.request<BreedingFarmSelectionResponse>("api/breeding-farms", { signal: controller.signal });
+        if (!selection.selectedBreedingFarmId) { setLoadState("blocked"); setMessage(selection.breedingFarms.length > 0 ? "Selecione um criatório para consultar suas informações." : "Crie seu primeiro criatório antes de consultar suas informações."); return; }
+        client.current!.setTenant(selection.selectedBreedingFarmId);
+        const response = await client.current!.request<BreedingFarmSettingsResponse>(`api/breeding-farms/${encodeURIComponent(selection.selectedBreedingFarmId)}/settings`, { signal: controller.signal });
+        if (cancelled || currentRequest !== requestVersion.current) return;
+        setSettings(response); setLoadState("ready");
+      } catch (error) {
+        if (cancelled || currentRequest !== requestVersion.current || error instanceof StaleTenantResponseError) return;
+        if (error instanceof ApiError && error.status === 401) { const result = await refresh(); if (result.ok) setReloadNonce((current) => current + 1); return; }
+        if (error instanceof ApiError && (error.status === 403 || error.status === 404)) { setLoadState("blocked"); setMessage("Sua conta não tem permissão para acessar o criatório selecionado."); return; }
+        setLoadState("error"); setMessage(error instanceof ApiError && error.status >= 500 ? "O serviço está indisponível no momento. Tente novamente em instantes." : "Verifique sua conexão e tente novamente.");
+      }
+    }
+    void loadOverview();
+    return () => { cancelled = true; controller.abort(); window.clearTimeout(timeoutId); };
+  }, [refresh, reloadNonce]);
 
-  if (status === "loading") return <FarmSettingsState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
-  if (status === "error") return <FarmSettingsState heading="Não foi possível abrir a edição" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
-  if (status === "forbidden") return <FarmSettingsState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para editar este criatório."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
-  if (status === "unauthenticated") return <FarmSettingsState heading="Entre para editar seu criatório" message="Faça login para atualizar os dados do seu criatório com segurança." />;
-  if (farmId === undefined) return <FarmSettingsState heading="Identificando o criatório" message="Só um instante enquanto preparamos a edição." />;
-  if (!farmId) return <FarmSettingsState heading="Selecione um criatório" message="Esta edição precisa ser aberta a partir de um criatório selecionado." />;
-
-  return <EditBreedingFarmForm farmId={farmId} />;
+  if (loadState === "loading") return <AppLoadingState activeNav="farm" email={email} label="Carregando seu criatório" message="Só um instante enquanto buscamos as informações do seu criatório." />;
+  if (loadState === "blocked") return <FarmState email={email} heading="Selecione um criatório" message={message ?? "Escolha um criatório para continuar."} />;
+  if (loadState === "error") return <FarmState email={email} heading="Não foi possível abrir seu criatório" message={message ?? "Tente novamente para continuar."} onRetry={() => setReloadNonce((current) => current + 1)} />;
+  return settings ? <FarmOverview email={email} settings={settings} /> : null;
 }
 
-export default function BreedingFarmEditPage() {
-  return (
-    <AuthProvider>
-      <BreedingFarmEditScreen />
-    </AuthProvider>
-  );
+function BreedingFarmScreen() {
+  const { error, refresh, session, status } = useAuth();
+  const [farmId, setFarmId] = useState<string | null>();
+  useEffect(() => { const queryFarmId = new URLSearchParams(window.location.search).get("breedingFarmId"); setFarmId(queryFarmId?.trim() || null); }, []);
+  const isEditRoute = typeof window !== "undefined" && Boolean(new URLSearchParams(window.location.search).get("breedingFarmId"));
+
+  if (status === "loading" || status === "authenticating" || status === "signing-out") return <AppLoadingState activeNav="farm" email={session?.email} label="Carregando criatório" message="Um instante enquanto verificamos seu acesso." />;
+  if (status === "error") return <FarmState heading="Não foi possível abrir o criatório" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
+  if (status === "forbidden") return <FarmState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar este criatório."} onRetry={() => void refresh()} />;
+  if (status === "unauthenticated" || !session) return <FarmState heading={isEditRoute ? "Entre para editar seu criatório" : "Entre para acessar seu criatório"} message={isEditRoute ? "Faça login para atualizar os dados do seu criatório com segurança." : "Faça login para visualizar e atualizar as informações do seu criatório."} />;
+  if (farmId === undefined) return <AppLoadingState activeNav="farm" email={session.email} label="Carregando criatório" message="Só um instante enquanto preparamos a tela." />;
+  return farmId ? <EditBreedingFarmForm email={session.email} farmId={farmId} /> : <BreedingFarmOverviewScreen email={session.email} />;
+}
+
+export default function BreedingFarmPage() {
+  return <AuthProvider><BreedingFarmScreen /></AuthProvider>;
 }

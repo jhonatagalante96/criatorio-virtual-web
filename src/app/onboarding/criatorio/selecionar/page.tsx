@@ -1,8 +1,10 @@
 "use client";
 
 import React, { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../../../lib/http/api-client";
+import { AppLoadingState } from "../../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../../components/brand";
 
 interface BreedingFarmSummary {
@@ -57,7 +59,7 @@ function SelectionState({
             <h1 id="titulo-selecao-estado" ref={headingRef} tabIndex={-1}>{heading}</h1>
             <p className="lede">{message}</p>
             {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-            <a className="text-action" href="/login">Voltar para o login</a>
+            <Link className="text-action" href="/login">Voltar para o login</Link>
           </div>
         </section>
       </div>
@@ -88,7 +90,7 @@ function SelectionPanelState({
       <h1 id="titulo-selecao-criatorio" ref={headingRef} tabIndex={-1}>{heading}</h1>
       <p className="lede">{message}</p>
       {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
-      <a className="text-action" href="/login">Voltar para o login</a>
+      <Link className="text-action" href="/login">Voltar para o login</Link>
     </div>
   );
 }
@@ -99,9 +101,9 @@ function EmptySelection({ onRetry }: Readonly<{ onRetry: () => void }>) {
       <p className="eyebrow">Próxima etapa</p>
       <h1 id="titulo-selecao-criatorio">Crie seu primeiro criatório</h1>
       <p className="lede">Ainda não existe um criatório vinculado a esta conta. Crie um agora para começar seu onboarding.</p>
-      <a className="auth-primary-action" href="/onboarding/criatorio">Criar meu criatório</a>
+      <Link className="auth-primary-action" href="/onboarding/criatorio">Criar meu criatório</Link>
       <button className="auth-secondary-action" onClick={onRetry} type="button">Atualizar</button>
-      <a className="text-action" href="/login">Voltar para a conta</a>
+      <Link className="text-action" href="/login">Voltar para a conta</Link>
     </div>
   );
 }
@@ -119,8 +121,8 @@ function SelectionSuccess({ farm }: Readonly<{ farm: BreedingFarmSummary }>) {
       <p className="eyebrow">Etapa retomada</p>
       <h1 id="titulo-selecao-criatorio" ref={headingRef} tabIndex={-1}>Você está em {farm.name}.</h1>
       <p className="lede">A escolha foi salva e será usada para manter seu onboarding no criatório correto.</p>
-      <a className="auth-primary-action" href="/dashboard">Ir para o dashboard</a>
-      <a className="text-action" href="/onboarding/criatorio/selecionar">Trocar criatório</a>
+      <Link className="auth-primary-action" href="/dashboard">Ir para o dashboard</Link>
+      <Link className="text-action" href="/onboarding/criatorio/selecionar">Trocar criatório</Link>
     </div>
   );
 }
@@ -144,7 +146,7 @@ function FarmSelectionForm({
 
   return (
     <div className="farm-selection-card">
-      <a className="auth-mobile-back" href="/login" aria-label="Voltar para a conta"><BackIcon /></a>
+      <Link className="auth-mobile-back" href="/login" aria-label="Voltar para a conta"><BackIcon /></Link>
       <div className="auth-mobile-brand"><BrandLockup stacked /></div>
       <p className="eyebrow">Onboarding</p>
       <h1 id="titulo-selecao-criatorio">Escolha onde continuar</h1>
@@ -283,7 +285,7 @@ function BreedingFarmSelection() {
     }
   }
 
-  if (view.kind === "loading") return <SelectionPanelState heading="Carregando seus criatórios" message="Só um instante enquanto recuperamos seu progresso." />;
+  if (view.kind === "loading") return <AppLoadingState label="Carregando criatórios" message="Só um instante enquanto recuperamos seu progresso." />;
   if (view.kind === "error") return <SelectionPanelState heading="Não foi possível carregar seus criatórios" message={view.message} onRetry={() => void loadSelection()} />;
   if (view.kind === "blocked") return <SelectionPanelState heading="Acesso bloqueado" message={view.message} onRetry={() => void loadSelection()} retryLabel="Verificar novamente" />;
   if (view.kind === "empty") return <EmptySelection onRetry={() => void loadSelection()} />;
@@ -304,7 +306,7 @@ function BreedingFarmSelection() {
 function SelectionScreen() {
   const { error, refresh, status } = useAuth();
 
-  if (status === "loading") return <SelectionState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+  if (status === "loading") return <AppLoadingState label="Carregando onboarding" message="Um instante enquanto verificamos seu acesso." />;
   if (status === "error") return <SelectionState heading="Não foi possível abrir o onboarding" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
   if (status === "forbidden") return <SelectionState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para continuar."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
   if (status === "unauthenticated") return <SelectionState heading="Entre para continuar" message="Faça login para retomar seu onboarding com segurança." />;

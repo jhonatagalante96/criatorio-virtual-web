@@ -69,6 +69,17 @@ function responseWithStatus(status: number): Response {
 }
 
 describe("DashboardPage", () => {
+  it("does not show the session recovery screen while the dashboard is initializing", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+
+    render(<DashboardPage />);
+
+    expect(screen.queryByRole("heading", { name: "Restaurando sua sessão" })).toBeNull();
+    expect(screen.getByRole("complementary", { name: "Navegação principal" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("Carregando dashboard");
+    expect(screen.getByRole("status").textContent).not.toContain("Restaurando sua sessão");
+  });
+
   it("keeps the dashboard private without an authenticated session", async () => {
     const fetchMock = vi.fn().mockResolvedValue(responseWithStatus(401));
     vi.stubGlobal("fetch", fetchMock);
@@ -259,9 +270,26 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Indicadores principais")).toBeNull();
   });
 
+  it("retries a transient tenant mismatch without showing the access error", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(dashboardResponse({ breedingFarmId: "foreign-farm" }))
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(dashboardResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DashboardPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    expect(screen.queryByRole("heading", { name: "Não foi possível carregar o dashboard" })).toBeNull();
+  });
+
   it("does not render a payload that belongs to another farm", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(dashboardResponse({ breedingFarmId: "foreign-farm" }))
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(dashboardResponse({ breedingFarmId: "foreign-farm" }));
     vi.stubGlobal("fetch", fetchMock);
