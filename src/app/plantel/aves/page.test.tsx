@@ -83,6 +83,16 @@ function listUrl(fetchMock: ReturnType<typeof vi.fn>, callIndex: number): string
 }
 
 describe("BirdListPage", () => {
+  it("keeps the authenticated shell visible while the plantel session is loading", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+
+    render(<BirdListPage />);
+
+    expect(screen.getByRole("complementary", { name: "Navegação principal" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("Carregando plantel");
+    expect(screen.queryByRole("heading", { name: "Restaurando sua sessão" })).toBeNull();
+  });
+
   it("keeps the plantel private without an authenticated session", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
     vi.stubGlobal("fetch", fetchMock);

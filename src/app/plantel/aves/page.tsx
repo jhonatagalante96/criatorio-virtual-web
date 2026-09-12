@@ -845,10 +845,10 @@ function BirdListPage() {
 }
 
 function BirdListScreen() {
-  const { error, refresh, status } = useAuth();
+  const { error, refresh, session, status } = useAuth();
 
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
-    return <AppLoadingState label="Carregando plantel" message="Buscando os registros do criatório selecionado." />;
+    return <AppLoadingState activeNav="birds" email={session?.email} label="Carregando plantel" message="Buscando os registros do criatório selecionado." />;
   }
   if (status === "error") {
     return <AccessState heading="Não foi possível abrir o plantel" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
