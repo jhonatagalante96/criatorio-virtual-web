@@ -69,6 +69,16 @@ function responseWithStatus(status: number): Response {
 }
 
 describe("DashboardPage", () => {
+  it("does not show the session recovery screen while the dashboard is initializing", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+
+    render(<DashboardPage />);
+
+    expect(screen.queryByRole("heading", { name: "Restaurando sua sessão" })).toBeNull();
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.getByText("Carregando dashboard")).toBeTruthy();
+  });
+
   it("keeps the dashboard private without an authenticated session", async () => {
     const fetchMock = vi.fn().mockResolvedValue(responseWithStatus(401));
     vi.stubGlobal("fetch", fetchMock);
