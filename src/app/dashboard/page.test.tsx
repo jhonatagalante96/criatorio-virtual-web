@@ -132,9 +132,10 @@ describe("DashboardPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
     expect(screen.getByText("Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.")).toBeTruthy();
 
-    const activeBirdMetric = screen.getByText("Aves cadastradas").parentElement;
+    const activeBirdMetric = screen.getByText("Aves cadastradas").closest("article");
     if (!activeBirdMetric) throw new Error("Indicador de aves cadastradas não encontrado.");
     expect(within(activeBirdMetric).getByText("3")).toBeTruthy();
+    expect(within(activeBirdMetric).getByRole("link", { name: "Ver aves cadastradas" }).getAttribute("href")).toBe("/plantel/aves");
 
     const pendingMetric = screen.getByText("Pendências", { selector: ".dashboard-metric-label" }).parentElement;
     if (!pendingMetric) throw new Error("Indicador de pendências não encontrado.");

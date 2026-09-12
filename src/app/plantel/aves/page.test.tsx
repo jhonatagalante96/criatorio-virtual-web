@@ -284,6 +284,35 @@ describe("BirdListPage", () => {
     expect(screen.getByRole("button", { name: "Página anterior" }).hasAttribute("disabled")).toBe(false);
   });
 
+  it("offers mobile load more only when more than five birds are available", async () => {
+    const mediaQuery = {
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn()
+    } as unknown as MediaQueryList;
+    vi.stubGlobal("matchMedia", vi.fn(() => mediaQuery));
+    const birds = Array.from({ length: 6 }, (_, index) => bird({
+      birdId: `bird-${index}`,
+      name: `Ave ${index + 1}`
+    }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse(birds));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openList(fetchMock, false);
+
+    await waitFor(() => expect(screen.getByRole("article", { name: "Ave Ave 5" })).toBeTruthy());
+    expect(screen.queryByRole("article", { name: "Ave Ave 6" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Carregar mais" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Carregar mais" }));
+
+    await waitFor(() => expect(screen.getByRole("article", { name: "Ave Ave 6" })).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Carregar mais" })).toBeNull();
+    expect(screen.getByText("Mostrando 6 de 6 aves")).toBeTruthy();
+  });
+
   it("shows a retry state when the listing request fails", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())

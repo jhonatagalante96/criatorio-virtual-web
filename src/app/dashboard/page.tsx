@@ -191,8 +191,9 @@ function AccessState({
   );
 }
 
-function DashboardMetric({ detail, icon, label, value, tone = "green" }: Readonly<{
+function DashboardMetric({ detail, href, icon, label, value, tone = "green" }: Readonly<{
   detail: string;
+  href?: string;
   icon: DashboardIconName;
   label: string;
   tone?: "green" | "orange" | "blue" | "rose";
@@ -205,7 +206,9 @@ function DashboardMetric({ detail, icon, label, value, tone = "green" }: Readonl
         <strong>{value}</strong>
         <span className="dashboard-metric-label">{label}</span>
       </div>
-      <span aria-hidden="true" className="dashboard-metric-arrow">›</span>
+      {href
+        ? <Link aria-label={`Ver ${label.toLowerCase()}`} className="dashboard-metric-arrow" href={href}>›</Link>
+        : <span aria-hidden="true" className="dashboard-metric-arrow">›</span>}
       <div className="dashboard-metric-trend">
         <span aria-hidden="true">—</span>
         <small>{detail}</small>
@@ -441,7 +444,7 @@ function DashboardContent({
       <section aria-labelledby="titulo-indicadores" className="dashboard-section">
         <h2 className="sr-only" id="titulo-indicadores">Indicadores principais</h2>
         <div className="dashboard-metrics-grid">
-          <DashboardMetric detail={formatCount(activeBirdCount, "ave ativa", "aves ativas")} icon="bird" label="Aves cadastradas" value={activeBirdCount} />
+          <DashboardMetric detail={formatCount(activeBirdCount, "ave ativa", "aves ativas")} href="/plantel/aves" icon="bird" label="Aves cadastradas" value={activeBirdCount} />
           <DashboardMetric detail={formatCount(activeReproductionCount, "registro ativo", "registros ativos")} icon="heart" label="Reproduções registradas" tone="rose" value={activeReproductionCount} />
           <DashboardMetric detail={formatCount(pendingIdentificationCount, "item pendente", "itens pendentes")} icon="alert" label="Pendências" tone="orange" value={pendingIdentificationCount} />
           <DashboardMetric detail={formatCount(transferCount, "registro recente", "registros recentes")} icon="transfer" label="Transferências" tone="blue" value={transferCount} />
