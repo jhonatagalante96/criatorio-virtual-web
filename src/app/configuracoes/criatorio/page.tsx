@@ -4,6 +4,7 @@ import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from "reac
 import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, ValidationErrors, createApiClient } from "../../../lib/http/api-client";
+import { AppLoadingState } from "../../components/app-loading-state";
 import { AuthenticatedShell } from "../../components/authenticated-shell";
 import { DashboardIcon } from "../../components/dashboard-icons";
 
@@ -282,7 +283,7 @@ function EditBreedingFarmForm({ email, farmId }: Readonly<{ email: string; farmI
     } finally { setIsSubmitting(false); }
   }
 
-  if (loadState === "loading") return <FarmState email={email} heading="Carregando edição" message="Só um instante enquanto buscamos as informações do criatório." />;
+  if (loadState === "loading") return <AppLoadingState activeNav="farm" email={email} label="Carregando edição" message="Só um instante enquanto buscamos as informações do criatório." />;
   if (loadState === "not-found") return <FarmState email={email} heading="Criatório não encontrado" message="Não foi possível localizar este criatório ou você não tem permissão para editá-lo." />;
   if (loadState === "error") return <FarmState email={email} heading="Não foi possível carregar o criatório" message={loadError ?? "Tente novamente para continuar."} onRetry={() => setReloadNonce((current) => current + 1)} />;
   if (!fields) return null;
@@ -343,7 +344,7 @@ function BreedingFarmOverviewScreen({ email }: Readonly<{ email: string }>) {
     return () => { cancelled = true; controller.abort(); window.clearTimeout(timeoutId); };
   }, [refresh, reloadNonce]);
 
-  if (loadState === "loading") return <FarmState email={email} heading="Carregando seu criatório" message="Só um instante enquanto buscamos as informações do seu criatório." />;
+  if (loadState === "loading") return <AppLoadingState activeNav="farm" email={email} label="Carregando seu criatório" message="Só um instante enquanto buscamos as informações do seu criatório." />;
   if (loadState === "blocked") return <FarmState email={email} heading="Selecione um criatório" message={message ?? "Escolha um criatório para continuar."} />;
   if (loadState === "error") return <FarmState email={email} heading="Não foi possível abrir seu criatório" message={message ?? "Tente novamente para continuar."} onRetry={() => setReloadNonce((current) => current + 1)} />;
   return settings ? <FarmOverview email={email} settings={settings} /> : null;
@@ -355,11 +356,11 @@ function BreedingFarmScreen() {
   useEffect(() => { const queryFarmId = new URLSearchParams(window.location.search).get("breedingFarmId"); setFarmId(queryFarmId?.trim() || null); }, []);
   const isEditRoute = typeof window !== "undefined" && Boolean(new URLSearchParams(window.location.search).get("breedingFarmId"));
 
-  if (status === "loading" || status === "authenticating" || status === "signing-out") return <FarmState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+  if (status === "loading" || status === "authenticating" || status === "signing-out") return <AppLoadingState activeNav="farm" email={session?.email} label="Carregando criatório" message="Um instante enquanto verificamos seu acesso." />;
   if (status === "error") return <FarmState heading="Não foi possível abrir o criatório" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
   if (status === "forbidden") return <FarmState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar este criatório."} onRetry={() => void refresh()} />;
   if (status === "unauthenticated" || !session) return <FarmState heading={isEditRoute ? "Entre para editar seu criatório" : "Entre para acessar seu criatório"} message={isEditRoute ? "Faça login para atualizar os dados do seu criatório com segurança." : "Faça login para visualizar e atualizar as informações do seu criatório."} />;
-  if (farmId === undefined) return <FarmState email={session.email} heading="Preparando seu criatório" message="Só um instante enquanto preparamos a tela." />;
+  if (farmId === undefined) return <AppLoadingState activeNav="farm" email={session.email} label="Carregando criatório" message="Só um instante enquanto preparamos a tela." />;
   return farmId ? <EditBreedingFarmForm email={session.email} farmId={farmId} /> : <BreedingFarmOverviewScreen email={session.email} />;
 }
 

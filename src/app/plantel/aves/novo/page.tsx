@@ -4,6 +4,7 @@ import React, { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState
 import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../../../lib/http/api-client";
+import { AppLoadingState } from "../../../components/app-loading-state";
 import { AuthenticatedShell } from "../../../components/authenticated-shell";
 import { BrandLockup, BrandPanel } from "../../../components/brand";
 import { SpeciesSelector, SpeciesSummary } from "../../../components/species-selector";
@@ -396,11 +397,7 @@ function BirdRegistrationState({
       : "Tente novamente para continuar.");
 
   if (farmState === "loading") {
-    return (
-      <AuthenticatedShell activeNav="birds" email={email} farmName={farmName}>
-        <div className="bird-form-view"><div className="bird-form-state" id="conteudo-cadastro-ave"><h1>{heading}</h1><p>{stateMessage}</p></div></div>
-      </AuthenticatedShell>
-    );
+    return <AppLoadingState activeNav="birds" email={email} farmName={farmName} label="Carregando cadastro" message="Buscando o criatório selecionado." />;
   }
 
   return (
@@ -744,7 +741,7 @@ function BirdRegistrationScreen() {
   const { error, refresh, status } = useAuth();
 
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
-    return <AccessState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+    return <AppLoadingState activeNav="birds" label="Carregando cadastro" message="Um instante enquanto verificamos seu acesso." />;
   }
   if (status === "error") {
     return <AccessState heading="Não foi possível abrir o cadastro" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;

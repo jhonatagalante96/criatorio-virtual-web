@@ -4,6 +4,7 @@ import React, { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState
 import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../../lib/http/api-client";
+import { AppLoadingContent, AppLoadingState } from "../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../components/brand";
 import { AuthenticatedShell } from "../../components/authenticated-shell";
 import { DashboardIcon } from "../../components/dashboard-icons";
@@ -474,11 +475,7 @@ function BirdListState({
 }>) {
   if (state === "loading") {
     return (
-      <div aria-busy="true" aria-live="polite" className="bird-list-state bird-list-loading" role="status">
-        <span className="bird-loading-dot" aria-hidden="true" />
-        <strong>Carregando aves</strong>
-        <span>Buscando os registros do criatório selecionado.</span>
-      </div>
+      <AppLoadingContent label="Carregando aves" message="Buscando os registros do criatório selecionado." />
     );
   }
 
@@ -685,17 +682,7 @@ function BirdListPage() {
   if (!session) return null;
 
   if (farmState === "loading") {
-    return (
-      <BirdListLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
-        <div className="bird-list-view">
-          <div aria-busy="true" aria-live="polite" className="bird-list-state bird-list-loading" role="status">
-            <span className="bird-loading-dot" aria-hidden="true" />
-            <strong>Carregando plantel</strong>
-            <span>Buscando os registros do criatório selecionado.</span>
-          </div>
-        </div>
-      </BirdListLayout>
-    );
+    return <AppLoadingState activeNav="birds" email={session.email} farmName={farmName ?? "Criatório selecionado"} label="Carregando plantel" message="Buscando os registros do criatório selecionado." />;
   }
   if (farmState === "blocked") {
     return <AccessState actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar criatório" heading="Selecione um criatório" message={farmError ?? "Escolha um criatório antes de consultar o plantel."} />;
@@ -861,7 +848,7 @@ function BirdListScreen() {
   const { error, refresh, status } = useAuth();
 
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
-    return <AccessState actionHref="/" actionLabel="Voltar para o início" heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+    return <AppLoadingState label="Carregando plantel" message="Buscando os registros do criatório selecionado." />;
   }
   if (status === "error") {
     return <AccessState heading="Não foi possível abrir o plantel" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;

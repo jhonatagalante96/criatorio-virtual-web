@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
+import { AppLoadingState } from "../../components/app-loading-state";
 import { BrandLockup } from "../../components/brand";
 import { SpeciesSelector, SpeciesSummary } from "../../components/species-selector";
 
@@ -62,7 +63,7 @@ function SpeciesSelectionScreen() {
   const handleSessionExpired = useCallback(() => { void refresh(); }, [refresh]);
 
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
-    return <SpeciesAccessState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+    return <AppLoadingState label="Carregando catálogo" message="Um instante enquanto verificamos seu acesso." />;
   }
 
   if (status === "error") {

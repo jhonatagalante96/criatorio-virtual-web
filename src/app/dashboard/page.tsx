@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../lib/http/api-client";
 import { AuthenticatedShell } from "../components/authenticated-shell";
+import { AppLoadingState } from "../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../components/brand";
 import { DashboardIcon } from "../components/dashboard-icons";
 import type { DashboardIconName } from "../components/dashboard-icons";
@@ -181,18 +182,6 @@ function AccessState({
             <Link className="text-action" href={actionHref}>{actionLabel}</Link>
           </div>
         </section>
-      </div>
-    </main>
-  );
-}
-
-function DashboardLoadingState() {
-  return (
-    <main aria-busy="true" className="dashboard-session-loading">
-      <div aria-live="polite" className="dashboard-session-loading-card" role="status">
-        <span aria-hidden="true" className="bird-loading-dot" />
-        <strong>Carregando dashboard</strong>
-        <span>Um instante enquanto preparamos seu espaço.</span>
       </div>
     </main>
   );
@@ -534,12 +523,16 @@ function DashboardScreen() {
     void loadDashboard();
   }, [loadDashboard, status]);
 
-  if (status === "loading") return <DashboardLoadingState />;
+  if (status === "loading" || status === "authenticating" || status === "signing-out") {
+    return <AppLoadingState activeNav="dashboard" email={session?.email} label="Carregando dashboard" message="Um instante enquanto preparamos seu espaço." />;
+  }
   if (status === "error") return <AccessState heading="Não foi possível abrir o dashboard" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
   if (status === "forbidden") return <AccessState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar esta área."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
   if (status === "unauthenticated") return <AccessState heading="Entre para consultar o dashboard" message="Faça login para acompanhar os indicadores do seu criatório." />;
 
-  if (view.kind === "loading") return <DashboardLoadingState />;
+  if (view.kind === "loading") {
+    return <AppLoadingState activeNav="dashboard" email={session?.email} label="Carregando dashboard" message="Um instante enquanto preparamos seu espaço." />;
+  }
   if (view.kind === "error") return <AccessState heading="Não foi possível carregar o dashboard" message={view.message} onRetry={() => void loadDashboard()} />;
   if (view.kind === "blocked") return <AccessState heading="Acesso bloqueado" message={view.message} onRetry={() => void loadDashboard()} retryLabel="Verificar novamente" />;
   if (view.kind === "empty") return <AccessState actionHref="/onboarding/criatorio" actionLabel="Criar meu criatório" heading="Crie seu primeiro criatório" message="Ainda não existe um criatório vinculado a esta conta. Crie um agora para liberar seu dashboard." />;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, createApiClient, getApiUrl } from "../../lib/http/api-client";
+import { AppLoadingState } from "../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../components/brand";
 import { GoogleAuthenticationCallback, googleAuthenticationMessageType, googleAuthenticationWindowName } from "../components/google-authentication-callback";
 
@@ -388,16 +389,15 @@ function LoginForm() {
 function LoginScreen() {
   const { error, refresh, status } = useAuth();
 
-  const content = status === "loading"
-    ? <AuthState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />
-    : status === "error"
+  if (status === "loading") return <AppLoadingState label="Carregando acesso" message="Um instante enquanto verificamos seu acesso." />;
+  if (status === "signing-out") return <AppLoadingState label="Encerrando sessão" message="Só um instante enquanto finalizamos seu acesso." />;
+
+  const content = status === "error"
       ? <AuthState heading="Não foi possível restaurar sua sessão" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />
       : status === "forbidden"
         ? <AuthState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar esta área."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />
         : status === "authenticated"
           ? <LoginDestination />
-          : status === "signing-out"
-            ? <AuthState heading="Encerrando sua sessão" message="Só um instante enquanto finalizamos seu acesso." />
           : <LoginForm />;
 
   return (

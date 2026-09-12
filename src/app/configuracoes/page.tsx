@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, createApiClient } from "../../lib/http/api-client";
 import { validatePassword, validatePasswordConfirmation } from "../../lib/auth/password-validation";
+import { AppLoadingState } from "../components/app-loading-state";
 import { AuthenticatedShell } from "../components/authenticated-shell";
 import { BrandLockup, BrandPanel } from "../components/brand";
 import { DashboardIcon } from "../components/dashboard-icons";
@@ -265,7 +266,7 @@ function AccountSettings() {
 
 function SettingsScreen() {
   const { error, refresh, session, status } = useAuth();
-  if (status === "loading" || status === "authenticating") return <SettingsState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+  if (status === "loading" || status === "authenticating" || status === "signing-out") return <AppLoadingState activeNav="settings" email={session?.email} label="Carregando configurações" message="Um instante enquanto verificamos seu acesso." />;
   if (status === "error") return <SettingsState heading="Não foi possível carregar as configurações" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
   if (status === "forbidden") return <SettingsState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar esta área."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
   if (status === "unauthenticated" || !session) return <SettingsState heading="Entre para acessar as configurações" message="Faça login para gerenciar a segurança da sua conta." />;

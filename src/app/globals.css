@@ -755,8 +755,7 @@ h1, h2 { line-height: 1.08; }
 .species-results-limit { color: #78919a; font-size: .67rem; line-height: 1.35; margin: .75rem auto 0; max-width: 42ch; text-align: center; }
 .species-results-error { color: #8f2b25; }
 .species-results-error .auth-secondary-action { margin-top: .3rem; }
-.species-loading-dot { animation: species-loading-pulse 1s ease-in-out infinite; background: var(--green); border-radius: 50%; height: .55rem; width: .55rem; }
-@keyframes species-loading-pulse { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+.species-loading-dot { animation: app-loading-pulse 1s ease-in-out infinite; background: var(--green); border-radius: 50%; height: .6rem; width: .6rem; }
 .species-selected { align-items: center; background: #f0f8f5; border: 1px solid #bfe4cd; border-radius: .7rem; display: flex; gap: 1rem; justify-content: space-between; margin-top: 1rem; padding: .8rem .9rem; }
 .species-selected > div { display: grid; gap: .15rem; min-width: 0; }
 .species-selected span { color: #557d6f; font-size: .64rem; font-weight: 700; }
@@ -871,8 +870,8 @@ h1, h2 { line-height: 1.08; }
 .bird-list-error { border-color: #efc9c5; color: #8f2b25; }
 .bird-list-error strong { color: #8f2b25; }
 .bird-empty-mark { color: #52ae7b; font-size: 2rem; line-height: 1; }
-.bird-loading-dot { animation: bird-list-loading-pulse 1s ease-in-out infinite; background: var(--green); border-radius: 50%; height: .6rem; width: .6rem; }
-@keyframes bird-list-loading-pulse { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+.app-loading-dot, .bird-loading-dot { animation: app-loading-pulse 1s ease-in-out infinite; background: var(--green); border-radius: 50%; height: .6rem; width: .6rem; }
+@keyframes app-loading-pulse { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
 .bird-pagination { align-items: center; display: flex; gap: .65rem; justify-content: center; margin-top: 1rem; }
 .bird-pagination button { background: #fff; border: 1px solid #cfe1e3; border-radius: .4rem; color: #1769a0; cursor: pointer; font-size: .68rem; font-weight: 800; min-height: 2.25rem; padding: .4rem .65rem; }
 .bird-pagination button:hover:not(:disabled) { border-color: #72b98d; color: var(--green-dark); }
@@ -1652,10 +1651,11 @@ h1, h2 { line-height: 1.08; }
 .authenticated-mobile-header { display: none; }
 .authenticated-mobile-account { display: none; }
 .authenticated-content { margin: 0 auto; max-width: 80rem; padding: 1.85rem clamp(1.25rem, 2.05vw, 2rem) 2rem; width: 100%; }
-.dashboard-session-loading { align-items: center; background: var(--sky); display: grid; min-height: 100svh; padding: 2rem; place-items: center; }
-.dashboard-session-loading-card { align-items: center; background: #fff; border: 1px solid #dcebed; border-radius: .8rem; box-shadow: 0 .35rem 1rem rgb(6 58 86 / 5%); color: #68818f; display: grid; gap: .45rem; justify-items: center; max-width: 24rem; padding: 2rem; text-align: center; width: min(100%, 24rem); }
-.dashboard-session-loading-card strong { color: var(--ink); font-size: .95rem; }
-.dashboard-session-loading-card > span:last-child { font-size: .72rem; }
+.app-loading-page { align-items: center; background: var(--sky); display: grid; min-height: 100svh; padding: 2rem; place-items: center; }
+.app-loading-page > .app-loading-state { background: #fff; max-width: 24rem; width: min(100%, 24rem); }
+.app-loading-state { align-items: center; border: 1px dashed #c9e0e0; border-radius: .75rem; color: #68818f; display: flex; flex-direction: column; gap: .35rem; min-height: 12rem; padding: 1.5rem 1rem; text-align: center; }
+.app-loading-state strong { color: var(--ink); font-size: .86rem; }
+.app-loading-state > span:last-child { font-size: .7rem; max-width: 38ch; }
 .dashboard-page-header { align-items: flex-start; display: flex; gap: 1.5rem; justify-content: space-between; margin-bottom: 1.25rem; }
 .dashboard-page-header > div { min-width: 0; }
 .dashboard-page-header h1 { color: var(--ink); font-size: clamp(2rem, 3.2vw, 2.55rem); letter-spacing: -.065em; margin: 0; }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, ValidationErrors, createApiClient } from "../../../../../lib/http/api-client";
 import { AuthenticatedShell } from "../../../../components/authenticated-shell";
+import { AppLoadingState } from "../../../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../../../components/brand";
 import { SpeciesSelector, SpeciesSummary } from "../../../../components/species-selector";
 
@@ -426,7 +427,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
   }
 
   if (farmState === "loading" || (farmState === "ready" && loadState === "loading")) {
-    return <AuthenticatedEditState actionHref={`/plantel/aves/${encodeURIComponent(birdId)}`} email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"} heading="Carregando dados da ave" message="Só um instante enquanto buscamos as informações para edição." />;
+    return <AppLoadingState activeNav="birds" email={session?.email} farmName={farmName ?? "Criatório selecionado"} label="Carregando edição" message="Buscando as informações da ave para edição." />;
   }
   if (farmState === "blocked") {
     return <AuthenticatedEditState actionHref={`/plantel/aves/${encodeURIComponent(birdId)}`} email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"} heading="Edição indisponível" message={farmError ?? "Não foi possível editar esta ave."} actionLabel="Voltar para a ficha" />;
@@ -543,13 +544,13 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
 }
 
 function BirdEditScreen() {
-  const { error, refresh, status } = useAuth();
+  const { error, refresh, session, status } = useAuth();
   const [birdId, setBirdId] = useState("");
 
   useEffect(() => { setBirdId(readBirdIdFromPathname()); }, []);
 
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
-    return <EditState actionHref="/plantel/aves" heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+    return <AppLoadingState activeNav="birds" email={session?.email} label="Carregando edição" message="Um instante enquanto verificamos seu acesso." />;
   }
   if (status === "error") {
     return <EditState actionHref="/plantel/aves" heading="Não foi possível abrir a edição" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;

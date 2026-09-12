@@ -4,6 +4,7 @@ import React, { FormEvent, useCallback, useEffect, useRef, useState } from "reac
 import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../../../lib/http/api-client";
+import { AppLoadingState } from "../../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../../components/brand";
 
 interface BreedingFarmSummary {
@@ -284,7 +285,7 @@ function BreedingFarmSelection() {
     }
   }
 
-  if (view.kind === "loading") return <SelectionPanelState heading="Carregando seus criatórios" message="Só um instante enquanto recuperamos seu progresso." />;
+  if (view.kind === "loading") return <AppLoadingState label="Carregando criatórios" message="Só um instante enquanto recuperamos seu progresso." />;
   if (view.kind === "error") return <SelectionPanelState heading="Não foi possível carregar seus criatórios" message={view.message} onRetry={() => void loadSelection()} />;
   if (view.kind === "blocked") return <SelectionPanelState heading="Acesso bloqueado" message={view.message} onRetry={() => void loadSelection()} retryLabel="Verificar novamente" />;
   if (view.kind === "empty") return <EmptySelection onRetry={() => void loadSelection()} />;
@@ -305,7 +306,7 @@ function BreedingFarmSelection() {
 function SelectionScreen() {
   const { error, refresh, status } = useAuth();
 
-  if (status === "loading") return <SelectionState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+  if (status === "loading") return <AppLoadingState label="Carregando onboarding" message="Um instante enquanto verificamos seu acesso." />;
   if (status === "error") return <SelectionState heading="Não foi possível abrir o onboarding" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
   if (status === "forbidden") return <SelectionState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para continuar."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
   if (status === "unauthenticated") return <SelectionState heading="Entre para continuar" message="Faça login para retomar seu onboarding com segurança." />;

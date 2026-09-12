@@ -4,6 +4,7 @@ import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from "reac
 import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../lib/auth/auth-context";
 import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../../lib/http/api-client";
+import { AppLoadingState } from "../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../components/brand";
 
 interface AddressFields {
@@ -474,7 +475,7 @@ function CreateBreedingFarmForm() {
 function OnboardingScreen() {
   const { error, refresh, status } = useAuth();
 
-  if (status === "loading") return <OnboardingState heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+  if (status === "loading") return <AppLoadingState label="Carregando onboarding" message="Um instante enquanto verificamos seu acesso." />;
   if (status === "error") return <OnboardingState heading="Não foi possível abrir o onboarding" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
   if (status === "forbidden") return <OnboardingState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para criar um criatório."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
   if (status === "unauthenticated") return <OnboardingState heading="Entre para criar seu criatório" message="Faça login para iniciar o cadastro do seu criatório com segurança." />;

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AuthProvider, useAuth } from "../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../../../lib/http/api-client";
+import { AppLoadingState } from "../../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../../components/brand";
 import { AuthenticatedShell } from "../../../components/authenticated-shell";
 import { DashboardIcon } from "../../../components/dashboard-icons";
@@ -544,11 +545,7 @@ function BirdDetailPage() {
   }
 
   if (farmState === "loading") {
-    return (
-      <DetailLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
-        <div className="bird-detail-page-state"><LoadingSection label="ficha da ave" /></div>
-      </DetailLayout>
-    );
+    return <AppLoadingState activeNav="birds" email={session.email} farmName={farmName ?? "Criatório selecionado"} label="Carregando ficha da ave" message="Buscando os dados da ave no criatório selecionado." />;
   }
   if (farmState === "blocked") {
     return <AuthenticatedDetailState email={session.email} farmName={farmName ?? "Criatório selecionado"} actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar criatório" heading="Selecione um criatório" message={farmError ?? "Escolha um criatório antes de consultar a ficha."} />;
@@ -557,11 +554,7 @@ function BirdDetailPage() {
     return <AuthenticatedDetailState email={session.email} farmName={farmName ?? "Criatório selecionado"} actionHref="/plantel/aves" heading="Não foi possível abrir a ficha" message={farmError ?? "Tente novamente para continuar."} onRetry={() => setReloadVersion((value) => value + 1)} />;
   }
   if (detailState === "loading") {
-    return (
-      <DetailLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
-        <div className="bird-detail-page-state"><LoadingSection label="ficha da ave" /></div>
-      </DetailLayout>
-    );
+    return <AppLoadingState activeNav="birds" email={session.email} farmName={farmName ?? "Criatório selecionado"} label="Carregando ficha da ave" message="Buscando os dados da ave no criatório selecionado." />;
   }
   if (detailState === "error" || !bird) {
     return <AuthenticatedDetailState email={session.email} farmName={farmName ?? "Criatório selecionado"} actionHref="/plantel/aves" message={detailError ?? "Tente novamente para consultar os dados desta ave."} heading="Não foi possível abrir a ficha" onRetry={() => setReloadVersion((value) => value + 1)} />;
@@ -647,10 +640,10 @@ function BirdDetailPage() {
 }
 
 function BirdDetailScreen() {
-  const { error, refresh, status } = useAuth();
+  const { error, refresh, session, status } = useAuth();
 
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
-    return <DetailStateView actionHref="/plantel/aves" heading="Restaurando sua sessão" message="Só um instante enquanto verificamos seu acesso." />;
+    return <AppLoadingState activeNav="birds" email={session?.email} label="Carregando ficha da ave" message="Um instante enquanto verificamos seu acesso." />;
   }
   if (status === "error") {
     return <DetailStateView actionHref="/plantel/aves" heading="Não foi possível abrir a ficha" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
