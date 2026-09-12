@@ -1820,6 +1820,7 @@ h1, h2 { line-height: 1.08; }
 .authenticated-mobile-header { display: none; }
 .authenticated-mobile-account { display: none; }
 .authenticated-content { margin: 0 auto; max-width: 80rem; padding: 1.85rem clamp(1.25rem, 2.05vw, 2rem) 2rem; width: 100%; }
+.pwa-install-prompt { display: none; }
 .app-loading-page { align-items: center; background: var(--sky); display: grid; min-height: 100svh; padding: 2rem; place-items: center; }
 .app-loading-page > .app-loading-state { background: #fff; max-width: 24rem; width: min(100%, 24rem); }
 .app-loading-state { align-items: center; border: 1px dashed #c9e0e0; border-radius: .75rem; color: #68818f; display: flex; flex-direction: column; gap: .35rem; min-height: 12rem; padding: 1.5rem 1rem; text-align: center; }
@@ -1946,6 +1947,22 @@ h1, h2 { line-height: 1.08; }
   .authenticated-sidebar { display: none; }
   .authenticated-main { grid-column: auto; min-height: 100svh; }
   .authenticated-topbar { display: none; }
+  .pwa-install-prompt { align-items: flex-start; background: linear-gradient(135deg, #e9f8ec, #f0fbfb); border-bottom: 1px solid #bddcca; color: var(--ink); display: flex; gap: .65rem; padding: .75rem 1.1rem; }
+  .pwa-install-prompt-icon { align-items: center; background: #c5e9cc; border-radius: 50%; color: var(--green-dark); display: inline-flex; flex: 0 0 auto; font-size: 1.35rem; font-weight: 800; height: 2rem; justify-content: center; line-height: 1; width: 2rem; }
+  .pwa-install-prompt-copy { display: grid; gap: .12rem; min-width: 0; }
+  .pwa-install-prompt-copy strong { color: var(--ink); font-size: .72rem; line-height: 1.25; }
+  .pwa-install-prompt-copy p { color: #4f7481; font-size: .62rem; line-height: 1.35; margin: 0; }
+  .pwa-install-prompt-actions { align-items: center; display: flex; flex: 0 0 auto; gap: .4rem; }
+  .pwa-install-prompt-action, .pwa-install-prompt-dismiss { border-radius: .4rem; cursor: pointer; font-size: .6rem; font-weight: 800; min-height: 2.1rem; padding: .35rem .55rem; white-space: nowrap; }
+  .pwa-install-prompt-action { background: var(--green-dark); border: 1px solid var(--green-dark); color: #fff; }
+  .pwa-install-prompt-action:hover { background: #075c34; }
+  .pwa-install-prompt-action:disabled { cursor: wait; opacity: .65; }
+  .pwa-install-prompt-dismiss { background: transparent; border: 1px solid #a9cfc0; color: var(--green-dark); }
+  .pwa-install-prompt-dismiss:hover { background: rgb(255 255 255 / 58%); }
+  @media (max-width: 30rem) {
+    .pwa-install-prompt { flex-wrap: wrap; }
+    .pwa-install-prompt-actions { margin-left: 2.65rem; }
+  }
   .authenticated-mobile-header { align-items: center; background: rgb(247 254 254 / 94%); border-bottom: 1px solid #dcebed; display: flex; justify-content: space-between; padding: .9rem 1.1rem; position: sticky; top: 0; z-index: 5; }
   .authenticated-mobile-header .authenticated-brand { border-bottom: 0; margin: 0; padding: 0; }
   .authenticated-mobile-header .authenticated-brand .brand-lockup img { filter: brightness(0) saturate(100%) invert(18%) sepia(16%) saturate(1220%) hue-rotate(169deg) brightness(89%) contrast(91%); width: 8.2rem; }
