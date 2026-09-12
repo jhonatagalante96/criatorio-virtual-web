@@ -186,27 +186,6 @@ function AccessState({
   );
 }
 
-function DashboardSessionLoading({ session }: Readonly<{ session?: { email: string } }>) {
-  if (session) {
-    return (
-      <AuthenticatedShell activeNav="dashboard" email={session.email} farmName="Criatório selecionado">
-        <div aria-busy="true" aria-live="polite" className="dashboard-loading-state" role="status">
-          <span className="bird-loading-dot" aria-hidden="true" />
-          <strong>Carregando seu dashboard</strong>
-          <span>Organizando os dados do criatório selecionado.</span>
-        </div>
-      </AuthenticatedShell>
-    );
-  }
-
-  return (
-    <main aria-busy="true" aria-live="polite" className="dashboard-session-loading" role="status">
-      <span aria-hidden="true" className="bird-loading-dot" />
-      <span className="sr-only">Carregando dashboard</span>
-    </main>
-  );
-}
-
 function DashboardMetric({ detail, icon, label, value, tone = "green" }: Readonly<{
   detail: string;
   icon: DashboardIconName;
@@ -543,14 +522,12 @@ function DashboardScreen() {
     void loadDashboard();
   }, [loadDashboard, status]);
 
-  if (status === "loading") return <DashboardSessionLoading session={session} />;
+  if (status === "loading") return null;
   if (status === "error") return <AccessState heading="Não foi possível abrir o dashboard" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
   if (status === "forbidden") return <AccessState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar esta área."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
   if (status === "unauthenticated") return <AccessState heading="Entre para consultar o dashboard" message="Faça login para acompanhar os indicadores do seu criatório." />;
 
-  if (view.kind === "loading") {
-    return <DashboardSessionLoading session={session} />;
-  }
+  if (view.kind === "loading") return null;
   if (view.kind === "error") return <AccessState heading="Não foi possível carregar o dashboard" message={view.message} onRetry={() => void loadDashboard()} />;
   if (view.kind === "blocked") return <AccessState heading="Acesso bloqueado" message={view.message} onRetry={() => void loadDashboard()} retryLabel="Verificar novamente" />;
   if (view.kind === "empty") return <AccessState actionHref="/onboarding/criatorio" actionLabel="Criar meu criatório" heading="Crie seu primeiro criatório" message="Ainda não existe um criatório vinculado a esta conta. Crie um agora para liberar seu dashboard." />;

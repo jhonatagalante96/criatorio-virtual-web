@@ -1662,10 +1662,6 @@ h1, h2 { line-height: 1.08; }
 .dashboard-page-context p:last-child { align-items: flex-start; }
 .dashboard-page-context .dashboard-icon { color: #536479; flex: 0 0 auto; height: 1.2rem; width: 1.2rem; }
 .dashboard-page-context p:last-child .dashboard-icon { color: #75955e; }
-.dashboard-loading-state { align-items: center; background: #fff; border: 1px solid #e0e8e8; border-radius: .8rem; color: #64758a; display: grid; gap: .45rem; justify-items: center; min-height: 28rem; padding: 2rem; text-align: center; }
-.dashboard-loading-state strong { color: var(--ink); font-size: .95rem; }
-.dashboard-loading-state > span:last-child { font-size: .72rem; }
-.dashboard-session-loading { align-items: center; background: var(--sky); display: grid; min-height: 100svh; place-items: center; }
 .dashboard-refresh-action { align-items: center; background: #fff; border: 1px solid #cfe1e3; border-radius: .45rem; color: #1769a0; cursor: pointer; display: inline-flex; flex: 0 0 auto; font-size: .68rem; font-weight: 800; gap: .4rem; min-height: 2.4rem; padding: .45rem .7rem; }
 .dashboard-refresh-action:hover { border-color: #72b98d; color: var(--green-dark); }
 .dashboard-refresh-action:disabled { cursor: wait; opacity: .6; }
