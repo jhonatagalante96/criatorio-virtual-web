@@ -99,7 +99,7 @@ describe("LoginPage", () => {
     popupLocation.href = `${window.location.origin}/`;
 
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("status").textContent).toContain("Abrindo seu espaço");
     expect(popup.close).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
@@ -256,7 +256,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
-    expect(screen.getByRole("heading", { name: "Abrindo seu espaço" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("Abrindo seu espaço");
     expect(fetchMock).toHaveBeenCalledTimes(5);
 
     const [, loginRequest] = fetchMock.mock.calls[2];

@@ -90,6 +90,7 @@ function LoginDestination() {
   const { refresh, session } = useAuth();
   const router = useRouter();
   const [message, setMessage] = useState("Só um instante enquanto abrimos o espaço certo para você.");
+  const [destinationError, setDestinationError] = useState<string>();
   const [isRetrying, setIsRetrying] = useState(0);
   const client = useRef<ApiClient | null>(null);
   const hasRedirected = useRef(false);
@@ -102,6 +103,7 @@ function LoginDestination() {
 
     async function openDestination() {
       setMessage("Só um instante enquanto abrimos o espaço certo para você.");
+      setDestinationError(undefined);
       try {
         const selection = await client.current!.request<BreedingFarmSelectionResponse>("api/breeding-farms");
         if (cancelled) return;
@@ -130,12 +132,18 @@ function LoginDestination() {
         if (error instanceof ApiError && error.status === 401) {
           const result = await refresh();
           if (result.ok) setIsRetrying((current) => current + 1);
-          else setMessage(result.error ?? "Sua sessão expirou. Entre novamente para continuar.");
+          else {
+            const nextMessage = result.error ?? "Sua sessão expirou. Entre novamente para continuar.";
+            setMessage(nextMessage);
+            setDestinationError(nextMessage);
+          }
           return;
         }
-        setMessage(error instanceof ApiError && error.status >= 500
+        const nextMessage = error instanceof ApiError && error.status >= 500
           ? "O serviço está indisponível no momento. Tente novamente em instantes."
-          : "Não foi possível continuar automaticamente. Tente novamente.");
+          : "Não foi possível continuar automaticamente. Tente novamente.";
+        setMessage(nextMessage);
+        setDestinationError(nextMessage);
       }
     }
 
@@ -143,7 +151,11 @@ function LoginDestination() {
     return () => { cancelled = true; };
   }, [isRetrying, refresh, router, session]);
 
-  return <AuthState heading="Abrindo seu espaço" message={message} onRetry={() => setIsRetrying((current) => current + 1)} />;
+  if (destinationError) {
+    return <AuthState heading="Não foi possível abrir seu espaço" message={destinationError} onRetry={() => setIsRetrying((current) => current + 1)} />;
+  }
+
+  return <AppLoadingState label="Abrindo seu espaço" message={message} />;
 }
 
 function LoginForm() {
