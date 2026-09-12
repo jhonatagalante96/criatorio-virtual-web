@@ -44,6 +44,13 @@ function settingsResponse(overrides: Partial<Record<string, unknown>> = {}): Res
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
+function selectionResponse(selectedBreedingFarmId: string | null = "farm-id"): Response {
+  return new Response(JSON.stringify({
+    breedingFarms: [{ breedingFarmId: "farm-id", isSelected: selectedBreedingFarmId === "farm-id", name: "Sítio Aurora", responsibleName: "Ana Souza" }],
+    selectedBreedingFarmId
+  }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
 function useFarmRoute() {
   window.history.pushState({}, "", "/configuracoes/criatorio?breedingFarmId=farm-id");
 }
@@ -61,13 +68,31 @@ describe("BreedingFarmEditPage", () => {
   });
 
   it("blocks authenticated access when no farm identifier is provided", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(authenticatedSession());
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectionResponse(null));
     vi.stubGlobal("fetch", fetchMock);
     render(<BreedingFarmEditPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Selecione um criatório" })).toBeTruthy());
     expect(screen.queryByLabelText("Nome do criatório")).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("renders the selected farm overview in the authenticated shell", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectionResponse())
+      .mockResolvedValueOnce(settingsResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BreedingFarmEditPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Meu Criatório" })).toBeTruthy());
+    expect(screen.getByRole("heading", { name: "Dados básicos" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Endereço" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Contato" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Editar criatório/ }).getAttribute("href")).toContain("breedingFarmId=farm-id");
+    expect(screen.getAllByRole("link", { name: "Meu Criatório" }).length).toBeGreaterThan(0);
   });
 
   it("loads the selected farm settings into an editable form", async () => {
@@ -81,8 +106,8 @@ describe("BreedingFarmEditPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Editar criatório" })).toBeTruthy());
     expect((screen.getByLabelText("Nome do criatório") as HTMLInputElement).value).toBe("Sítio Aurora");
     expect((screen.getByLabelText("Nome do responsável") as HTMLInputElement).value).toBe("Ana Souza");
-    expect((screen.getByLabelText("Rua") as HTMLInputElement).value).toBe("Rua das Flores");
-    expect(screen.getByText("A edição está disponível somente para o responsável autorizado.")).toBeTruthy();
+    expect((screen.getByLabelText("Endereço") as HTMLInputElement).value).toBe("Rua das Flores");
+    expect(screen.getByRole("link", { name: "Cancelar" })).toBeTruthy();
   });
 
   it("updates settings with the contract payload and shows confirmation", async () => {
