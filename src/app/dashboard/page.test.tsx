@@ -75,8 +75,8 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     expect(screen.queryByRole("heading", { name: "Restaurando sua sessão" })).toBeNull();
-    expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.queryByText("Carregando dashboard")).toBeNull();
+    expect(screen.getByRole("status").textContent).toContain("Carregando dashboard");
+    expect(screen.getByRole("status").textContent).not.toContain("Restaurando sua sessão");
   });
 
   it("keeps the dashboard private without an authenticated session", async () => {
