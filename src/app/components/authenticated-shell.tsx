@@ -3,7 +3,7 @@ import { BrandLockup } from "./brand";
 import { DashboardIcon } from "./dashboard-icons";
 import type { DashboardIconName } from "./dashboard-icons";
 
-export type AuthenticatedNav = "dashboard" | "birds";
+export type AuthenticatedNav = "dashboard" | "birds" | "farm";
 
 interface AuthenticatedShellProps {
   activeNav: AuthenticatedNav;
