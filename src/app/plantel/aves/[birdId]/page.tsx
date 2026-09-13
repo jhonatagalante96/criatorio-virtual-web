@@ -24,6 +24,7 @@ interface BreedingFarmSelectionResponse {
 
 type BirdSex = "Female" | "Male" | "Unknown";
 type DetailState = "error" | "loading" | "ready";
+type EligibilityState = "blocked" | "error" | "loading" | "ready";
 type FarmState = "blocked" | "error" | "loading" | "ready";
 type GenealogyState = "error" | "loading" | "ready";
 
@@ -62,6 +63,18 @@ interface BirdDetailsResponse {
   speciesScientificName: string;
   status: BirdStatus;
   updatedAtUtc: string;
+}
+
+interface BirdEligibilityIssue {
+  code: string;
+  message: string;
+}
+
+interface BirdEligibilityResponse {
+  birdId: string;
+  identificationPending: boolean;
+  isEligible: boolean;
+  issues: BirdEligibilityIssue[];
 }
 
 interface BirdGenealogyNode {
@@ -112,6 +125,18 @@ function statusNotice(status: BirdStatus): string | undefined {
   if (status === "Escaped") return "Esta ave está marcada como escapada. A ficha permanece disponível para consulta histórica.";
   if (status === "Transferred") return "Esta ave está com uma transferência pendente. Alterações cadastrais e de situação ficam bloqueadas até o fluxo terminar.";
   return undefined;
+}
+
+function eligibilityIssueTitle(code: string): string {
+  if (code === "MissingRingNumber") return "Anilha não informada";
+  if (code === "InactiveStatus") return "Ave inativa";
+  return "Pendência de elegibilidade";
+}
+
+function eligibilityIssueMessage(issue: BirdEligibilityIssue): string {
+  if (issue.code === "MissingRingNumber") return "Informe uma anilha válida de seis dígitos para liberar as ações que exigem identificação.";
+  if (issue.code === "InactiveStatus") return "A ave precisa estar ativa para esta ação.";
+  return issue.message.trim() || "A API não informou detalhes adicionais para esta pendência.";
 }
 
 function formatDate(value: string | null): string {
@@ -329,6 +354,84 @@ function BirdDetailTabs() {
   );
 }
 
+function BirdEligibilityPanel({
+  birdId,
+  error,
+  eligibility,
+  onRetry,
+  state
+}: Readonly<{
+  birdId: string;
+  error?: string;
+  eligibility?: BirdEligibilityResponse;
+  onRetry: () => void;
+  state: EligibilityState;
+}>) {
+  return (
+    <section aria-busy={state === "loading"} aria-label="Resultado da elegibilidade" aria-labelledby="titulo-elegibilidade-ave" aria-live="polite" className={`bird-eligibility-panel${state === "ready" && eligibility?.isEligible ? " is-eligible" : ""}`}>
+      <div className="bird-eligibility-heading">
+        <div>
+          <p className="eyebrow">Validação da API</p>
+          <h2 id="titulo-elegibilidade-ave">Elegibilidade da ave</h2>
+        </div>
+        {state === "ready" && eligibility && <span className={`bird-eligibility-badge${eligibility.isEligible ? " is-eligible" : " is-pending"}`}>{eligibility.isEligible ? "Elegível" : "Requer atenção"}</span>}
+      </div>
+
+      {state === "loading" && <LoadingSection label="elegibilidade" />}
+
+      {state === "error" && (
+        <div className="bird-eligibility-feedback" role="alert">
+          <strong>Não foi possível consultar a elegibilidade</strong>
+          <p>{error ?? "Tente novamente para verificar as pendências da ave."}</p>
+          <button className="text-action" onClick={onRetry} type="button">Tentar novamente</button>
+        </div>
+      )}
+
+      {state === "blocked" && (
+        <div className="bird-eligibility-feedback" role="alert">
+          <strong>Elegibilidade indisponível</strong>
+          <p>{error ?? "Não foi possível consultar a elegibilidade no criatório selecionado."}</p>
+          <button className="text-action" onClick={onRetry} type="button">Tentar novamente</button>
+        </div>
+      )}
+
+      {state === "ready" && eligibility?.isEligible && (
+        <div className="bird-eligibility-summary">
+          <span aria-hidden="true" className="bird-eligibility-mark">✓</span>
+          <div>
+            <strong>Nenhuma pendência encontrada</strong>
+            <p>A API não retornou motivos de inelegibilidade para esta ave.</p>
+          </div>
+        </div>
+      )}
+
+      {state === "ready" && eligibility && !eligibility.isEligible && (
+        <>
+          <p className="bird-eligibility-intro">Resolva os itens abaixo para liberar as ações compatíveis com esta ave.</p>
+          {eligibility.issues.length > 0 ? (
+            <ul aria-label="Motivos de inelegibilidade" className="bird-eligibility-issues">
+              {eligibility.issues.map((issue) => (
+                <li key={`${issue.code}-${issue.message}`}>
+                  <span aria-hidden="true" className="bird-eligibility-issue-mark">!</span>
+                  <div>
+                    <strong>{eligibilityIssueTitle(issue.code)}</strong>
+                    <p>{eligibilityIssueMessage(issue)}</p>
+                    {issue.code === "MissingRingNumber" && (
+                      <Link className="bird-eligibility-action" href={`/plantel/aves/${encodeURIComponent(birdId)}/editar`}>Completar identificação</Link>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="bird-eligibility-feedback">A API informou que esta ave não está elegível, mas não retornou os motivos.</p>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 function BirdDetailActionMenu({
   bird,
   client,
@@ -478,6 +581,9 @@ function BirdDetailPage() {
   const [bird, setBird] = useState<BirdDetailsResponse>();
   const [detailError, setDetailError] = useState<string>();
   const [detailState, setDetailState] = useState<DetailState>("loading");
+  const [eligibility, setEligibility] = useState<BirdEligibilityResponse>();
+  const [eligibilityError, setEligibilityError] = useState<string>();
+  const [eligibilityState, setEligibilityState] = useState<EligibilityState>("loading");
   const [farmError, setFarmError] = useState<string>();
   const [farmName, setFarmName] = useState<string>();
   const [farmState, setFarmState] = useState<FarmState>("loading");
@@ -505,6 +611,7 @@ function BirdDetailPage() {
         updatedAtUtc: updatedBird.updatedAtUtc ?? current.updatedAtUtc
       }
       : current);
+    setReloadVersion((value) => value + 1);
   }, []);
 
   const loadData = useCallback(async (recoverSession = true) => {
@@ -514,6 +621,9 @@ function BirdDetailPage() {
     setFarmState("loading");
     setDetailState("loading");
     setDetailError(undefined);
+    setEligibility(undefined);
+    setEligibilityError(undefined);
+    setEligibilityState("loading");
     setGenealogy(undefined);
     setGenealogyState("loading");
 
@@ -538,18 +648,41 @@ function BirdDetailPage() {
       setBird(details);
       setDetailState("ready");
 
-      try {
-        const tree = await client.current!.request<BirdGenealogyResponse>(`api/birds/${encodeURIComponent(birdId)}/genealogy?maxGenerations=2`);
-        if (nextRequestVersion !== requestVersion.current) return;
-        setGenealogy(tree);
+      const [eligibilityResult, genealogyResult] = await Promise.allSettled([
+        client.current!.request<BirdEligibilityResponse>(`api/birds/${encodeURIComponent(birdId)}/eligibility`),
+        client.current!.request<BirdGenealogyResponse>(`api/birds/${encodeURIComponent(birdId)}/genealogy?maxGenerations=2`)
+      ]);
+      if (nextRequestVersion !== requestVersion.current) return;
+
+      const requestErrors = [eligibilityResult, genealogyResult]
+        .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+        .map((result) => result.reason);
+      if (requestErrors.some((error) => error instanceof StaleTenantResponseError)) return;
+      if (recoverSession && requestErrors.some((error) => error instanceof ApiError && error.status === 401)) {
+        const result = await refresh();
+        if (result.ok) await loadData(false);
+        return;
+      }
+
+      if (eligibilityResult.status === "fulfilled") {
+        setEligibility(eligibilityResult.value);
+        setEligibilityState("ready");
+      } else if (eligibilityResult.reason instanceof ApiError && (eligibilityResult.reason.status === 404 || eligibilityResult.reason.status === 409)) {
+        setEligibilityState("blocked");
+        setEligibilityError(eligibilityResult.reason.status === 409
+          ? "Selecione novamente um criatório para consultar esta elegibilidade."
+          : "A elegibilidade não está disponível para o criatório selecionado.");
+      } else {
+        setEligibilityState("error");
+        setEligibilityError(eligibilityResult.reason instanceof ApiError && eligibilityResult.reason.status >= 500
+          ? "O serviço está indisponível no momento. Tente novamente em instantes."
+          : "Verifique sua conexão e tente novamente.");
+      }
+
+      if (genealogyResult.status === "fulfilled") {
+        setGenealogy(genealogyResult.value);
         setGenealogyState("ready");
-      } catch (error) {
-        if (nextRequestVersion !== requestVersion.current || error instanceof StaleTenantResponseError) return;
-        if (error instanceof ApiError && error.status === 401 && recoverSession) {
-          const result = await refresh();
-          if (result.ok) await loadData(false);
-          return;
-        }
+      } else {
         setGenealogyState("error");
       }
     } catch (error) {
@@ -642,6 +775,14 @@ function BirdDetailPage() {
       </section>
 
       {statusNotice(bird.status) && <p className={`bird-status-history-notice bird-status-history-notice-${bird.status.toLowerCase()}`} role="status"><span aria-hidden="true">i</span>{statusNotice(bird.status)}</p>}
+
+      <BirdEligibilityPanel
+        birdId={bird.birdId}
+        eligibility={eligibility}
+        error={eligibilityError}
+        onRetry={() => setReloadVersion((value) => value + 1)}
+        state={eligibilityState}
+      />
 
       <BirdDetailTabs />
 

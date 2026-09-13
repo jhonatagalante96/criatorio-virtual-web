@@ -50,6 +50,16 @@ function detailsResponse(overrides: Record<string, unknown> = {}): Response {
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
+function eligibilityResponse(overrides: Record<string, unknown> = {}): Response {
+  return new Response(JSON.stringify({
+    birdId: "bird-a",
+    identificationPending: false,
+    isEligible: true,
+    issues: [],
+    ...overrides
+  }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
 function genealogyResponse(): Response {
   return new Response(JSON.stringify({
     edges: [{ childNodeKey: "bird:bird-a", parentNodeKey: "bird:father-a", position: "father" }],
@@ -67,7 +77,7 @@ async function openDetail(fetchMock: ReturnType<typeof vi.fn>) {
   render(<BirdDetailPage />);
   await waitFor(() => expect(screen.getByRole("heading", { name: "Aurora" })).toBeTruthy());
   await waitFor(() => expect(screen.getAllByText("Pai Azul").length).toBeGreaterThan(0));
-  expect(fetchMock).toHaveBeenCalledTimes(4);
+  expect(fetchMock).toHaveBeenCalledTimes(5);
 }
 
 describe("BirdDetailPage", () => {
@@ -101,6 +111,7 @@ describe("BirdDetailPage", () => {
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
       .mockResolvedValueOnce(genealogyResponse());
     vi.stubGlobal("fetch", fetchMock);
 
@@ -111,6 +122,7 @@ describe("BirdDetailPage", () => {
     expect(screen.getByLabelText("Foto da ave não cadastrada")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Informações da ave" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Linhagem (Genealogia)" })).toBeTruthy();
+    expect(screen.getByText("Nenhuma pendência encontrada")).toBeTruthy();
     expect(screen.getByText("Ave acompanhada desde o primeiro cadastro.")).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /Pai Azul/ }).some((link) => link.getAttribute("href") === "/plantel/aves/father-a")).toBe(true);
     expect(screen.getByRole("link", { name: "Editar dados" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
@@ -118,6 +130,30 @@ describe("BirdDetailPage", () => {
 
     const detailRequest = fetchMock.mock.calls[2];
     expect(String(detailRequest[0])).toContain("/api/birds/bird-a");
+    const eligibilityRequest = fetchMock.mock.calls[3];
+    expect(String(eligibilityRequest[0])).toContain("/api/birds/bird-a/eligibility");
+  });
+
+  it("renders API eligibility and offers contextual identification action", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse({ identificationPending: true, ringNumber: null }))
+      .mockResolvedValueOnce(eligibilityResponse({
+        identificationPending: true,
+        isEligible: false,
+        issues: [{ code: "MissingRingNumber", message: "A valid six-digit ring number is required for this action." }]
+      }))
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+
+    expect(screen.getByRole("heading", { name: "Elegibilidade da ave" })).toBeTruthy();
+    expect(screen.getByText("Requer atenção")).toBeTruthy();
+    expect(screen.getByText("Anilha não informada")).toBeTruthy();
+    expect(screen.getByText("Informe uma anilha válida de seis dígitos para liberar as ações que exigem identificação.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Completar identificação" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
   });
 
   it("keeps a terminal bird available for historical consultation", async () => {
@@ -125,6 +161,7 @@ describe("BirdDetailPage", () => {
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse({ deathDate: "2025-02-01", status: "Deceased" }))
+      .mockResolvedValueOnce(eligibilityResponse({ isEligible: false, issues: [{ code: "InactiveStatus", message: "Only active birds are eligible for this action." }] }))
       .mockResolvedValueOnce(genealogyResponse());
     vi.stubGlobal("fetch", fetchMock);
 
@@ -143,6 +180,7 @@ describe("BirdDetailPage", () => {
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse({ status: "Transferred" }))
+      .mockResolvedValueOnce(eligibilityResponse({ isEligible: false, issues: [{ code: "InactiveStatus", message: "Only active birds are eligible for this action." }] }))
       .mockResolvedValueOnce(genealogyResponse());
     vi.stubGlobal("fetch", fetchMock);
 
@@ -164,6 +202,7 @@ describe("BirdDetailPage", () => {
         identificationPending: true,
         notes: null
       }))
+      .mockResolvedValueOnce(eligibilityResponse({ identificationPending: true, isEligible: false, issues: [{ code: "MissingRingNumber", message: "A valid six-digit ring number is required for this action." }] }))
       .mockResolvedValueOnce(genealogyResponse());
     vi.stubGlobal("fetch", fetchMock);
 
@@ -176,6 +215,50 @@ describe("BirdDetailPage", () => {
     expect(screen.getByText("Nenhuma foto cadastrada.")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "QR Code da ave" })).toBeTruthy();
     expect(screen.getByText(/geração de documentos for liberada/)).toBeTruthy();
+  });
+
+  it("offers retry when eligibility is temporarily unavailable", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Service unavailable" }), { headers: { "content-type": "application/problem+json" }, status: 503 }))
+      .mockResolvedValueOnce(genealogyResponse())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<BirdDetailPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Elegibilidade da ave" })).toBeTruthy());
+    const eligibilityPanel = screen.getByRole("heading", { name: "Elegibilidade da ave" }).closest("section");
+    expect(eligibilityPanel).not.toBeNull();
+    expect(within(eligibilityPanel as HTMLElement).getByRole("alert").textContent).toContain("Não foi possível consultar a elegibilidade");
+
+    fireEvent.click(within(eligibilityPanel as HTMLElement).getByRole("button", { name: "Tentar novamente" }));
+    await waitFor(() => expect(screen.getByText("Nenhuma pendência encontrada")).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledTimes(9);
+  });
+
+  it("keeps the detail readable when eligibility is blocked by the selected tenant", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "A breeding farm must be selected before consulting bird eligibility." }), { headers: { "content-type": "application/problem+json" }, status: 409 }))
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<BirdDetailPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Elegibilidade da ave" })).toBeTruthy());
+    const eligibilityPanel = screen.getByRole("heading", { name: "Elegibilidade da ave" }).closest("section");
+    expect(eligibilityPanel).not.toBeNull();
+    expect(within(eligibilityPanel as HTMLElement).getByRole("alert").textContent).toContain("Selecione novamente um criatório");
+    expect(screen.getByRole("heading", { name: "Informações da ave" })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it("does not expose a bird outside the selected farm", async () => {
@@ -198,9 +281,11 @@ describe("BirdDetailPage", () => {
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
       .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Service unavailable" }), { headers: { "content-type": "application/problem+json" }, status: 503 }))
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
       .mockResolvedValueOnce(genealogyResponse());
     vi.stubGlobal("fetch", fetchMock);
 
@@ -209,6 +294,6 @@ describe("BirdDetailPage", () => {
     expect(screen.getByRole("alert").textContent).toContain("Não foi possível carregar os demais ancestrais");
     fireEvent.click(within(screen.getByRole("alert")).getByRole("button", { name: "Tentar novamente" }));
     await waitFor(() => expect(screen.getAllByText("Árvore consultada")).toHaveLength(1));
-    expect(fetchMock).toHaveBeenCalledTimes(7);
+    expect(fetchMock).toHaveBeenCalledTimes(9);
   });
 });
