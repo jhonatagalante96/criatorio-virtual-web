@@ -125,7 +125,8 @@ describe("PasskeyClient", () => {
     expect(new Headers(fetchMock.mock.calls[1][1].headers).get("x-xsrf-token")).toBe("csrf-token");
     expect(fetchMock.mock.calls[1][1].method).toBe("POST");
     expect(fetchMock.mock.calls[2][0]).toBe("https://api.example.test/api/auth/passkeys/register/verify");
-    expect(JSON.parse(String(fetchMock.mock.calls[2][1].body))).toMatchObject({ id: "credential-id", type: "public-key" });
+    const registrationBody = JSON.parse(String(fetchMock.mock.calls[2][1].body));
+    expect(JSON.parse(registrationBody.credentialJson)).toMatchObject({ id: "credential-id", type: "public-key" });
   });
 
   it("normalizes authenticator cancellation and does not submit a credential", async () => {
@@ -139,6 +140,21 @@ describe("PasskeyClient", () => {
     await expect(new PasskeyClient({ endpoint: "https://api.example.test" }).authenticate()).rejects.toMatchObject({ kind: "cancelled" } satisfies Partial<PasskeyError>);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(get).toHaveBeenCalledOnce();
+  });
+
+  it("sends the login assertion in the backend credentialJson contract", async () => {
+    const get = vi.fn().mockResolvedValue(credential());
+    setBrowserSupport({ create: vi.fn(), get });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(antiforgeryResponse())
+      .mockResolvedValueOnce(optionsResponse())
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new PasskeyClient({ endpoint: "https://api.example.test" }).authenticate();
+
+    const loginBody = JSON.parse(String(fetchMock.mock.calls[2][1].body));
+    expect(JSON.parse(loginBody.credentialJson)).toMatchObject({ id: "credential-id", type: "public-key" });
   });
 
   it("does not touch the network when WebAuthn is unavailable", async () => {

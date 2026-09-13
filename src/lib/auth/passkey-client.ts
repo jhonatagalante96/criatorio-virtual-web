@@ -125,7 +125,7 @@ export class PasskeyClient {
   private async verify(path: string, credential: PasskeyCredentialJson, signal?: AbortSignal): Promise<void> {
     await this.ensureAntiforgeryToken();
     await this.api.request<void>(path, {
-      body: JSON.stringify(credential),
+      body: JSON.stringify({ credentialJson: JSON.stringify(credential) }),
       headers: { "content-type": "application/json" },
       method: "POST",
       signal

@@ -7,8 +7,20 @@ const routerReplace = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: routerReplace }) }));
 
+const browserDescriptors = {
+  credentials: Object.getOwnPropertyDescriptor(navigator, "credentials"),
+  isSecureContext: Object.getOwnPropertyDescriptor(window, "isSecureContext"),
+  publicKeyCredential: Object.getOwnPropertyDescriptor(window, "PublicKeyCredential")
+};
+
 afterEach(() => {
   cleanup();
+  if (browserDescriptors.credentials) Object.defineProperty(navigator, "credentials", browserDescriptors.credentials);
+  else delete (navigator as { credentials?: CredentialsContainer }).credentials;
+  if (browserDescriptors.isSecureContext) Object.defineProperty(window, "isSecureContext", browserDescriptors.isSecureContext);
+  else delete (window as { isSecureContext?: boolean }).isSecureContext;
+  if (browserDescriptors.publicKeyCredential) Object.defineProperty(window, "PublicKeyCredential", browserDescriptors.publicKeyCredential);
+  else delete (window as { PublicKeyCredential?: typeof PublicKeyCredential }).PublicKeyCredential;
   routerReplace.mockReset();
   window.history.replaceState({}, "", "/");
   vi.restoreAllMocks();
@@ -39,6 +51,19 @@ function breedingFarmsResponse(farms: string[], selectedBreedingFarmId: string |
     breedingFarms: farms.map((breedingFarmId) => ({ breedingFarmId })),
     selectedBreedingFarmId
   }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
+function setBrowserSupport(get: CredentialsContainer["get"]) {
+  function PublicKeyCredentialMock() {}
+  Object.assign(PublicKeyCredentialMock, {
+    parseRequestOptionsFromJSON: (options: PublicKeyCredentialRequestOptionsJSON) => ({
+      ...options,
+      challenge: new Uint8Array([1]).buffer
+    })
+  });
+  Object.defineProperty(window, "isSecureContext", { configurable: true, value: true });
+  Object.defineProperty(window, "PublicKeyCredential", { configurable: true, value: PublicKeyCredentialMock });
+  Object.defineProperty(navigator, "credentials", { configurable: true, value: { create: vi.fn(), get } });
 }
 
 describe("LoginPage", () => {
@@ -262,6 +287,62 @@ describe("LoginPage", () => {
     const [, loginRequest] = fetchMock.mock.calls[2];
     expect(new Headers(loginRequest.headers).get("x-xsrf-token")).toBe("before-login");
     expect(JSON.parse(loginRequest.body as string)).toEqual({ email: "owner@example.com", password: "StrongPassword!123" });
+  });
+
+  it("logs in with a discoverable passkey and preserves a safe returnUrl", async () => {
+    const get = vi.fn().mockResolvedValue({
+      authenticatorAttachment: "platform",
+      getClientExtensionResults: () => ({}),
+      id: "credential-id",
+      rawId: new Uint8Array([1]).buffer,
+      response: {
+        authenticatorData: new Uint8Array([2]).buffer,
+        clientDataJSON: new Uint8Array([3]).buffer,
+        signature: new Uint8Array([4]).buffer,
+        userHandle: null
+      },
+      toJSON: () => ({
+        authenticatorAttachment: "platform",
+        clientExtensionResults: {},
+        id: "credential-id",
+        rawId: "AQ",
+        response: { authenticatorData: "Ag", clientDataJSON: "Aw", signature: "BA", userHandle: null },
+        type: "public-key"
+      }),
+      type: "public-key"
+    } as unknown as PublicKeyCredential);
+    setBrowserSupport(get);
+    window.history.replaceState({}, "", "/login?returnUrl=%2Fconfiguracoes%3Fsection%3Dseguranca");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-passkey" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ challenge: "AQ", userVerification: "required" }), {
+        headers: { "content-type": "application/json" },
+        status: 200
+      }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Entrar com biometria" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Entrar com biometria" }));
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/configuracoes?section=seguranca"));
+    const verifyBody = JSON.parse(String(fetchMock.mock.calls[3][1].body));
+    expect(JSON.parse(verifyBody.credentialJson)).toMatchObject({ id: "credential-id", type: "public-key" });
+  });
+
+  it("falls back to the dashboard when returnUrl is external", async () => {
+    window.history.replaceState({}, "", "/login?returnUrl=https%3A%2F%2Fevil.example%2Fsteal");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
   });
 
   it("opens the breeding-farm selector after login when there is more than one farm", async () => {
