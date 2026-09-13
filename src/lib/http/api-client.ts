@@ -125,6 +125,34 @@ export class ApiClient {
     return data;
   }
 
+  async requestBlob(path: string, options: ApiRequestOptions = {}): Promise<Blob> {
+    const method = options.method ?? "GET";
+    const url = new URL(path, this.endpoint).toString();
+    const headers = new Headers(options.headers);
+    headers.set("accept", "application/pdf");
+
+    if (isMutation(method)) {
+      const token = this.csrfToken();
+      if (token) headers.set(ANTIFORGERY_HEADER, token);
+    }
+
+    const requestVersion = this.tenantVersion;
+    const response = await fetch(url, {
+      body: options.body,
+      credentials: "include",
+      headers,
+      method,
+      signal: options.signal
+    });
+
+    if (requestVersion !== this.tenantVersion) throw new StaleTenantResponseError();
+    if (!response.ok) throw await toApiError(response);
+
+    const data = await response.blob();
+    if (requestVersion !== this.tenantVersion) throw new StaleTenantResponseError();
+    return data;
+  }
+
   async fetchAntiforgeryToken(path = "antiforgery/token"): Promise<string> {
     const url = new URL(path, this.endpoint).toString();
     const response = await fetch(url, {
