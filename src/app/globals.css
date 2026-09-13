@@ -2156,6 +2156,14 @@ h1, h2 { line-height: 1.08; }
 .document-wizard-genealogy-list small { max-width: 48%; text-align: right; }
 .document-wizard-genealogy-note { background: #f0f8fa; border-radius: .35rem; color: #4f7481; font-size: .6rem; line-height: 1.35; margin: .65rem 0 0; padding: .5rem .6rem; }
 .document-wizard-certificate-preview > footer { background: #f1f6f1; border-top: 1px solid #dce9e3; color: #5e756d; font-size: .58rem; padding: .7rem 1.15rem; text-align: right; }
+.document-wizard-provenance-preview { border-color: #c8d8c6; }
+.document-wizard-provenance-preview > header { background: linear-gradient(110deg, #315a42, #668c5c); }
+.document-wizard-provenance-details { border-top: 1px solid #dce9e3; display: grid; gap: .75rem; grid-template-columns: minmax(9rem, .6fr) minmax(14rem, 1.4fr); margin: 0 1.15rem; padding: 1rem 0; }
+.document-wizard-provenance-details > div { background: #f3f8f0; border-radius: .3rem; display: grid; gap: .2rem; padding: .55rem .65rem; }
+.document-wizard-provenance-details span { color: #718875; font-size: .56rem; }
+.document-wizard-provenance-details strong { color: #315a42; font-size: .68rem; overflow-wrap: anywhere; }
+.document-wizard-provenance-signature { border: 1px dashed #9db99c; }
+.document-wizard-provenance-signature strong { font-weight: 600; }
 .document-wizard-state { align-items: center; background: #fff; border: 1px solid #dce8e9; border-radius: .85rem; display: flex; flex-direction: column; margin: 3rem auto; max-width: 34rem; padding: 2.5rem 1.5rem; text-align: center; }
 .document-wizard-state-icon { align-items: center; background: #e1f0f3; border-radius: 50%; color: #266d83; display: inline-flex; height: 3.2rem; justify-content: center; margin-bottom: .9rem; width: 3.2rem; }
 .document-wizard-state-icon .dashboard-icon { height: 1.5rem; width: 1.5rem; }
@@ -2189,6 +2197,7 @@ h1, h2 { line-height: 1.08; }
   .document-wizard-certificate-identity dl, .document-wizard-certificate-farm dl { min-width: 0; width: 100%; }
   .document-wizard-genealogy-list li { align-items: flex-start; flex-direction: column; gap: .25rem; }
   .document-wizard-genealogy-list small { max-width: none; text-align: left; }
+  .document-wizard-provenance-details { grid-template-columns: 1fr; }
   .document-wizard-certificate-preview > footer { text-align: left; }
   .document-wizard-actions { bottom: 0; position: sticky; z-index: 2; }
   .document-wizard-actions > span { display: none; }
