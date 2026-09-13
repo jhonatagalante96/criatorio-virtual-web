@@ -543,7 +543,7 @@ function DocumentsWizard() {
 
           <nav aria-label="Tipo de documento" className="document-wizard-type-switcher">
             <span>Tipo de documento</span>
-            <div role="tablist">
+            <div>
               <Link href="/documentos">Crachá</Link>
               <Link aria-current={isGenealogyCertificate ? "page" : undefined} className={isGenealogyCertificate ? "is-selected" : ""} href="/documentos?type=GenealogyCertificate">Certificado de genealogia</Link>
               <Link aria-current={isProvenanceDocument ? "page" : undefined} className={isProvenanceDocument ? "is-selected" : ""} href="/documentos?type=ProvenanceDocument">Documento de procedência</Link>
@@ -585,7 +585,7 @@ function DocumentsWizard() {
 
         <nav aria-label="Tipo de documento" className="document-wizard-type-switcher">
           <span>Tipo de documento</span>
-          <div role="tablist">
+            <div>
             <Link aria-current="page" className="is-selected" href="/documentos">Crachá</Link>
             <Link href="/documentos?type=GenealogyCertificate">Certificado de genealogia</Link>
             <Link href="/documentos?type=ProvenanceDocument">Documento de procedência</Link>

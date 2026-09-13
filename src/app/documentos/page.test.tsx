@@ -359,4 +359,31 @@ describe("DocumentsPage", () => {
     expect(screen.getByRole("link", { name: "Baixar documento de procedência em PDF" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-provenance-a/content");
   });
+
+  it("keeps the provenance review recoverable when private storage is unavailable", async () => {
+    window.history.pushState({}, "", "/documentos?type=ProvenanceDocument&birdId=bird-a");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse())
+      .mockResolvedValueOnce(certificateEligibilityResponse())
+      .mockResolvedValueOnce(certificateGenealogyResponse())
+      .mockResolvedValueOnce(certificateFarmSettingsResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DocumentsPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    await waitFor(() => expect(screen.getByText("Ave elegível para o documento de procedência")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Revise e gere" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Gerar documento" }));
+
+    await waitFor(() => expect(screen.getByText("O armazenamento privado está indisponível. Tente novamente em instantes.")).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Gerar documento" })).toBeTruthy();
+  });
 });
