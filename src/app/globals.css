@@ -565,6 +565,7 @@ h1, h2 { line-height: 1.08; }
 .auth-state-card h1 { text-align: center; }
 .auth-state-card h1:focus { outline: 0; }
 .auth-state-card > .lede { margin-inline: auto; max-width: 34ch; }
+.auth-state-card .auth-primary-action { margin-top: .4rem; width: 100%; }
 .auth-state-card .auth-secondary-action { margin-top: .4rem; width: 100%; }
 .auth-state-card .text-action { display: block; }
 .logout-dialog-backdrop { align-items: center; background: rgb(6 58 86 / 36%); display: flex; inset: 0; justify-content: center; padding: 1rem; position: fixed; z-index: 20; }

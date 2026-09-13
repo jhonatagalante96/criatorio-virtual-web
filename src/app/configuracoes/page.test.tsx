@@ -77,8 +77,8 @@ describe("SettingsPage", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Alterar senha" })).toBeTruthy());
     fireEvent.change(screen.getByLabelText("Senha atual"), { target: { value: "InitialStrongPassword!123" } });
-    fireEvent.change(screen.getByLabelText("Senha nova"), { target: { value: "ChangedStrongPassword!123" } });
-    fireEvent.change(screen.getByLabelText("Confirmar senha nova"), { target: { value: "ChangedStrongPassword!123" } });
+    fireEvent.change(screen.getByLabelText("Senha nova"), { target: { value: "Abcdef1!" } });
+    fireEvent.change(screen.getByLabelText("Confirmar senha nova"), { target: { value: "Abcdef1!" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar nova senha" }));
 
     await waitFor(() => expect(screen.getByRole("status").textContent).toContain("Senha alterada com sucesso"));
@@ -88,9 +88,9 @@ describe("SettingsPage", () => {
     const [, request] = fetchMock.mock.calls[2];
     expect(new Headers(request.headers).get("x-xsrf-token")).toBe("csrf-token");
     expect(JSON.parse(request.body as string)).toEqual({
-      confirmPassword: "ChangedStrongPassword!123",
+      confirmPassword: "Abcdef1!",
       currentPassword: "InitialStrongPassword!123",
-      newPassword: "ChangedStrongPassword!123"
+      newPassword: "Abcdef1!"
     });
   });
 

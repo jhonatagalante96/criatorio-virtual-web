@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, createApiClient } from "../../lib/http/api-client";
-import { validatePassword, validatePasswordConfirmation } from "../../lib/auth/password-validation";
+import { passwordPolicyMessage, validatePassword, validatePasswordConfirmation } from "../../lib/auth/password-validation";
 import { AppLoadingState } from "../components/app-loading-state";
 import { AuthenticatedShell } from "../components/authenticated-shell";
 import { BrandLockup, BrandPanel } from "../components/brand";
@@ -190,7 +190,7 @@ function ChangePasswordForm({ onLocalPasswordUnavailable }: Readonly<{ onLocalPa
       <PasswordField autoComplete="current-password" disabled={isSubmitting} error={errors.currentPassword} id="current-password" label="Senha atual" name="currentPassword" onChange={(event) => { setCurrentPassword(event.target.value); setErrors((current) => ({ ...current, currentPassword: undefined })); }} placeholder="Digite sua senha atual" value={currentPassword} />
       <PasswordField autoComplete="new-password" disabled={isSubmitting} error={errors.newPassword} id="settings-new-password" label="Senha nova" name="newPassword" onChange={(event) => { setNewPassword(event.target.value); setErrors((current) => ({ ...current, newPassword: undefined })); }} placeholder="Crie uma senha forte" value={newPassword} />
       <PasswordField autoComplete="new-password" disabled={isSubmitting} error={errors.confirmPassword} id="settings-confirm-password" label="Confirmar senha nova" name="confirmPassword" onChange={(event) => { setConfirmPassword(event.target.value); setErrors((current) => ({ ...current, confirmPassword: undefined })); }} placeholder="Repita sua senha" value={confirmPassword} />
-      <p className="password-hint">Use pelo menos 12 caracteres, com maiúscula, minúscula, número e símbolo.</p>
+      <p className="password-hint">{passwordPolicyMessage}</p>
       <button className="auth-primary-action submit-action" disabled={isSubmitting} type="submit">{isSubmitting ? "Salvando…" : "Salvar nova senha"}</button>
     </form>
   );

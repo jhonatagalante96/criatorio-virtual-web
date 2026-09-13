@@ -3,6 +3,7 @@
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ApiClient, ApiError, ValidationErrors, createApiClient } from "../../lib/http/api-client";
+import { validatePassword } from "../../lib/auth/password-validation";
 import { BrandLockup, BrandPanel } from "../components/brand";
 
 interface AccountRegistrationResponse {
@@ -38,14 +39,9 @@ function validateForm(email: string, password: string, confirmPassword: string, 
 
   if (!password) {
     errors.password = ["Informe uma senha."];
-  } else if (
-    password.length < 12 ||
-    !/[A-Z]/.test(password) ||
-    !/[a-z]/.test(password) ||
-    !/\d/.test(password) ||
-    !/[^A-Za-z0-9]/.test(password)
-  ) {
-    errors.password = ["Use pelo menos 12 caracteres, com maiúscula, minúscula, número e símbolo."];
+  } else {
+    const passwordError = validatePassword(password);
+    if (passwordError) errors.password = [passwordError];
   }
 
   if (!confirmPassword) {

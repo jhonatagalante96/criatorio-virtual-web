@@ -13,6 +13,8 @@ export interface AccountSession {
 export type AuthStatus = "authenticated" | "authenticating" | "error" | "forbidden" | "loading" | "signing-out" | "unauthenticated";
 export type AuthenticationProvider = "email" | "google";
 
+export const emailConfirmationRequiredCode = "email_confirmation_required";
+
 const authenticationProviderStorageKey = "criatorio-authentication-provider";
 
 export interface AuthResult {
@@ -25,6 +27,7 @@ interface AuthContextValue {
   authenticationProvider: AuthenticationProvider | undefined;
   clearError: () => void;
   error: string | undefined;
+  errorCode: string | undefined;
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<AuthResult>;
   refresh: (options?: { provider?: AuthenticationProvider; showLoading?: boolean }) => Promise<AuthResult>;
@@ -36,7 +39,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function messageForFailure(error: unknown, action: "login" | "logout" | "session"): string {
   if (error instanceof ApiError) {
-    if (action === "login" && error.code === "email_confirmation_required") {
+    if ((action === "login" || action === "session") && error.code === emailConfirmationRequiredCode) {
       return "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada ou solicite um novo link de confirmação.";
     }
     if (action === "login" && error.status === 401) return "E-mail ou senha inválidos.";
@@ -53,6 +56,7 @@ function AuthProviderInner({ children }: Readonly<{ children: React.ReactNode }>
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
   const [error, setError] = useState<string | undefined>();
+  const [errorCode, setErrorCode] = useState<string | undefined>();
   const [authenticationProvider, setAuthenticationProvider] = useState<AuthenticationProvider | undefined>();
   const [session, setSession] = useState<AccountSession | undefined>();
   const [status, setStatus] = useState<AuthStatus>("loading");
@@ -83,11 +87,13 @@ function AuthProviderInner({ children }: Readonly<{ children: React.ReactNode }>
     clearShellIdentity();
     rememberAuthenticationProvider(undefined);
     setSession(undefined);
+    setErrorCode(undefined);
   }, [rememberAuthenticationProvider]);
 
   const refresh = useCallback(async ({ provider, showLoading = true }: { provider?: AuthenticationProvider; showLoading?: boolean } = {}): Promise<AuthResult> => {
     if (showLoading) setStatus("loading");
     setError(undefined);
+    setErrorCode(undefined);
     client.current?.clearCache();
 
     try {
@@ -109,6 +115,7 @@ function AuthProviderInner({ children }: Readonly<{ children: React.ReactNode }>
       if (showLoading) {
         setStatus(requestError instanceof ApiError && requestError.status === 403 ? "forbidden" : "error");
         setError(message);
+        setErrorCode(code);
       }
 
       return { code, error: message, ok: false };
@@ -123,6 +130,7 @@ function AuthProviderInner({ children }: Readonly<{ children: React.ReactNode }>
     clearShellIdentity();
     setStatus("authenticating");
     setError(undefined);
+    setErrorCode(undefined);
 
     try {
       if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
@@ -140,13 +148,16 @@ function AuthProviderInner({ children }: Readonly<{ children: React.ReactNode }>
       const currentSession = await client.current!.request<AccountSession>("api/auth/session");
       setSession(currentSession);
       rememberAuthenticationProvider("email");
+      setErrorCode(undefined);
       setStatus("authenticated");
       return { ok: true };
     } catch (requestError) {
       rememberAuthenticationProvider(undefined);
       setSession(undefined);
       setStatus(requestError instanceof ApiError && requestError.status === 403 ? "forbidden" : "unauthenticated");
+      const code = requestError instanceof ApiError ? requestError.code : undefined;
       const message = messageForFailure(requestError, "login");
+      setErrorCode(code);
       setError(message);
       return { error: message, ok: false };
     }
@@ -155,6 +166,7 @@ function AuthProviderInner({ children }: Readonly<{ children: React.ReactNode }>
   const logout = useCallback(async (): Promise<AuthResult> => {
     setStatus("signing-out");
     setError(undefined);
+    setErrorCode(undefined);
 
     try {
       // The backend invalidates antiforgery tokens when the identity changes.
@@ -179,10 +191,13 @@ function AuthProviderInner({ children }: Readonly<{ children: React.ReactNode }>
     }
   }, [clearSession]);
 
-  const clearError = useCallback(() => setError(undefined), []);
+  const clearError = useCallback(() => {
+    setError(undefined);
+    setErrorCode(undefined);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ authenticationProvider, clearError, error, login, logout, refresh, session, status }}>
+    <AuthContext.Provider value={{ authenticationProvider, clearError, error, errorCode, login, logout, refresh, session, status }}>
       {children}
     </AuthContext.Provider>
   );

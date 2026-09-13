@@ -41,6 +41,46 @@ describe("RegistrationPage", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("rejects a password shorter than eight characters", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<RegistrationPage />);
+
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "Abcde1!" } });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), { target: { value: "Abcde1!" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
+
+    expect(screen.getByText("Use pelo menos 8 caracteres, com maiúscula, minúscula, número e símbolo.")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts a compliant password with eight characters", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, {
+        headers: { "X-XSRF-TOKEN": "csrf-token" },
+        status: 204
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        email: "owner@example.com",
+        emailConfirmationRequired: true,
+        userId: "user-id"
+      }), { headers: { "content-type": "application/json" }, status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<RegistrationPage />);
+
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "Abcdef1!" } });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), { target: { value: "Abcdef1!" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Verifique seu e-mail" })).toBeTruthy());
+    expect(screen.queryByText("Use pelo menos 8 caracteres, com maiúscula, minúscula, número e símbolo.")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("registers with the API contract and shows the confirmation navigation", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(null, {

@@ -3,7 +3,7 @@
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ApiClient, ApiError, createApiClient } from "../../../lib/http/api-client";
-import { validatePassword, validatePasswordConfirmation } from "../../../lib/auth/password-validation";
+import { passwordPolicyMessage, validatePassword, validatePasswordConfirmation } from "../../../lib/auth/password-validation";
 import { BrandLockup, BrandPanel } from "../../components/brand";
 import { PasswordField } from "../../components/password-field";
 
@@ -181,7 +181,7 @@ export default function ResetPasswordPage() {
                     placeholder="Repita sua senha"
                     value={confirmPassword}
                   />
-                  <p className="password-hint">Use pelo menos 12 caracteres, com maiúscula, minúscula, número e símbolo.</p>
+                  <p className="password-hint">{passwordPolicyMessage}</p>
                   <button className="auth-primary-action submit-action" disabled={isSubmitting} type="submit">
                     {isSubmitting ? "Redefinindo…" : "Redefinir senha"}
                   </button>

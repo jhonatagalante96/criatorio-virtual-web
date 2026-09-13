@@ -1,10 +1,11 @@
-export const passwordPolicyMessage = "Use pelo menos 12 caracteres, com maiúscula, minúscula, número e símbolo.";
+export const passwordMinimumLength = 8;
+export const passwordPolicyMessage = "Use pelo menos 8 caracteres, com maiúscula, minúscula, número e símbolo.";
 
 export function validatePassword(password: string): string | undefined {
   if (!password) return "Informe uma senha nova.";
 
   if (
-    password.length < 12 ||
+    password.length < passwordMinimumLength ||
     !/[A-Z]/.test(password) ||
     !/[a-z]/.test(password) ||
     !/\d/.test(password) ||
