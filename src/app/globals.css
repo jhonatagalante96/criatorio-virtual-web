@@ -408,6 +408,20 @@ h1, h2 { line-height: 1.08; }
 .settings-password-form .confirmation-feedback { margin: .2rem 0 .8rem; }
 .settings-google-message { align-items: flex-start; display: flex; gap: .75rem; margin-top: 1rem; }
 .settings-google-mark { align-items: center; background: #fff; border: 1px solid #dce3e7; border-radius: .45rem; color: #4285f4; display: inline-flex; flex: 0 0 auto; font-size: 1.25rem; font-weight: 900; height: 2.1rem; justify-content: center; width: 2.1rem; }
+.passkey-activation-card { align-items: flex-start; background: linear-gradient(135deg, #f2fbf7, #f5f9ff); border: 1px solid #cfe6df; border-radius: .65rem; display: grid; gap: .8rem; grid-template-columns: auto minmax(0, 1fr) auto; margin-top: 1rem; padding: .9rem; }
+.passkey-activation-card-dashboard { margin: 0 0 1.25rem; }
+.passkey-activation-card-settings { margin-top: 1rem; }
+.passkey-activation-icon { align-items: center; background: #d8f0e3; border-radius: .55rem; color: #167548; display: inline-flex; flex: 0 0 auto; height: 2.65rem; justify-content: center; width: 2.65rem; }
+.passkey-activation-icon .dashboard-icon { height: 1.35rem; width: 1.35rem; }
+.passkey-activation-copy { min-width: 0; }
+.passkey-activation-copy .eyebrow { margin-bottom: .22rem; }
+.passkey-activation-copy h2 { color: var(--ink); font-size: .88rem; margin: 0; }
+.passkey-activation-copy > p:not(.eyebrow) { color: #5f7285; font-size: .68rem; line-height: 1.45; margin: .25rem 0 0; max-width: 58ch; }
+.passkey-activation-feedback { color: #356b59 !important; font-size: .64rem !important; font-weight: 700; }
+.passkey-activation-feedback.is-error { color: #9a261f !important; }
+.passkey-activation-card .auth-primary-action, .passkey-activation-card .auth-secondary-action { align-self: center; font-size: .64rem; min-height: 2.25rem; white-space: nowrap; }
+.passkey-activation-card .auth-primary-action { padding-inline: .75rem; }
+.passkey-activation-pending { align-self: center; color: #68818f; font-size: .63rem; font-weight: 700; white-space: nowrap; }
 .settings-session-panel { max-width: 42rem; }
 .settings-session-device { align-items: center; background: #f5fafb; border: 1px solid #dcebed; border-radius: .55rem; display: flex; gap: .75rem; margin: 1rem 0; padding: .85rem; }
 .settings-session-icon { align-items: center; background: #e1f0f3; border-radius: .5rem; color: #1769a0; display: inline-flex; flex: 0 0 auto; height: 2.5rem; justify-content: center; width: 2.5rem; }
@@ -444,6 +458,9 @@ h1, h2 { line-height: 1.08; }
   .settings-detail-panel > .confirmation-feedback, .settings-detail-panel > .form-error { margin-left: 0; }
   .settings-profile-details { grid-template-columns: 1fr; }
   .settings-google-message { flex-direction: column; }
+  .passkey-activation-card { grid-template-columns: auto minmax(0, 1fr); }
+  .passkey-activation-card .auth-primary-action, .passkey-activation-card .auth-secondary-action { grid-column: 1 / -1; width: 100%; }
+  .passkey-activation-pending { grid-column: 1 / -1; justify-self: start; }
   .settings-danger-action { width: 100%; }
   .settings-dialog-actions { flex-direction: column-reverse; }
   .settings-dialog-actions .settings-danger-action, .settings-dialog-actions .settings-cancel-action { width: 100%; }

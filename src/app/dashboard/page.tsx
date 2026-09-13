@@ -8,6 +8,7 @@ import { AuthenticatedShell } from "../components/authenticated-shell";
 import { AppLoadingState } from "../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../components/brand";
 import { DashboardIcon } from "../components/dashboard-icons";
+import { PasskeyActivationPrompt } from "../components/passkey-activation-prompt";
 import type { DashboardIconName } from "../components/dashboard-icons";
 
 interface BreedingFarmSummary {
@@ -442,6 +443,8 @@ function DashboardContent({
           Alguns dados do painel não foram entregues. Os indicadores disponíveis continuam visíveis.
         </div>
       )}
+
+      <PasskeyActivationPrompt variant="dashboard" />
 
       <section aria-labelledby="titulo-indicadores" className="dashboard-section">
         <h2 className="sr-only" id="titulo-indicadores">Indicadores principais</h2>

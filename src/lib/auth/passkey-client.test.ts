@@ -86,6 +86,27 @@ afterEach(() => {
 });
 
 describe("PasskeyClient", () => {
+  it("lists only the account passkey summaries through the authenticated GET endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      passkeys: [{
+        credentialId: "credential-id",
+        createdAt: "2026-09-13T12:00:00Z",
+        isBackedUp: false,
+        isBackupEligible: true,
+        isUserVerified: true,
+        name: null,
+        transports: ["internal"]
+      }]
+    }), { headers: { "content-type": "application/json" }, status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(new PasskeyClient({ endpoint: "https://api.example.test" }).list()).resolves.toEqual([expect.objectContaining({ credentialId: "credential-id" })]);
+    expect(fetchMock).toHaveBeenCalledWith("https://api.example.test/api/auth/passkeys", expect.objectContaining({
+      credentials: "include",
+      method: "GET"
+    }));
+  });
+
   it("runs the registration ceremony through the API with antiforgery protection", async () => {
     const create = vi.fn().mockResolvedValue(credential());
     setBrowserSupport({ create, get: vi.fn() });

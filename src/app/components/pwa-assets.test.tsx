@@ -5,6 +5,13 @@ import { describe, expect, it } from "vitest";
 const publicDirectory = resolve(process.cwd(), "public");
 
 describe("PWA assets", () => {
+  it("keeps account passkey requests on the network", () => {
+    const serviceWorker = readFileSync(resolve(publicDirectory, "sw.js"), "utf8");
+
+    expect(serviceWorker).toContain('requestUrl.pathname === "/api/auth/passkeys"');
+    expect(serviceWorker).toContain('requestUrl.pathname.startsWith("/api/auth/passkeys/")');
+  });
+
   it("uses versioned high-contrast icons in the manifest", () => {
     const manifest = JSON.parse(readFileSync(resolve(publicDirectory, "manifest.webmanifest"), "utf8")) as {
       icons: Array<{ purpose: string; src: string }>;
