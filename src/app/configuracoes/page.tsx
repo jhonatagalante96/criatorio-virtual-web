@@ -11,7 +11,7 @@ import { AuthenticatedShell } from "../components/authenticated-shell";
 import { BrandLockup, BrandPanel } from "../components/brand";
 import { DashboardIcon } from "../components/dashboard-icons";
 import { PasswordField } from "../components/password-field";
-import { PasskeyActivationPrompt } from "../components/passkey-activation-prompt";
+import { PasskeyManagementPanel } from "../components/passkey-management-panel";
 
 interface ChangePasswordFields {
   confirmPassword?: string;
@@ -207,7 +207,7 @@ function SecurityView() {
       <SettingsHeader title="Segurança" description="Altere sua senha ou gerencie as formas de login da sua conta." />
       <section aria-labelledby="titulo-seguranca" className="settings-detail-panel settings-security-panel">
         <div className="settings-detail-heading"><div><p className="eyebrow">Proteção da conta</p><h2 id="titulo-seguranca">{isGoogleAccount ? "Login com Google" : "Alterar senha"}</h2></div></div>
-        <PasskeyActivationPrompt variant="settings" />
+        <PasskeyManagementPanel />
         {isGoogleAccount ? <div className="settings-provider-message settings-google-message" role="status"><span aria-hidden="true" className="settings-google-mark">G</span><div><strong>Sua conta utiliza login com Google</strong><p>Este acesso não possui uma senha local para alterar. Continue usando o Google para entrar com segurança.</p></div></div> : <><p className="settings-card-description">Confirme sua senha atual e escolha uma nova senha para proteger sua conta.</p><ChangePasswordForm onLocalPasswordUnavailable={() => setProviderDetected(true)} /></>}
       </section>
     </SettingsFrame>

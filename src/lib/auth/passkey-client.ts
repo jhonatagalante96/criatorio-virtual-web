@@ -18,7 +18,9 @@ export const passkeyEndpoints = {
   loginOptions: "api/auth/passkeys/login/options",
   loginVerify: "api/auth/passkeys/login/verify",
   registerOptions: "api/auth/passkeys/register/options",
-  registerVerify: "api/auth/passkeys/register/verify"
+  registerVerify: "api/auth/passkeys/register/verify",
+  rename: (credentialId: string) => `api/auth/passkeys/${encodeURIComponent(credentialId)}`,
+  remove: (credentialId: string) => `api/auth/passkeys/${encodeURIComponent(credentialId)}`
 } as const;
 
 export interface AccountPasskeySummary {
@@ -72,6 +74,23 @@ export class PasskeyClient {
   async list(): Promise<AccountPasskeySummary[]> {
     const response = await this.api.request<AccountPasskeyListResponse>(passkeyEndpoints.list);
     return response.passkeys;
+  }
+
+  async rename(credentialId: string, name: string, signal?: AbortSignal): Promise<void> {
+    await this.ensureAntiforgeryToken();
+    await this.api.request<void>(passkeyEndpoints.rename(credentialId), {
+      body: JSON.stringify({ name }),
+      headers: { "content-type": "application/json" },
+      method: "PATCH",
+      signal
+    });
+    this.api.clearCache();
+  }
+
+  async remove(credentialId: string, signal?: AbortSignal): Promise<void> {
+    await this.ensureAntiforgeryToken();
+    await this.api.request<void>(passkeyEndpoints.remove(credentialId), { method: "DELETE", signal });
+    this.api.clearCache();
   }
 
   async register({ signal }: PasskeyOperationOptions = {}): Promise<PublicKeyCredential> {

@@ -84,7 +84,7 @@ describe("SettingsPage", () => {
     expect((screen.getByRole("button", { name: "Editar dados" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("offers passkey activation inside account security settings", async () => {
+  it("offers passkey management inside account security settings", async () => {
     openSecuritySettings();
     setBrowserSupport();
     const fetchMock = vi.fn()
@@ -93,8 +93,8 @@ describe("SettingsPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<SettingsPage />);
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Ativar login rápido" })).toBeTruthy());
-    expect(screen.getByRole("heading", { name: "Login rápido" })).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Adicionar Passkey" })).toBeTruthy());
+    expect(screen.getByRole("heading", { name: "Chaves de acesso" })).toBeTruthy();
     expect(String(fetchMock.mock.calls[1][0])).toContain("api/auth/passkeys");
   });
 
