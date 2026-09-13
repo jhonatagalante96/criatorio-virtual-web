@@ -95,22 +95,24 @@ describe("ApiClient", () => {
 
   it("requests PDF content without caching it and keeps the tenant guard", async () => {
     const pdf = new Blob(["%PDF-1.7"], { type: "application/pdf" });
-    const fetchMock = vi.fn().mockResolvedValue(new Response(pdf, {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(pdf, {
       headers: { "content-type": "application/pdf" },
       status: 200
-    }));
+    })));
     vi.stubGlobal("fetch", fetchMock);
     const client = new ApiClient("http://localhost:5000");
     client.setTenant("tenant-a");
 
     const response = await client.requestBlob("api/reports/birds/pdf?sex=Female");
     expect(response.type).toBe("application/pdf");
+    const secondResponse = await client.requestBlob("api/reports/birds/pdf?sex=Female");
+    expect(secondResponse.type).toBe("application/pdf");
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:5000/api/reports/birds/pdf?sex=Female", expect.objectContaining({
       credentials: "include",
       method: "GET"
     }));
     expect(new Headers(fetchMock.mock.calls[0][1].headers).get("accept")).toBe("application/pdf");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 
