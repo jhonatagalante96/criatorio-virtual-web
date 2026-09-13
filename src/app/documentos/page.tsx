@@ -14,6 +14,8 @@ type DocumentType = "Badge" | "GenealogyCertificate" | "ProvenanceDocument";
 type BadgeModelId = "Classic" | "Minimalist" | "Competition" | "Photographic";
 type BadgePrintSize = "Small" | "Medium" | "Large";
 type DocumentField = "Name" | "RingNumber" | "Sex" | "Species" | "BirthDate" | "BirdPhoto" | "BreedingFarmName" | "GenealogyTree";
+type DocumentView = "generate" | "history";
+type DocumentHistoryFilter = "All" | DocumentType;
 type FarmState = "blocked" | "error" | "loading" | "ready";
 type BirdsState = "empty" | "error" | "loading" | "ready";
 type FixedDocumentState = "blocked" | "error" | "idle" | "loading" | "ready";
@@ -47,6 +49,7 @@ interface BirdListResponse {
 }
 
 interface BirdDocumentResponse {
+  birdId: string;
   contentType: string;
   documentId: string;
   downloadUrl: string;
@@ -54,12 +57,18 @@ interface BirdDocumentResponse {
   generatedAtUtc: string;
   length: number;
   modelId: BadgeModelId | null;
-  pageCount: number;
+  pageCount?: number;
   printSize: BadgePrintSize | null;
   selectedFields: DocumentField[];
   type: DocumentType;
-  widthMillimeters: number;
-  heightMillimeters: number;
+  widthMillimeters?: number;
+  heightMillimeters?: number;
+}
+
+interface BirdDocumentsResponse {
+  breedingFarmId: string;
+  birdId: string;
+  items: BirdDocumentResponse[];
 }
 
 interface BirdEligibilityIssue {
@@ -214,6 +223,60 @@ function documentLabelForType(documentType: DocumentType): string {
   return "crachá";
 }
 
+function documentTypeLabel(documentType: DocumentType): string {
+  if (documentType === "GenealogyCertificate") return "Certificado de genealogia";
+  if (documentType === "ProvenanceDocument") return "Documento de procedência";
+  return "Crachá/Badge";
+}
+
+function isDocumentType(value: string): value is DocumentType {
+  return value === "Badge" || value === "GenealogyCertificate" || value === "ProvenanceDocument";
+}
+
+function documentDateLabel(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Data não informada"
+    : new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function fileSizeLabel(value: number): string {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
+
+function documentHistoryError(error: unknown): string {
+  if (error instanceof ApiError && error.status === 401) return "Sua sessão expirou. Entre novamente para consultar os documentos.";
+  if (error instanceof ApiError && error.status === 403) return "Sua conta não tem permissão para consultar os documentos desta ave.";
+  if (error instanceof ApiError && error.status === 404) return "A ave ou o criatório não está disponível no contexto selecionado.";
+  if (error instanceof ApiError && error.status === 409) return "Selecione novamente um criatório antes de consultar os documentos.";
+  if (error instanceof ApiError && error.status >= 500) return "O serviço está indisponível no momento. Tente novamente em instantes.";
+  if (error instanceof TypeError) return "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.";
+  return "Não foi possível consultar as emissões desta ave. Tente novamente.";
+}
+
+function documentContentError(error: unknown): string {
+  if (error instanceof ApiError && error.status === 401) return "Sua sessão expirou. Entre novamente para visualizar o PDF.";
+  if (error instanceof ApiError && error.status === 403) return "Sua conta não tem permissão para visualizar este documento.";
+  if (error instanceof ApiError && error.status === 404) return "O arquivo original não está mais disponível.";
+  if (error instanceof ApiError && error.status === 409) return "Selecione novamente um criatório antes de visualizar o PDF.";
+  if (error instanceof ApiError && error.status >= 500) return "O armazenamento privado está indisponível. Tente novamente em instantes.";
+  if (error instanceof TypeError) return "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.";
+  return "Não foi possível carregar a prévia do PDF. Tente novamente.";
+}
+
+function reissueError(error: unknown): string {
+  if (error instanceof ApiError && error.status === 400) return "A configuração do crachá não foi aceita. Revise os campos escolhidos.";
+  if (error instanceof ApiError && error.status === 401) return "Sua sessão expirou. Entre novamente para reemitir o documento.";
+  if (error instanceof ApiError && error.status === 403) return "Sua conta não tem permissão para reemitir este documento.";
+  if (error instanceof ApiError && error.status === 404) return "A ave ou o documento original não está disponível.";
+  if (error instanceof ApiError && error.status === 409) return "Selecione novamente um criatório antes de reemitir o documento.";
+  if (error instanceof ApiError && error.status >= 500) return "O armazenamento privado está indisponível. Tente novamente em instantes.";
+  if (error instanceof TypeError) return "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.";
+  return "Não foi possível reemitir o documento. Tente novamente.";
+}
+
 function documentGenerationError(error: unknown, documentType: DocumentType): string {
   if (documentType === "Badge") return generationError(error);
   const label = documentLabelForType(documentType);
@@ -245,11 +308,367 @@ function FarmBlockedState({ email, farmName, message }: Readonly<{ email: string
   );
 }
 
+function DocumentModeSwitcher({ view, onChange }: Readonly<{ view: DocumentView; onChange: (view: DocumentView) => void }>) {
+  return (
+    <nav aria-label="Modo dos documentos" className="document-mode-switcher">
+      <button aria-pressed={view === "generate"} className={view === "generate" ? "is-selected" : ""} onClick={() => onChange("generate")} type="button">Emitir novo documento</button>
+      <button aria-pressed={view === "history"} className={view === "history" ? "is-selected" : ""} onClick={() => onChange("history")} type="button">Consultar emissões</button>
+    </nav>
+  );
+}
+
+function DocumentPreviewDialog({
+  client,
+  item,
+  onClose,
+  onSessionExpired
+}: Readonly<{
+  client: ApiClient;
+  item: BirdDocumentResponse;
+  onClose: () => void;
+  onSessionExpired: () => Promise<unknown> | void;
+}>) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previewUrlRef = useRef<string | undefined>(undefined);
+  const requestRef = useRef<AbortController | undefined>(undefined);
+  const [previewState, setPreviewState] = useState<"error" | "loading" | "ready">("loading");
+  const [previewError, setPreviewError] = useState<string>();
+  const [previewUrl, setPreviewUrl] = useState<string>();
+
+  const releasePreview = useCallback(() => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = undefined;
+    setPreviewUrl(undefined);
+  }, []);
+
+  const loadPreview = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    releasePreview();
+    setPreviewState("loading");
+    setPreviewError(undefined);
+
+    try {
+      const blob = await client.requestBlob(item.downloadUrl, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      const nextUrl = URL.createObjectURL(blob);
+      previewUrlRef.current = nextUrl;
+      setPreviewUrl(nextUrl);
+      setPreviewState("ready");
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      if (error instanceof ApiError && error.status === 401) void onSessionExpired();
+      setPreviewError(documentContentError(error));
+      setPreviewState("error");
+    }
+  }, [client, item.downloadUrl, onSessionExpired, releasePreview]);
+
+  useEffect(() => {
+    void loadPreview();
+    return () => {
+      requestRef.current?.abort();
+      releasePreview();
+    };
+  }, [loadPreview, releasePreview]);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+    closeButtonRef.current?.focus();
+    return () => previouslyFocused?.focus();
+  }, []);
+
+  function closeDialog() {
+    requestRef.current?.abort();
+    onClose();
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeDialog();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+      "button:not([disabled]), a[href], iframe, [tabindex]:not([tabindex=\"-1\"])"
+    ) ?? []);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  return (
+    <div className="document-preview-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDialog(); }} role="presentation">
+      <section
+        aria-describedby="document-preview-dialog-description"
+        aria-labelledby="document-preview-dialog-title"
+        aria-modal="true"
+        className="document-preview-dialog"
+        onKeyDown={handleKeyDown}
+        ref={dialogRef}
+        role="dialog"
+      >
+        <header className="document-preview-dialog-heading">
+          <div><p className="eyebrow">Documento privado</p><h2 id="document-preview-dialog-title">Prévia do PDF</h2></div>
+          <button aria-label="Fechar prévia do PDF" className="document-preview-dialog-close" onClick={closeDialog} ref={closeButtonRef} type="button">×</button>
+        </header>
+        <p className="document-preview-dialog-intro" id="document-preview-dialog-description">{documentTypeLabel(item.type)} · {item.fileName}</p>
+        {previewState === "loading" && <div className="document-preview-dialog-loading" aria-live="polite" role="status"><span className="document-preview-dialog-spinner" aria-hidden="true" /><strong>Carregando prévia…</strong><span>O arquivo é buscado com a sessão e o criatório atuais.</span></div>}
+        {previewState === "error" && <div className="document-preview-dialog-error" role="alert"><strong>Não foi possível abrir o PDF</strong><span>{previewError}</span><button className="auth-secondary-action" onClick={() => void loadPreview()} type="button">Tentar novamente</button></div>}
+        {previewState === "ready" && previewUrl && <div className="document-preview-dialog-content"><iframe title={`Prévia de ${item.fileName}`} src={previewUrl} /><div className="document-preview-dialog-actions"><a className="auth-primary-action" download={item.fileName} href={previewUrl}>Baixar PDF original</a><button className="auth-secondary-action" onClick={closeDialog} type="button">Fechar</button></div></div>}
+        <footer className="document-preview-dialog-footer"><span>Emissão de {documentDateLabel(item.generatedAtUtc)} · {fileSizeLabel(item.length)}</span></footer>
+      </section>
+    </div>
+  );
+}
+
+function DocumentReissueDialog({
+  client,
+  csrfToken,
+  item,
+  onClose,
+  onReissued,
+  onSessionExpired
+}: Readonly<{
+  client: ApiClient;
+  csrfToken: React.MutableRefObject<string | undefined>;
+  item: BirdDocumentResponse;
+  onClose: () => void;
+  onReissued: (document: BirdDocumentResponse) => void;
+  onSessionExpired: () => Promise<unknown> | void;
+}>) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [useCustomBadge, setUseCustomBadge] = useState(false);
+  const [modelId, setModelId] = useState<BadgeModelId>(item.modelId ?? "Classic");
+  const [printSize, setPrintSize] = useState<BadgePrintSize>(item.printSize ?? "Medium");
+  const [selectedFields, setSelectedFields] = useState<DocumentField[]>(item.selectedFields.length > 0 ? item.selectedFields : defaultFields);
+  const [state, setState] = useState<"idle" | "loading">("idle");
+  const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    setUseCustomBadge(false);
+    setModelId(item.modelId ?? "Classic");
+    setPrintSize(item.printSize ?? "Medium");
+    setSelectedFields(item.selectedFields.length > 0 ? item.selectedFields : defaultFields);
+    setState("idle");
+    setError(undefined);
+  }, [item.documentId, item.modelId, item.printSize, item.selectedFields]);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+    closeButtonRef.current?.focus();
+    return () => previouslyFocused?.focus();
+  }, []);
+
+  function toggleField(field: DocumentField) {
+    setSelectedFields((current) => current.includes(field) ? current.filter((value) => value !== field) : [...current, field]);
+    setError(undefined);
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (state === "loading") return;
+    if (item.type === "Badge" && useCustomBadge && selectedFields.length === 0) {
+      setError("Selecione pelo menos um campo para a nova configuração do crachá.");
+      return;
+    }
+
+    setState("loading");
+    setError(undefined);
+    try {
+      if (!csrfToken.current) csrfToken.current = await client.fetchAntiforgeryToken();
+      const body = item.type === "Badge" && useCustomBadge ? { modelId, printSize, selectedFields } : {};
+      const result = await client.request<BirdDocumentResponse>(`api/birds/${encodeURIComponent(item.birdId)}/documents/${encodeURIComponent(item.documentId)}/reissue`, {
+        body: JSON.stringify(body),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      });
+      onReissued(result);
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) void onSessionExpired();
+      setError(reissueError(requestError));
+      setState("idle");
+    }
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape" && state !== "loading") {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+      "button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"])"
+    ) ?? []);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  return (
+    <div className="document-reissue-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && state !== "loading") onClose(); }} role="presentation">
+      <section aria-describedby="document-reissue-dialog-description" aria-labelledby="document-reissue-dialog-title" aria-modal="true" className="document-reissue-dialog" onKeyDown={handleKeyDown} ref={dialogRef} role="dialog">
+        <header className="document-reissue-dialog-heading"><div><p className="eyebrow">Nova versão</p><h2 id="document-reissue-dialog-title">Reemitir documento</h2></div><button aria-label="Fechar reemissão" className="document-preview-dialog-close" disabled={state === "loading"} onClick={onClose} ref={closeButtonRef} type="button">×</button></header>
+        <p id="document-reissue-dialog-description" className="document-reissue-dialog-intro">A emissão original de <strong>{item.fileName}</strong> permanece intacta. A nova versão usa os dados atuais devolvidos pelo servidor.</p>
+        <form id="document-reissue-form" onSubmit={handleSubmit}>
+          {item.type === "Badge" ? <>
+            <label className="document-reissue-dialog-toggle"><input checked={useCustomBadge} onChange={(event) => setUseCustomBadge(event.target.checked)} type="checkbox" /><span><strong>Alterar configuração do crachá</strong><small>Sem marcar, a configuração atual é preservada.</small></span></label>
+            {useCustomBadge && <div className="document-reissue-dialog-options">
+              <label><span>Modelo</span><select onChange={(event) => setModelId(event.target.value as BadgeModelId)} value={modelId}>{modelOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>
+              <label><span>Tamanho</span><select onChange={(event) => setPrintSize(event.target.value as BadgePrintSize)} value={printSize}>{sizeOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>
+              <fieldset><legend>Campos permitidos</legend><div>{fieldOptions.map((field) => <label key={field.id}><input checked={selectedFields.includes(field.id)} onChange={() => toggleField(field.id)} type="checkbox" />{field.name}</label>)}</div></fieldset>
+            </div>}
+          </> : <p className="document-reissue-dialog-fixed">Este tipo usa um template fixo. Apenas os dados atuais da ave e do criatório serão considerados na nova emissão.</p>}
+          {error && <p className="document-reissue-dialog-error" role="alert">{error}</p>}
+          <div className="document-reissue-dialog-actions"><button className="settings-cancel-action" disabled={state === "loading"} onClick={onClose} type="button">Cancelar</button><button className="auth-primary-action" disabled={state === "loading"} type="submit">{state === "loading" ? "Reemitindo…" : "Reemitir documento"}</button></div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function DocumentsHistory({
+  birds,
+  client,
+  csrfToken,
+  farmName,
+  filteredBirds,
+  onChangeView,
+  onSelectBird,
+  onSessionExpired,
+  selectedBird,
+  selectedBirdId,
+  birdSearch,
+  onBirdSearchChange,
+  session
+}: Readonly<{
+  birds: BirdListItem[];
+  client: ApiClient;
+  csrfToken: React.MutableRefObject<string | undefined>;
+  farmName: string;
+  filteredBirds: BirdListItem[];
+  onChangeView: (view: DocumentView) => void;
+  onSelectBird: (bird: BirdListItem) => void;
+  onSessionExpired: () => Promise<unknown> | void;
+  selectedBird?: BirdListItem;
+  selectedBirdId: string;
+  birdSearch: string;
+  onBirdSearchChange: (value: string) => void;
+  session: { email: string };
+}>) {
+  const [historyState, setHistoryState] = useState<"empty" | "error" | "loading" | "ready">("empty");
+  const [historyError, setHistoryError] = useState<string>();
+  const [historyDocuments, setHistoryDocuments] = useState<BirdDocumentResponse[]>([]);
+  const [historyFilter, setHistoryFilter] = useState<DocumentHistoryFilter>("All");
+  const [previewItem, setPreviewItem] = useState<BirdDocumentResponse>();
+  const [reissueItem, setReissueItem] = useState<BirdDocumentResponse>();
+  const [notice, setNotice] = useState<Notice>();
+  const requestVersion = useRef(0);
+
+  const loadHistory = useCallback(async (recoverSession = true) => {
+    const currentBird = selectedBird;
+    const version = requestVersion.current + 1;
+    requestVersion.current = version;
+    if (!currentBird) {
+      setHistoryDocuments([]);
+      setHistoryState("empty");
+      setHistoryError(undefined);
+      return;
+    }
+
+    setHistoryState("loading");
+    setHistoryError(undefined);
+    try {
+      const response = await client.request<BirdDocumentsResponse>(`api/birds/${encodeURIComponent(currentBird.birdId)}/documents`);
+      if (version !== requestVersion.current) return;
+      setHistoryDocuments(response.items.filter((item) => isDocumentType(item.type)));
+      setHistoryState("ready");
+    } catch (error) {
+      if (version !== requestVersion.current) return;
+      if (error instanceof StaleTenantResponseError) return;
+      if (error instanceof ApiError && error.status === 401 && recoverSession) {
+        const result = await onSessionExpired();
+        if (result && typeof result === "object" && "ok" in result && result.ok) {
+          await loadHistory(false);
+          return;
+        }
+      }
+      setHistoryError(documentHistoryError(error));
+      setHistoryState("error");
+    }
+  }, [client, onSessionExpired, selectedBird]);
+
+  useEffect(() => {
+    setHistoryFilter("All");
+    setNotice(undefined);
+    void loadHistory();
+    return () => { requestVersion.current += 1; };
+  }, [loadHistory]);
+
+  const visibleDocuments = useMemo(
+    () => historyFilter === "All" ? historyDocuments : historyDocuments.filter((item) => item.type === historyFilter),
+    [historyDocuments, historyFilter]
+  );
+
+  function handleReissued(document: BirdDocumentResponse) {
+    setHistoryDocuments((current) => [document, ...current]);
+    setReissueItem(undefined);
+    setNotice({ kind: "success", text: `${documentTypeLabel(document.type)} reemitido com os dados atuais. A versão original continua no histórico.` });
+  }
+
+  return (
+    <AuthenticatedShell activeNav="documents" email={session.email} farmName={farmName}>
+      <main className="document-wizard-page">
+        <nav aria-label="Navegação estrutural" className="document-wizard-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span><span aria-current="page">Documentos</span></nav>
+        <header className="document-wizard-header"><div><p className="eyebrow">Documentos internos</p><h1>Histórico de documentos</h1><p>Consulte as emissões privadas de cada ave e reemita uma nova versão quando precisar.</p></div><Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link></header>
+        <DocumentModeSwitcher onChange={onChangeView} view="history" />
+        <section aria-labelledby="titulo-consulta-documentos" className="document-history-selector document-wizard-card">
+          <div className="document-wizard-section-heading"><div><p className="eyebrow">Consulta protegida</p><h2 id="titulo-consulta-documentos">Escolha a ave</h2><p>A API consulta somente o histórico pertencente ao criatório selecionado.</p></div></div>
+          <label className="document-wizard-search" htmlFor="buscar-ave-historico"><span>Filtrar aves por nome, anilha ou espécie</span><input id="buscar-ave-historico" onChange={(event) => onBirdSearchChange(event.target.value)} placeholder="Ex.: Aurora ou 123456" value={birdSearch} /></label>
+          <label className="document-history-bird-select" htmlFor="ave-historico"><span>Ave do histórico</span><select id="ave-historico" onChange={(event) => { const bird = birds.find((candidate) => candidate.birdId === event.target.value); if (bird) onSelectBird(bird); }} value={selectedBirdId}><option value="">Selecione uma ave</option>{filteredBirds.map((bird) => <option key={bird.birdId} value={bird.birdId}>{bird.name} · {bird.ringNumber ?? "sem anilha"} · {bird.speciesPopularName}</option>)}</select></label>
+          {filteredBirds.length === 0 && <p className="document-wizard-inline-empty" role="status">Nenhuma ave corresponde à busca.</p>}
+        </section>
+
+        {!selectedBird && <section className="document-history-empty document-wizard-card" role="status"><span aria-hidden="true" className="document-wizard-state-icon"><DashboardIcon name="document" /></span><h2>Escolha uma ave para consultar</h2><p>O histórico é carregado por ave para preservar o isolamento do criatório atual.</p></section>}
+        {selectedBird && <section aria-labelledby="titulo-emissoes-ave" className="document-history-results document-wizard-card">
+          <header className="document-history-results-heading"><div><p className="eyebrow">Emissões de {selectedBird.name}</p><h2 id="titulo-emissoes-ave">Documentos emitidos</h2><p>{selectedBird.speciesPopularName} · {selectedBird.ringNumber ? `Anilha ${selectedBird.ringNumber}` : "Anilha não informada"}</p></div><label className="document-history-filter" htmlFor="filtro-tipo-documento"><span>Filtrar por tipo</span><select id="filtro-tipo-documento" onChange={(event) => setHistoryFilter(event.target.value as DocumentHistoryFilter)} value={historyFilter}><option value="All">Todos os tipos</option><option value="Badge">Crachá/Badge</option><option value="GenealogyCertificate">Certificado de genealogia</option><option value="ProvenanceDocument">Documento de procedência</option></select></label></header>
+          {notice && <p className="document-wizard-notice document-wizard-notice-success" role="status">{notice.text}</p>}
+          {historyState === "loading" && <div className="document-history-state" role="status"><span className="document-preview-dialog-spinner" aria-hidden="true" /><strong>Consultando emissões…</strong><span>Buscando somente os documentos autorizados para esta ave.</span></div>}
+          {historyState === "error" && <div className="document-history-state is-error" role="alert"><strong>Não foi possível consultar o histórico</strong><span>{historyError}</span><button className="auth-secondary-action" onClick={() => void loadHistory()} type="button">Tentar novamente</button></div>}
+          {historyState === "ready" && visibleDocuments.length === 0 && <div className="document-history-state" role="status"><strong>{historyDocuments.length === 0 ? "Nenhuma emissão encontrada" : "Nenhum documento neste filtro"}</strong><span>{historyDocuments.length === 0 ? "As emissões de crachá, certificado e procedência aparecerão aqui." : "Altere o filtro para consultar os outros tipos desta ave."}</span></div>}
+          {historyState === "ready" && visibleDocuments.length > 0 && <ul aria-label={`Documentos emitidos para ${selectedBird.name}`} className="document-history-list">{visibleDocuments.map((item) => <li key={item.documentId}><article className="document-history-item"><div className="document-history-item-icon" aria-hidden="true"><DashboardIcon name="document" /></div><div className="document-history-item-main"><div className="document-history-item-title"><strong>{documentTypeLabel(item.type)}</strong><span>{documentDateLabel(item.generatedAtUtc)}</span></div><p>{item.fileName}</p><small>{fileSizeLabel(item.length)}{item.modelId ? ` · ${modelLabel(item.modelId)}` : ""}{item.printSize ? ` · ${item.printSize}` : ""}</small></div><div className="document-history-item-actions"><button className="auth-secondary-action" onClick={() => setPreviewItem(item)} type="button">Visualizar PDF</button><a className="auth-secondary-action" download={item.fileName} href={getApiUrl(item.downloadUrl)}>Baixar original</a><button className="auth-primary-action" onClick={() => setReissueItem(item)} type="button">Reemitir</button></div></article></li>)}</ul>}
+        </section>}
+        {previewItem && <DocumentPreviewDialog client={client} item={previewItem} onClose={() => setPreviewItem(undefined)} onSessionExpired={onSessionExpired} />}
+        {reissueItem && <DocumentReissueDialog client={client} csrfToken={csrfToken} item={reissueItem} onClose={() => setReissueItem(undefined)} onReissued={handleReissued} onSessionExpired={onSessionExpired} />}
+      </main>
+    </AuthenticatedShell>
+  );
+}
+
 function DocumentsWizard() {
   const { refresh, session } = useAuth();
   const client = useRef<ApiClient | null>(null);
   const csrfToken = useRef<string | undefined>(undefined);
   const [clientReady, setClientReady] = useState(false);
+  const [documentView, setDocumentView] = useState<DocumentView>("generate");
   const [documentType, setDocumentType] = useState<DocumentType>("Badge");
   const [farmError, setFarmError] = useState<string>();
   const [farmName, setFarmName] = useState("Criatório selecionado");
@@ -280,6 +699,7 @@ function DocumentsWizard() {
     const query = new URLSearchParams(window.location.search);
     const queryBirdId = query.get("birdId")?.trim() ?? "";
     const queryType = query.get("type");
+    setDocumentView(query.get("view") === "history" ? "history" : "generate");
     setDocumentType(queryType === "GenealogyCertificate" || queryType === "ProvenanceDocument" ? queryType : "Badge");
     setRequestedBirdId(queryBirdId);
     setClientReady(true);
@@ -525,6 +945,26 @@ function DocumentsWizard() {
     );
   }
 
+  if (documentView === "history") {
+    return (
+      <DocumentsHistory
+        birdSearch={birdSearch}
+        birds={birds}
+        client={client.current}
+        csrfToken={csrfToken}
+        farmName={farmName}
+        filteredBirds={filteredBirds}
+        onBirdSearchChange={setBirdSearch}
+        onChangeView={setDocumentView}
+        onSelectBird={selectBird}
+        onSessionExpired={refresh}
+        selectedBird={selectedBird}
+        selectedBirdId={selectedBirdId}
+        session={session}
+      />
+    );
+  }
+
   if (isFixedDocument) {
     const fixedDocumentAncestors = fixedDocumentGenealogy?.nodes.filter((node) => node.position !== "root") ?? [];
     const fixedDocumentName = isGenealogyCertificate ? "certificado de genealogia" : "documento de procedência";
@@ -540,6 +980,8 @@ function DocumentsWizard() {
             <div><p className="eyebrow">Documentos internos</p><h1>{documentTitle}</h1><p>{isGenealogyCertificate ? "Revise a genealogia disponível e gere um certificado interno em A4 paisagem." : "Confira a origem registrada e gere um documento interno de procedência em A4 paisagem."}</p></div>
             <Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link>
           </header>
+
+          <DocumentModeSwitcher onChange={setDocumentView} view={documentView} />
 
           <nav aria-label="Tipo de documento" className="document-wizard-type-switcher">
             <span>Tipo de documento</span>
@@ -582,6 +1024,8 @@ function DocumentsWizard() {
           <div><p className="eyebrow">Documentos internos</p><h1>{documentTitle}</h1><p>Monte um crachá privado da ave em poucos passos, com campos e tamanho adequados ao uso.</p></div>
           <Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link>
         </header>
+
+        <DocumentModeSwitcher onChange={setDocumentView} view={documentView} />
 
         <nav aria-label="Tipo de documento" className="document-wizard-type-switcher">
           <span>Tipo de documento</span>
