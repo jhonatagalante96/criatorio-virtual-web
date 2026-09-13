@@ -216,6 +216,30 @@ describe("BirdEditPage", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it("preserves an external parent value and maps backend validation errors", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdResponse())
+      .mockResolvedValueOnce(tokenResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        errors: { ExternalFatherName: ["The external father name cannot exceed 200 characters."] },
+        status: 400,
+        title: "Bird genealogy data is invalid."
+      }), { headers: { "content-type": "application/problem+json" }, status: 400 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openEditForm(fetchMock);
+    fireEvent.click(screen.getByRole("button", { name: "Informar nome do pai sem cadastro" }));
+    fireEvent.change(screen.getByLabelText("Nome do pai"), { target: { value: "Pai externo" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar e salvar genealogia" }));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Revise os vínculos"));
+    expect(screen.getByText("O nome do pai sem cadastro não pode exceder 200 caracteres.")).toBeTruthy();
+    expect(screen.getByDisplayValue("Pai externo")).toBeTruthy();
+    expect(screen.queryByText("Genealogia atualizada com sucesso.")).toBeNull();
+  });
+
   it("shows empty and retryable error states while searching registered ancestors", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
