@@ -107,6 +107,26 @@ describe("PasskeyClient", () => {
     }));
   });
 
+  it("renames and removes a passkey with antiforgery protection", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(antiforgeryResponse())
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new PasskeyClient({ endpoint: "https://api.example.test" });
+
+    await client.rename("credential-id", "Meu celular");
+    await client.remove("credential-id");
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[1][0]).toBe("https://api.example.test/api/auth/passkeys/credential-id");
+    expect(fetchMock.mock.calls[1][1].method).toBe("PATCH");
+    expect(new Headers(fetchMock.mock.calls[1][1].headers).get("x-xsrf-token")).toBe("csrf-token");
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toEqual({ name: "Meu celular" });
+    expect(fetchMock.mock.calls[2][1].method).toBe("DELETE");
+    expect(new Headers(fetchMock.mock.calls[2][1].headers).get("x-xsrf-token")).toBe("csrf-token");
+  });
+
   it("runs the registration ceremony through the API with antiforgery protection", async () => {
     const create = vi.fn().mockResolvedValue(credential());
     setBrowserSupport({ create, get: vi.fn() });

@@ -427,6 +427,40 @@ h1, h2 { line-height: 1.08; }
 .passkey-activation-card .auth-primary-action, .passkey-activation-card .auth-secondary-action { align-self: center; font-size: .64rem; min-height: 2.25rem; white-space: nowrap; }
 .passkey-activation-card .auth-primary-action { padding-inline: .75rem; }
 .passkey-activation-pending { align-self: center; color: #68818f; font-size: .63rem; font-weight: 700; white-space: nowrap; }
+.passkey-management-card { background: linear-gradient(135deg, #f2fbf7, #f5f9ff); border: 1px solid #cfe6df; border-radius: .65rem; margin: 1rem 0 1.15rem; padding: .9rem; }
+.passkey-management-header { align-items: flex-start; display: grid; gap: .8rem; grid-template-columns: auto minmax(0, 1fr) auto; }
+.passkey-management-icon { align-items: center; background: #d8f0e3; border-radius: .55rem; color: #167548; display: inline-flex; flex: 0 0 auto; height: 2.65rem; justify-content: center; width: 2.65rem; }
+.passkey-management-icon .dashboard-icon { height: 1.35rem; width: 1.35rem; }
+.passkey-management-copy { min-width: 0; }
+.passkey-management-copy .eyebrow { margin-bottom: .22rem; }
+.passkey-management-copy h2 { color: var(--ink); font-size: .88rem; margin: 0; }
+.passkey-management-copy > p:not(.eyebrow) { color: #5f7285; font-size: .68rem; line-height: 1.45; margin: .25rem 0 0; max-width: 58ch; }
+.passkey-management-add { align-self: center; font-size: .64rem; min-height: 2.25rem; padding-inline: .75rem; white-space: nowrap; }
+.passkey-management-notice { border-radius: .45rem; font-size: .65rem; line-height: 1.4; margin: .8rem 0 0; padding: .6rem .7rem; }
+.passkey-management-notice-success { background: #eef9f1; border: 1px solid #c8e8d0; color: #356b59; }
+.passkey-management-notice-info { background: #f0f8fa; border: 1px solid #d6e9ed; color: #4c6d7b; }
+.passkey-management-notice-error { background: #fff3f1; border: 1px solid #ecc6c1; color: #9a261f; }
+.passkey-management-state, .passkey-management-empty { background: rgb(255 255 255 / 72%); border: 1px solid #dcebed; border-radius: .55rem; display: grid; gap: .3rem; margin-top: .8rem; padding: .85rem; }
+.passkey-management-state strong, .passkey-management-empty strong { color: var(--ink); font-size: .7rem; }
+.passkey-management-state span, .passkey-management-empty span { color: #657389; font-size: .65rem; line-height: 1.4; }
+.passkey-management-state .auth-secondary-action { justify-self: start; margin-top: .3rem; min-height: 2.15rem; }
+.passkey-management-empty .auth-primary-action { justify-self: start; margin-top: .35rem; min-height: 2.25rem; }
+.passkey-management-list { display: grid; gap: .55rem; list-style: none; margin: .8rem 0 0; padding: 0; }
+.passkey-management-item { align-items: center; background: rgb(255 255 255 / 78%); border: 1px solid #dcebed; border-radius: .55rem; display: flex; gap: .65rem; min-width: 0; padding: .7rem; }
+.passkey-management-item-icon { align-items: center; background: #e1f0f3; border-radius: .5rem; color: #1769a0; display: inline-flex; flex: 0 0 auto; height: 2.35rem; justify-content: center; width: 2.35rem; }
+.passkey-management-item-icon .dashboard-icon { height: 1.1rem; width: 1.1rem; }
+.passkey-management-item-copy { display: grid; gap: .15rem; min-width: 0; }
+.passkey-management-item-copy strong { color: var(--ink); font-size: .7rem; overflow-wrap: anywhere; }
+.passkey-management-item-copy span { color: #718198; font-size: .61rem; line-height: 1.35; overflow-wrap: anywhere; }
+.passkey-management-actions { align-items: center; display: flex; flex: 0 0 auto; gap: .4rem; margin-left: auto; }
+.passkey-management-actions .settings-cancel-action, .passkey-management-actions .settings-danger-action { font-size: .6rem; min-height: 2rem; padding: .35rem .55rem; }
+.passkey-rename-form { display: grid; gap: .4rem; min-width: 0; width: 100%; }
+.passkey-rename-form label { color: #365f72; font-size: .65rem; font-weight: 800; }
+.passkey-rename-form input { border: 1px solid #b9d1d7; border-radius: .4rem; color: var(--ink); font: inherit; font-size: .72rem; min-height: 2.35rem; padding: .45rem .6rem; width: 100%; }
+.passkey-rename-form input:focus { border-color: #4d9e86; box-shadow: 0 0 0 3px rgb(77 158 134 / 16%); outline: none; }
+.passkey-rename-form input[aria-invalid="true"] { border-color: #c42d2d; }
+.passkey-rename-form .field-error { margin-top: .05rem; }
+.passkey-rename-form .passkey-management-actions { justify-content: flex-start; margin-left: 0; margin-top: .1rem; }
 .settings-session-panel { max-width: 42rem; }
 .settings-session-device { align-items: center; background: #f5fafb; border: 1px solid #dcebed; border-radius: .55rem; display: flex; gap: .75rem; margin: 1rem 0; padding: .85rem; }
 .settings-session-icon { align-items: center; background: #e1f0f3; border-radius: .5rem; color: #1769a0; display: inline-flex; flex: 0 0 auto; height: 2.5rem; justify-content: center; width: 2.5rem; }
@@ -466,7 +500,14 @@ h1, h2 { line-height: 1.08; }
   .passkey-activation-card { grid-template-columns: auto minmax(0, 1fr); }
   .passkey-activation-card .auth-primary-action, .passkey-activation-card .auth-secondary-action { grid-column: 1 / -1; width: 100%; }
   .passkey-activation-pending { grid-column: 1 / -1; justify-self: start; }
+  .passkey-management-header { grid-template-columns: auto minmax(0, 1fr); }
+  .passkey-management-add { grid-column: 1 / -1; width: 100%; }
+  .passkey-management-item { align-items: flex-start; flex-wrap: wrap; }
+  .passkey-management-actions { flex-basis: 100%; margin-left: 0; }
+  .passkey-management-actions .settings-cancel-action, .passkey-management-actions .settings-danger-action { flex: 1; width: auto; }
+  .passkey-rename-form .passkey-management-actions { flex-basis: auto; }
   .settings-danger-action { width: 100%; }
+  .passkey-management-actions .settings-danger-action { width: auto; }
   .settings-dialog-actions { flex-direction: column-reverse; }
   .settings-dialog-actions .settings-danger-action, .settings-dialog-actions .settings-cancel-action { width: 100%; }
 }
