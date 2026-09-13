@@ -2057,14 +2057,19 @@ h1, h2 { line-height: 1.08; }
 .document-mode-switcher button { background: transparent; border: 1px solid transparent; border-radius: .42rem; color: #3b6e68; cursor: pointer; flex: 1; font: inherit; font-size: .68rem; font-weight: 800; min-height: 2.35rem; padding: .45rem .7rem; }
 .document-mode-switcher button:hover, .document-mode-switcher button:focus-visible { border-color: #9bcdb8; outline: none; }
 .document-mode-switcher button.is-selected { background: #236b58; box-shadow: 0 .2rem .55rem rgb(35 107 88 / 16%); color: #fff; }
-.document-wizard-type-switcher { align-items: center; background: #f5faf9; border: 1px solid #dcebea; border-radius: .65rem; display: flex; gap: .8rem; justify-content: space-between; margin-bottom: 1rem; padding: .55rem .65rem; }
-.document-wizard-type-switcher > span { color: #547283; font-size: .65rem; font-weight: 800; }
-.document-wizard-type-switcher > div { display: flex; flex-wrap: wrap; gap: .35rem; justify-content: flex-end; }
-.document-wizard-type-switcher a { border: 1px solid transparent; border-radius: .4rem; color: #3f6e7d; font-size: .64rem; font-weight: 800; padding: .45rem .6rem; text-decoration: none; }
-.document-wizard-type-switcher a:hover, .document-wizard-type-switcher a:focus-visible { border-color: #a8cebe; outline: none; }
-.document-wizard-type-switcher a.is-selected { background: #236b58; color: #fff; }
-.document-wizard-progress { align-items: flex-start; display: grid; grid-template-columns: repeat(7, minmax(4.2rem, 1fr)); list-style: none; margin: 0 0 1rem; overflow-x: auto; padding: 0; }
-.document-wizard-progress-certificate { grid-template-columns: repeat(5, minmax(4.2rem, 1fr)); }
+.document-type-option-grid { display: grid; gap: .75rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.document-type-option { align-items: center; background: #fbfdfd; border: 1px solid #d6e7e5; border-radius: .65rem; color: var(--ink); cursor: pointer; display: grid; gap: .7rem; grid-template-columns: 2.35rem minmax(0, 1fr) 1.2rem; min-height: 7.2rem; padding: .85rem; text-align: left; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.document-type-option:hover, .document-type-option:focus-visible { border-color: #77b296; box-shadow: 0 .35rem .8rem rgb(35 107 88 / 10%); outline: none; transform: translateY(-1px); }
+.document-type-option.is-selected { background: #f0faf4; border-color: #2d8364; box-shadow: 0 0 0 2px rgb(45 131 100 / 12%); }
+.document-type-option-icon { align-items: center; background: #e2f0ed; border-radius: 50%; color: #236b58; display: inline-flex; height: 2.35rem; justify-content: center; width: 2.35rem; }
+.document-type-option-icon .dashboard-icon { height: 1.2rem; width: 1.2rem; }
+.document-type-option strong, .document-type-option small { display: block; }
+.document-type-option strong { font-size: .73rem; line-height: 1.25; }
+.document-type-option small { color: #6b7f8b; font-size: .61rem; line-height: 1.4; margin-top: .25rem; }
+.document-type-option-check { align-items: center; border: 1px solid #bdd5cd; border-radius: 50%; color: #fff; display: inline-flex; font-size: .65rem; height: 1.2rem; justify-content: center; width: 1.2rem; }
+.document-type-option.is-selected .document-type-option-check { background: #2d8364; border-color: #2d8364; }
+.document-wizard-progress { align-items: flex-start; display: grid; grid-template-columns: repeat(8, minmax(4.2rem, 1fr)); list-style: none; margin: 0 0 1rem; overflow-x: auto; padding: 0; }
+.document-wizard-progress-certificate { grid-template-columns: repeat(6, minmax(4.2rem, 1fr)); }
 .document-wizard-progress li { color: #8a98a8; font-size: .61rem; min-width: 4.2rem; position: relative; text-align: center; }
 .document-wizard-progress li::before { background: #d6e4e5; content: ""; height: 2px; left: 0; position: absolute; right: 0; top: .82rem; z-index: 0; }
 .document-wizard-progress li:first-child::before { left: 50%; }
@@ -2179,6 +2184,11 @@ h1, h2 { line-height: 1.08; }
 .document-history-results-heading { align-items: flex-end; border-bottom: 1px solid #e4eeee; display: flex; gap: 1rem; justify-content: space-between; padding: clamp(1.1rem, 3vw, 1.55rem) clamp(1.1rem, 3vw, 2rem); }
 .document-history-results-heading h2 { color: var(--ink); font-size: 1.25rem; letter-spacing: -.03em; margin: 0; }
 .document-history-results-heading p:not(.eyebrow) { color: #6a7b8d; font-size: .72rem; line-height: 1.45; margin: .35rem 0 0; }
+.document-history-controls { align-items: end; display: grid; gap: .6rem; grid-template-columns: minmax(13rem, 1.4fr) minmax(11rem, .8fr); min-width: min(100%, 35rem); }
+.document-history-search { display: grid; gap: .35rem; }
+.document-history-search > span { color: #365f72; font-size: .66rem; font-weight: 800; }
+.document-history-search input { background: #fff; border: 1px solid #bfd4d8; border-radius: .45rem; color: var(--ink); font: inherit; font-size: .75rem; min-height: 2.65rem; padding: .55rem .7rem; width: 100%; }
+.document-history-search input:focus { border-color: #4d9e86; box-shadow: 0 0 0 3px rgb(77 158 134 / 16%); outline: none; }
 .document-history-filter { min-width: min(100%, 14rem); }
 .document-history-list { display: grid; gap: .65rem; list-style: none; margin: 0; padding: clamp(1.1rem, 3vw, 1.55rem) clamp(1.1rem, 3vw, 2rem); }
 .document-history-list > li { min-width: 0; }
@@ -2296,9 +2306,9 @@ h1, h2 { line-height: 1.08; }
   .document-wizard-header { align-items: flex-start; flex-direction: column; gap: .8rem; }
   .document-wizard-header h1 { font-size: 2rem; }
   .document-wizard-back-link { text-align: center; width: 100%; }
-  .document-wizard-type-switcher { align-items: flex-start; flex-direction: column; }
-  .document-wizard-type-switcher > div { justify-content: flex-start; width: 100%; }
-  .document-wizard-type-switcher a { flex: 1; text-align: center; }
+  .document-type-option-grid { grid-template-columns: 1fr; }
+  .document-history-controls { grid-template-columns: 1fr; min-width: 0; width: 100%; }
+  .document-history-search, .document-history-filter { min-width: 0; width: 100%; }
   .document-wizard-progress { margin-inline: -.25rem; }
   .document-wizard-card { border-radius: .65rem; min-height: 0; }
   .document-wizard-option-grid, .document-wizard-field-grid, .document-wizard-size-grid { grid-template-columns: 1fr; }

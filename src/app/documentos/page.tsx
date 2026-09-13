@@ -9,7 +9,7 @@ import { AuthenticatedShell } from "../components/authenticated-shell";
 import { DashboardIcon } from "../components/dashboard-icons";
 
 type BirdSex = "Female" | "Male" | "Unknown";
-type WizardStep = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+type WizardStep = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type DocumentType = "Badge" | "GenealogyCertificate" | "ProvenanceDocument";
 type BadgeModelId = "Classic" | "Minimalist" | "Competition" | "Photographic";
 type BadgePrintSize = "Small" | "Medium" | "Large";
@@ -71,6 +71,12 @@ interface BirdDocumentsResponse {
   items: BirdDocumentResponse[];
 }
 
+interface DocumentHistoryItem extends BirdDocumentResponse {
+  birdName: string;
+  birdSpeciesPopularName: string;
+  birdRingNumber: string | null;
+}
+
 interface BirdEligibilityIssue {
   code: string;
   message: string;
@@ -115,8 +121,8 @@ interface BreedingFarmSettingsResponse {
   responsibleName: string;
 }
 
-const badgeWizardSteps = ["Ave", "Modelo", "Campos", "Tamanho", "Prévia", "Revisão", "Gerar"] as const;
-const fixedDocumentWizardSteps = ["Ave", "Elegibilidade", "Prévia", "Revisão", "Gerar"] as const;
+const badgeWizardSteps = ["Documento", "Ave", "Modelo", "Campos", "Tamanho", "Prévia", "Revisão", "Gerar"] as const;
+const fixedDocumentWizardSteps = ["Documento", "Ave", "Elegibilidade", "Prévia", "Revisão", "Gerar"] as const;
 
 const modelOptions: Array<{ id: BadgeModelId; description: string; name: string }> = [
   { id: "Classic", description: "Identificação completa e atemporal.", name: "Clássico" },
@@ -248,12 +254,12 @@ function fileSizeLabel(value: number): string {
 
 function documentHistoryError(error: unknown): string {
   if (error instanceof ApiError && error.status === 401) return "Sua sessão expirou. Entre novamente para consultar os documentos.";
-  if (error instanceof ApiError && error.status === 403) return "Sua conta não tem permissão para consultar os documentos desta ave.";
-  if (error instanceof ApiError && error.status === 404) return "A ave ou o criatório não está disponível no contexto selecionado.";
+  if (error instanceof ApiError && error.status === 403) return "Sua conta não tem permissão para consultar os documentos deste criatório.";
+  if (error instanceof ApiError && error.status === 404) return "Os documentos ou o criatório não estão disponíveis no contexto selecionado.";
   if (error instanceof ApiError && error.status === 409) return "Selecione novamente um criatório antes de consultar os documentos.";
   if (error instanceof ApiError && error.status >= 500) return "O serviço está indisponível no momento. Tente novamente em instantes.";
   if (error instanceof TypeError) return "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.";
-  return "Não foi possível consultar as emissões desta ave. Tente novamente.";
+  return "Não foi possível consultar as emissões deste criatório. Tente novamente.";
 }
 
 function documentContentError(error: unknown): string {
@@ -314,6 +320,41 @@ function DocumentModeSwitcher({ view, onChange }: Readonly<{ view: DocumentView;
       <button aria-pressed={view === "generate"} className={view === "generate" ? "is-selected" : ""} onClick={() => onChange("generate")} type="button">Emitir novo documento</button>
       <button aria-pressed={view === "history"} className={view === "history" ? "is-selected" : ""} onClick={() => onChange("history")} type="button">Consultar emissões</button>
     </nav>
+  );
+}
+
+function DocumentTypeStep({ documentType, onChange }: Readonly<{ documentType: DocumentType; onChange: (type: DocumentType) => void }>) {
+  const options: Array<{ description: string; id: DocumentType; name: string }> = [
+    { description: "Identificação visual personalizada da ave.", id: "Badge", name: "Crachá" },
+    { description: "Resumo interno da árvore genealógica.", id: "GenealogyCertificate", name: "Certificado de genealogia" },
+    { description: "Origem e dados do criatório em A4.", id: "ProvenanceDocument", name: "Documento de procedência" }
+  ];
+
+  return (
+    <section aria-labelledby="titulo-etapa-documento">
+      <div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 1</p><h2 id="titulo-etapa-documento">Escolha o documento</h2><p>Selecione o tipo de documento que deseja emitir. As próximas etapas serão ajustadas para a sua escolha.</p></div></div>
+      <div aria-label="Tipos de documento disponíveis" className="document-type-option-grid" role="group">
+        {options.map((option) => <button aria-label={option.name} aria-pressed={documentType === option.id} className={`document-type-option${documentType === option.id ? " is-selected" : ""}`} key={option.id} onClick={() => onChange(option.id)} type="button"><span aria-hidden="true" className="document-type-option-icon"><DashboardIcon name="document" /></span><span><strong>{option.name}</strong><small>{option.description}</small></span><span aria-hidden="true" className="document-type-option-check">{documentType === option.id ? "✓" : ""}</span></button>)}
+      </div>
+    </section>
+  );
+}
+
+function DocumentWizardProgress({
+  activeStep,
+  className,
+  onSelect,
+  steps
+}: Readonly<{
+  activeStep: number;
+  className: string;
+  onSelect: (step: number) => void;
+  steps: readonly string[];
+}>) {
+  return (
+    <ol aria-label="Etapas da emissão" className={`document-wizard-progress ${className}`}>
+      {steps.map((label, index) => <li key={label} className={index === activeStep ? "is-current" : index < activeStep ? "is-complete" : ""}>{index <= activeStep ? <button aria-current={index === activeStep ? "step" : undefined} onClick={() => onSelect(index)} type="button">{index < activeStep ? "✓" : index + 1}<span>{label}</span></button> : <span><span aria-hidden="true">{index + 1}</span>{label}</span>}</li>)}
+    </ol>
   );
 }
 
@@ -550,12 +591,8 @@ function DocumentsHistory({
   client,
   csrfToken,
   farmName,
-  filteredBirds,
   onChangeView,
-  onSelectBird,
   onSessionExpired,
-  selectedBird,
-  selectedBirdId,
   birdSearch,
   onBirdSearchChange,
   session
@@ -564,42 +601,42 @@ function DocumentsHistory({
   client: ApiClient;
   csrfToken: React.MutableRefObject<string | undefined>;
   farmName: string;
-  filteredBirds: BirdListItem[];
   onChangeView: (view: DocumentView) => void;
-  onSelectBird: (bird: BirdListItem) => void;
   onSessionExpired: () => Promise<unknown> | void;
-  selectedBird?: BirdListItem;
-  selectedBirdId: string;
   birdSearch: string;
   onBirdSearchChange: (value: string) => void;
   session: { email: string };
 }>) {
-  const [historyState, setHistoryState] = useState<"empty" | "error" | "loading" | "ready">("empty");
+  const [historyState, setHistoryState] = useState<"error" | "loading" | "ready">("loading");
   const [historyError, setHistoryError] = useState<string>();
-  const [historyDocuments, setHistoryDocuments] = useState<BirdDocumentResponse[]>([]);
+  const [historyDocuments, setHistoryDocuments] = useState<DocumentHistoryItem[]>([]);
   const [historyFilter, setHistoryFilter] = useState<DocumentHistoryFilter>("All");
-  const [previewItem, setPreviewItem] = useState<BirdDocumentResponse>();
-  const [reissueItem, setReissueItem] = useState<BirdDocumentResponse>();
+  const [previewItem, setPreviewItem] = useState<DocumentHistoryItem>();
+  const [reissueItem, setReissueItem] = useState<DocumentHistoryItem>();
   const [notice, setNotice] = useState<Notice>();
   const requestVersion = useRef(0);
 
   const loadHistory = useCallback(async (recoverSession = true) => {
-    const currentBird = selectedBird;
     const version = requestVersion.current + 1;
     requestVersion.current = version;
-    if (!currentBird) {
-      setHistoryDocuments([]);
-      setHistoryState("empty");
-      setHistoryError(undefined);
-      return;
-    }
-
     setHistoryState("loading");
     setHistoryError(undefined);
     try {
-      const response = await client.request<BirdDocumentsResponse>(`api/birds/${encodeURIComponent(currentBird.birdId)}/documents`);
+      const documentsByBird = await Promise.all(birds.map(async (bird) => {
+        const response = await client.request<BirdDocumentsResponse>(`api/birds/${encodeURIComponent(bird.birdId)}/documents`);
+        return response.items.filter((item) => isDocumentType(item.type)).map((item) => ({
+          ...item,
+          birdName: bird.name,
+          birdRingNumber: bird.ringNumber,
+          birdSpeciesPopularName: bird.speciesPopularName
+        }));
+      }));
       if (version !== requestVersion.current) return;
-      setHistoryDocuments(response.items.filter((item) => isDocumentType(item.type)));
+      setHistoryDocuments(documentsByBird.flat().sort((left, right) => {
+        const leftTime = new Date(left.generatedAtUtc).getTime();
+        const rightTime = new Date(right.generatedAtUtc).getTime();
+        return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime);
+      }));
       setHistoryState("ready");
     } catch (error) {
       if (version !== requestVersion.current) return;
@@ -614,7 +651,7 @@ function DocumentsHistory({
       setHistoryError(documentHistoryError(error));
       setHistoryState("error");
     }
-  }, [client, onSessionExpired, selectedBird]);
+  }, [birds, client, onSessionExpired]);
 
   useEffect(() => {
     setHistoryFilter("All");
@@ -623,13 +660,23 @@ function DocumentsHistory({
     return () => { requestVersion.current += 1; };
   }, [loadHistory]);
 
+  const normalizedSearch = birdSearch.trim().toLocaleLowerCase("pt-BR");
   const visibleDocuments = useMemo(
-    () => historyFilter === "All" ? historyDocuments : historyDocuments.filter((item) => item.type === historyFilter),
-    [historyDocuments, historyFilter]
+    () => historyDocuments.filter((item) => {
+      const matchesType = historyFilter === "All" || item.type === historyFilter;
+      const matchesSearch = !normalizedSearch || `${item.birdName} ${item.birdRingNumber ?? ""} ${item.birdSpeciesPopularName} ${item.fileName} ${documentTypeLabel(item.type)}`.toLocaleLowerCase("pt-BR").includes(normalizedSearch);
+      return matchesType && matchesSearch;
+    }),
+    [historyDocuments, historyFilter, normalizedSearch]
   );
 
   function handleReissued(document: BirdDocumentResponse) {
-    setHistoryDocuments((current) => [document, ...current]);
+    setHistoryDocuments((current) => [{
+      ...document,
+      birdName: reissueItem?.birdName ?? "Ave selecionada",
+      birdRingNumber: reissueItem?.birdRingNumber ?? null,
+      birdSpeciesPopularName: reissueItem?.birdSpeciesPopularName ?? ""
+    }, ...current]);
     setReissueItem(undefined);
     setNotice({ kind: "success", text: `${documentTypeLabel(document.type)} reemitido com os dados atuais. A versão original continua no histórico.` });
   }
@@ -638,24 +685,16 @@ function DocumentsHistory({
     <AuthenticatedShell activeNav="documents" email={session.email} farmName={farmName}>
       <main className="document-wizard-page">
         <nav aria-label="Navegação estrutural" className="document-wizard-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span><span aria-current="page">Documentos</span></nav>
-        <header className="document-wizard-header"><div><p className="eyebrow">Documentos internos</p><h1>Histórico de documentos</h1><p>Consulte as emissões privadas de cada ave e reemita uma nova versão quando precisar.</p></div><Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link></header>
+        <header className="document-wizard-header"><div><p className="eyebrow">Documentos internos</p><h1>Documentos</h1><p>Consulte o histórico de emissões do criatório e emita uma nova versão quando precisar.</p></div><Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link></header>
         <DocumentModeSwitcher onChange={onChangeView} view="history" />
-        <section aria-labelledby="titulo-consulta-documentos" className="document-history-selector document-wizard-card">
-          <div className="document-wizard-section-heading"><div><p className="eyebrow">Consulta protegida</p><h2 id="titulo-consulta-documentos">Escolha a ave</h2><p>A API consulta somente o histórico pertencente ao criatório selecionado.</p></div></div>
-          <label className="document-wizard-search" htmlFor="buscar-ave-historico"><span>Filtrar aves por nome, anilha ou espécie</span><input id="buscar-ave-historico" onChange={(event) => onBirdSearchChange(event.target.value)} placeholder="Ex.: Aurora ou 123456" value={birdSearch} /></label>
-          <label className="document-history-bird-select" htmlFor="ave-historico"><span>Ave do histórico</span><select id="ave-historico" onChange={(event) => { const bird = birds.find((candidate) => candidate.birdId === event.target.value); if (bird) onSelectBird(bird); }} value={selectedBirdId}><option value="">Selecione uma ave</option>{filteredBirds.map((bird) => <option key={bird.birdId} value={bird.birdId}>{bird.name} · {bird.ringNumber ?? "sem anilha"} · {bird.speciesPopularName}</option>)}</select></label>
-          {filteredBirds.length === 0 && <p className="document-wizard-inline-empty" role="status">Nenhuma ave corresponde à busca.</p>}
-        </section>
-
-        {!selectedBird && <section className="document-history-empty document-wizard-card" role="status"><span aria-hidden="true" className="document-wizard-state-icon"><DashboardIcon name="document" /></span><h2>Escolha uma ave para consultar</h2><p>O histórico é carregado por ave para preservar o isolamento do criatório atual.</p></section>}
-        {selectedBird && <section aria-labelledby="titulo-emissoes-ave" className="document-history-results document-wizard-card">
-          <header className="document-history-results-heading"><div><p className="eyebrow">Emissões de {selectedBird.name}</p><h2 id="titulo-emissoes-ave">Documentos emitidos</h2><p>{selectedBird.speciesPopularName} · {selectedBird.ringNumber ? `Anilha ${selectedBird.ringNumber}` : "Anilha não informada"}</p></div><label className="document-history-filter" htmlFor="filtro-tipo-documento"><span>Filtrar por tipo</span><select id="filtro-tipo-documento" onChange={(event) => setHistoryFilter(event.target.value as DocumentHistoryFilter)} value={historyFilter}><option value="All">Todos os tipos</option><option value="Badge">Crachá/Badge</option><option value="GenealogyCertificate">Certificado de genealogia</option><option value="ProvenanceDocument">Documento de procedência</option></select></label></header>
+        <section aria-labelledby="titulo-historico-documentos" className="document-history-results document-wizard-card">
+          <header className="document-history-results-heading"><div><p className="eyebrow">Histórico de emissões</p><h2 id="titulo-historico-documentos">Todos os documentos</h2><p>Emissões privadas de todas as aves ativas do criatório selecionado.</p></div><div className="document-history-controls"><label className="document-history-search" htmlFor="buscar-documento-historico"><span>Buscar por ave ou arquivo</span><input id="buscar-documento-historico" onChange={(event) => onBirdSearchChange(event.target.value)} placeholder="Ex.: Aurora ou crachá" value={birdSearch} /></label><label className="document-history-filter" htmlFor="filtro-tipo-documento"><span>Filtrar por tipo</span><select id="filtro-tipo-documento" onChange={(event) => setHistoryFilter(event.target.value as DocumentHistoryFilter)} value={historyFilter}><option value="All">Todos os tipos</option><option value="Badge">Crachá/Badge</option><option value="GenealogyCertificate">Certificado de genealogia</option><option value="ProvenanceDocument">Documento de procedência</option></select></label></div></header>
           {notice && <p className="document-wizard-notice document-wizard-notice-success" role="status">{notice.text}</p>}
-          {historyState === "loading" && <div className="document-history-state" role="status"><span className="document-preview-dialog-spinner" aria-hidden="true" /><strong>Consultando emissões…</strong><span>Buscando somente os documentos autorizados para esta ave.</span></div>}
+          {historyState === "loading" && <div className="document-history-state" role="status"><span className="document-preview-dialog-spinner" aria-hidden="true" /><strong>Consultando emissões…</strong><span>Buscando somente os documentos autorizados deste criatório.</span></div>}
           {historyState === "error" && <div className="document-history-state is-error" role="alert"><strong>Não foi possível consultar o histórico</strong><span>{historyError}</span><button className="auth-secondary-action" onClick={() => void loadHistory()} type="button">Tentar novamente</button></div>}
-          {historyState === "ready" && visibleDocuments.length === 0 && <div className="document-history-state" role="status"><strong>{historyDocuments.length === 0 ? "Nenhuma emissão encontrada" : "Nenhum documento neste filtro"}</strong><span>{historyDocuments.length === 0 ? "As emissões de crachá, certificado e procedência aparecerão aqui." : "Altere o filtro para consultar os outros tipos desta ave."}</span></div>}
-          {historyState === "ready" && visibleDocuments.length > 0 && <ul aria-label={`Documentos emitidos para ${selectedBird.name}`} className="document-history-list">{visibleDocuments.map((item) => <li key={item.documentId}><article className="document-history-item"><div className="document-history-item-icon" aria-hidden="true"><DashboardIcon name="document" /></div><div className="document-history-item-main"><div className="document-history-item-title"><strong>{documentTypeLabel(item.type)}</strong><span>{documentDateLabel(item.generatedAtUtc)}</span></div><p>{item.fileName}</p><small>{fileSizeLabel(item.length)}{item.modelId ? ` · ${modelLabel(item.modelId)}` : ""}{item.printSize ? ` · ${item.printSize}` : ""}</small></div><div className="document-history-item-actions"><button className="auth-secondary-action" onClick={() => setPreviewItem(item)} type="button">Visualizar PDF</button><a className="auth-secondary-action" download={item.fileName} href={getApiUrl(item.downloadUrl)}>Baixar original</a><button className="auth-primary-action" onClick={() => setReissueItem(item)} type="button">Reemitir</button></div></article></li>)}</ul>}
-        </section>}
+          {historyState === "ready" && visibleDocuments.length === 0 && <div className="document-history-state" role="status"><strong>{historyDocuments.length === 0 ? "Nenhuma emissão encontrada" : "Nenhum documento encontrado"}</strong><span>{historyDocuments.length === 0 ? "As emissões de crachá, certificado e procedência aparecerão aqui." : "Altere a busca ou o filtro para consultar outras emissões."}</span></div>}
+          {historyState === "ready" && visibleDocuments.length > 0 && <ul aria-label="Todos os documentos emitidos" className="document-history-list">{visibleDocuments.map((item) => <li key={item.documentId}><article className="document-history-item"><div className="document-history-item-icon" aria-hidden="true"><DashboardIcon name="document" /></div><div className="document-history-item-main"><div className="document-history-item-title"><strong>{documentTypeLabel(item.type)}</strong><span>{documentDateLabel(item.generatedAtUtc)}</span></div><p>{item.fileName}</p><small>{item.birdName} · {item.birdSpeciesPopularName}{item.birdRingNumber ? ` · Anilha ${item.birdRingNumber}` : ""}{item.modelId ? ` · ${modelLabel(item.modelId)}` : ""}{item.printSize ? ` · ${item.printSize}` : ""}</small></div><div className="document-history-item-actions"><button className="auth-secondary-action" onClick={() => setPreviewItem(item)} type="button">Visualizar PDF</button><a className="auth-secondary-action" download={item.fileName} href={getApiUrl(item.downloadUrl)}>Baixar original</a><button className="auth-primary-action" onClick={() => setReissueItem(item)} type="button">Reemitir</button></div></article></li>)}</ul>}
+        </section>
         {previewItem && <DocumentPreviewDialog client={client} item={previewItem} onClose={() => setPreviewItem(undefined)} onSessionExpired={onSessionExpired} />}
         {reissueItem && <DocumentReissueDialog client={client} csrfToken={csrfToken} item={reissueItem} onClose={() => setReissueItem(undefined)} onReissued={handleReissued} onSessionExpired={onSessionExpired} />}
       </main>
@@ -670,6 +709,7 @@ function DocumentsWizard() {
   const [clientReady, setClientReady] = useState(false);
   const [documentView, setDocumentView] = useState<DocumentView>("generate");
   const [documentType, setDocumentType] = useState<DocumentType>("Badge");
+  const [isDocumentTypeStep, setIsDocumentTypeStep] = useState(true);
   const [farmError, setFarmError] = useState<string>();
   const [farmName, setFarmName] = useState("Criatório selecionado");
   const [selectedBreedingFarmId, setSelectedBreedingFarmId] = useState("");
@@ -699,8 +739,10 @@ function DocumentsWizard() {
     const query = new URLSearchParams(window.location.search);
     const queryBirdId = query.get("birdId")?.trim() ?? "";
     const queryType = query.get("type");
-    setDocumentView(query.get("view") === "history" ? "history" : "generate");
-    setDocumentType(queryType === "GenealogyCertificate" || queryType === "ProvenanceDocument" ? queryType : "Badge");
+    const hasDocumentType = queryType !== null && isDocumentType(queryType);
+    setDocumentView(query.get("view") === "history" || (!hasDocumentType && !queryBirdId) ? "history" : "generate");
+    setDocumentType(hasDocumentType ? queryType : "Badge");
+    setIsDocumentTypeStep(true);
     setRequestedBirdId(queryBirdId);
     setClientReady(true);
   }, []);
@@ -717,8 +759,8 @@ function DocumentsWizard() {
         setFarmState("blocked");
         setBirdsState("empty");
         setFarmError(selection.breedingFarms.length > 0
-          ? `Escolha um criatório para consultar as aves disponíveis para o ${documentLabelForType(documentType)}.`
-          : `Crie seu primeiro criatório antes de gerar um ${documentLabelForType(documentType)}.`);
+          ? "Escolha um criatório para consultar as aves disponíveis para os documentos."
+          : "Crie seu primeiro criatório antes de gerar um documento.");
         return;
       }
 
@@ -744,7 +786,7 @@ function DocumentsWizard() {
       if (error instanceof ApiError && error.status === 409) {
         setFarmState("blocked");
         setBirdsState("empty");
-        setFarmError(`Selecione novamente um criatório para gerar o ${documentLabelForType(documentType)}.`);
+        setFarmError("Selecione novamente um criatório para gerar o documento.");
         return;
       }
       if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
@@ -759,7 +801,7 @@ function DocumentsWizard() {
         ? "O serviço está indisponível no momento. Tente novamente em instantes."
         : "Verifique sua conexão e tente novamente.");
     }
-  }, [documentType, refresh, requestedBirdId]);
+  }, [refresh, requestedBirdId]);
 
   useEffect(() => {
     if (clientReady) void loadData();
@@ -783,12 +825,43 @@ function DocumentsWizard() {
     setNotice(undefined);
   }
 
+  function changeDocumentView(view: DocumentView) {
+    setDocumentView(view);
+    setIsDocumentTypeStep(view === "generate");
+    setStep(0);
+    setGenerated(undefined);
+    setNotice(undefined);
+    const params = new URLSearchParams();
+    if (view === "generate") params.set("type", documentType);
+    else params.set("view", "history");
+    window.history.pushState({}, "", `/documentos?${params.toString()}`);
+  }
+
+  function selectDocumentType(type: DocumentType) {
+    setDocumentType(type);
+    setDocumentView("generate");
+    setIsDocumentTypeStep(true);
+    setStep(0);
+    setGenerated(undefined);
+    setNotice(undefined);
+    setFixedDocumentState("idle");
+    setFixedDocumentError(undefined);
+    setFixedDocumentEligibility(undefined);
+    setFixedDocumentGenealogy(undefined);
+    setFixedDocumentFarm(undefined);
+    const params = new URLSearchParams();
+    params.set("type", type);
+    if (requestedBirdId) params.set("birdId", requestedBirdId);
+    window.history.pushState({}, "", `/documentos?${params.toString()}`);
+  }
+
   function toggleField(field: DocumentField) {
     setSelectedFields((current) => current.includes(field) ? current.filter((value) => value !== field) : [...current, field]);
     setNotice(undefined);
   }
 
   function canContinue(): boolean {
+    if (isDocumentTypeStep) return true;
     if (step === 0) return documentType !== "Badge" ? Boolean(selectedBird) : Boolean(selectedBird?.ringNumber);
     if (documentType !== "Badge" && step === 1) return fixedDocumentState === "ready";
     if (step === 2) return documentType !== "Badge" || selectedFields.length > 0;
@@ -796,6 +869,12 @@ function DocumentsWizard() {
   }
 
   function goNext() {
+    if (isDocumentTypeStep) {
+      setNotice(undefined);
+      setIsDocumentTypeStep(false);
+      setStep(0);
+      return;
+    }
     if (!selectedBird) {
       setNotice({ kind: "error", text: "Selecione uma ave para continuar." });
       return;
@@ -829,6 +908,7 @@ function DocumentsWizard() {
   function resetWizard() {
     setGenerated(undefined);
     setNotice(undefined);
+    setIsDocumentTypeStep(true);
     setFixedDocumentState("idle");
     setFixedDocumentError(undefined);
     setFixedDocumentEligibility(undefined);
@@ -912,8 +992,9 @@ function DocumentsWizard() {
   const isProvenanceDocument = documentType === "ProvenanceDocument";
   const isFixedDocument = isGenealogyCertificate || isProvenanceDocument;
   const steps = isFixedDocument ? fixedDocumentWizardSteps : badgeWizardSteps;
+  const progressStep = isDocumentTypeStep ? 0 : step + 1;
   const documentLabel = isGenealogyCertificate ? "certificado de genealogia" : isProvenanceDocument ? "documento de procedência" : "crachá";
-  const documentTitle = isGenealogyCertificate ? "Emitir certificado de genealogia" : isProvenanceDocument ? "Emitir documento de procedência" : "Gerar crachá";
+  const documentTitle = "Emitir novo documento";
 
   if (!session) return null;
   if (!clientReady || farmState === "loading") {
@@ -937,13 +1018,6 @@ function DocumentsWizard() {
       </AuthenticatedShell>
     );
   }
-  if (birdsState === "empty") {
-    return (
-      <AuthenticatedShell activeNav="documents" email={session.email} farmName={farmName}>
-        <main className="document-wizard-page"><section className="document-wizard-state"><span aria-hidden="true" className="document-wizard-state-icon"><DashboardIcon name="bird" /></span><h1>Nenhuma ave disponível</h1><p>Cadastre uma ave ativa para liberar a geração de documentos.</p><Link className="auth-primary-action" href="/plantel/aves/novo">Cadastrar ave</Link></section></main>
-      </AuthenticatedShell>
-    );
-  }
 
   if (documentView === "history") {
     return (
@@ -953,15 +1027,19 @@ function DocumentsWizard() {
         client={client.current}
         csrfToken={csrfToken}
         farmName={farmName}
-        filteredBirds={filteredBirds}
         onBirdSearchChange={setBirdSearch}
-        onChangeView={setDocumentView}
-        onSelectBird={selectBird}
+        onChangeView={changeDocumentView}
         onSessionExpired={refresh}
-        selectedBird={selectedBird}
-        selectedBirdId={selectedBirdId}
         session={session}
       />
+    );
+  }
+
+  if (birdsState === "empty") {
+    return (
+      <AuthenticatedShell activeNav="documents" email={session.email} farmName={farmName}>
+        <main className="document-wizard-page"><section className="document-wizard-state"><span aria-hidden="true" className="document-wizard-state-icon"><DashboardIcon name="bird" /></span><h1>Nenhuma ave disponível</h1><p>Cadastre uma ave ativa para liberar a geração de documentos.</p><Link className="auth-primary-action" href="/plantel/aves/novo">Cadastrar ave</Link></section></main>
+      </AuthenticatedShell>
     );
   }
 
@@ -981,35 +1059,27 @@ function DocumentsWizard() {
             <Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link>
           </header>
 
-          <DocumentModeSwitcher onChange={setDocumentView} view={documentView} />
+          <DocumentModeSwitcher onChange={changeDocumentView} view={documentView} />
 
-          <nav aria-label="Tipo de documento" className="document-wizard-type-switcher">
-            <span>Tipo de documento</span>
-            <div>
-              <Link href="/documentos">Crachá</Link>
-              <Link aria-current={isGenealogyCertificate ? "page" : undefined} className={isGenealogyCertificate ? "is-selected" : ""} href="/documentos?type=GenealogyCertificate">Certificado de genealogia</Link>
-              <Link aria-current={isProvenanceDocument ? "page" : undefined} className={isProvenanceDocument ? "is-selected" : ""} href="/documentos?type=ProvenanceDocument">Documento de procedência</Link>
-            </div>
-          </nav>
-
-          <ol aria-label={`Etapas da geração do ${documentLabel}`} className="document-wizard-progress document-wizard-progress-certificate">
-            {fixedDocumentWizardSteps.map((label, index) => <li key={label} className={index === step ? "is-current" : index < step ? "is-complete" : ""}>{index <= step ? <button aria-current={index === step ? "step" : undefined} onClick={() => { if (index < step) { setNotice(undefined); setStep(index as WizardStep); } }} type="button">{index < step ? "✓" : index + 1}<span>{label}</span></button> : <span><span aria-hidden="true">{index + 1}</span>{label}</span>}</li>)}
-          </ol>
+          <DocumentWizardProgress activeStep={progressStep} className="document-wizard-progress-certificate" onSelect={(index) => { if (index === 0) { setIsDocumentTypeStep(true); setNotice(undefined); return; } if (index < progressStep) { setNotice(undefined); setIsDocumentTypeStep(false); setStep(Math.max(0, index - 1) as WizardStep); } }} steps={fixedDocumentWizardSteps} />
 
           {notice && <p className={`document-wizard-notice document-wizard-notice-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.text}</p>}
 
           <form className="document-wizard-card" onSubmit={handleSubmit}>
-            {step === 0 && <section aria-labelledby="titulo-etapa-documento-ave"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 1 de 5</p><h2 id="titulo-etapa-documento-ave">Escolha a ave</h2><p>Selecione uma ave para consultar a elegibilidade, os pais e os dados devolvidos pela API.</p></div></div><label className="document-wizard-search" htmlFor="buscar-ave-documento"><span>Buscar por nome, anilha ou espécie</span><input id="buscar-ave-documento" onChange={(event) => setBirdSearch(event.target.value)} placeholder="Ex.: Canário ou 123456" value={birdSearch} /></label><ul aria-label="Aves ativas disponíveis" className="document-wizard-bird-list" role="listbox">{filteredBirds.map((bird) => <li key={bird.birdId}><button aria-selected={selectedBirdId === bird.birdId} className={selectedBirdId === bird.birdId ? "is-selected" : ""} onClick={() => selectBird(bird)} role="option" type="button"><span className="document-wizard-bird-icon" aria-hidden="true"><DashboardIcon name="bird" /></span><span className="document-wizard-bird-copy"><strong>{bird.name}</strong><span>{bird.speciesPopularName} · {sexLabel(bird.sex)}</span><span>{bird.ringNumber ? `Anilha ${bird.ringNumber} · ${formatDate(bird.birthDate)}` : "Identificação pendente · anilha necessária"}</span></span><span aria-hidden="true" className="document-wizard-selection-mark">{selectedBirdId === bird.birdId ? "✓" : bird.ringNumber ? "＋" : "!"}</span></button></li>)}</ul>{filteredBirds.length === 0 && <p className="document-wizard-inline-empty" role="status">Nenhuma ave corresponde à busca.</p>}</section>}
+            {isDocumentTypeStep ? <DocumentTypeStep documentType={documentType} onChange={selectDocumentType} /> : <>
+            {step === 0 && <section aria-labelledby="titulo-etapa-documento-ave"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 2 de 6</p><h2 id="titulo-etapa-documento-ave">Escolha a ave</h2><p>Selecione uma ave para consultar a elegibilidade, os pais e os dados devolvidos pela API.</p></div></div><label className="document-wizard-search" htmlFor="buscar-ave-documento"><span>Buscar por nome, anilha ou espécie</span><input id="buscar-ave-documento" onChange={(event) => setBirdSearch(event.target.value)} placeholder="Ex.: Canário ou 123456" value={birdSearch} /></label><ul aria-label="Aves ativas disponíveis" className="document-wizard-bird-list" role="listbox">{filteredBirds.map((bird) => <li key={bird.birdId}><button aria-selected={selectedBirdId === bird.birdId} className={selectedBirdId === bird.birdId ? "is-selected" : ""} onClick={() => selectBird(bird)} role="option" type="button"><span className="document-wizard-bird-icon" aria-hidden="true"><DashboardIcon name="bird" /></span><span className="document-wizard-bird-copy"><strong>{bird.name}</strong><span>{bird.speciesPopularName} · {sexLabel(bird.sex)}</span><span>{bird.ringNumber ? `Anilha ${bird.ringNumber} · ${formatDate(bird.birthDate)}` : "Identificação pendente · anilha necessária"}</span></span><span aria-hidden="true" className="document-wizard-selection-mark">{selectedBirdId === bird.birdId ? "✓" : bird.ringNumber ? "＋" : "!"}</span></button></li>)}</ul>{filteredBirds.length === 0 && <p className="document-wizard-inline-empty" role="status">Nenhuma ave corresponde à busca.</p>}</section>}
 
-            {step === 1 && <section aria-labelledby="titulo-etapa-documento-elegibilidade"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 2 de 5</p><h2 id="titulo-etapa-documento-elegibilidade">Valide a elegibilidade</h2><p>A API verifica se a ave pode receber este documento antes de carregar a prévia.</p></div></div>{fixedDocumentState === "loading" && <div className="document-wizard-inline-state" role="status"><strong>Consultando dados da ave…</strong><span>Validando elegibilidade, genealogia e dados disponíveis do criatório.</span></div>}{fixedDocumentState === "error" && <div className="document-wizard-inline-state is-error" role="alert"><h3>Não foi possível validar a ave</h3><span>{fixedDocumentError}</span><button className="auth-secondary-action" onClick={() => void validateFixedDocument()} type="button">Tentar novamente</button></div>}{fixedDocumentState === "blocked" && <div className="document-wizard-inline-state is-error" role="alert"><h3>{isGenealogyCertificate ? "Certificado" : "Documento de procedência"} bloqueado para esta ave</h3><span>Corrija as pendências abaixo para liberar a emissão.</span><ul className="document-wizard-issue-list">{fixedDocumentEligibility?.issues.map((issue) => <li key={issue.code}>{eligibilityIssueMessage(issue)}</li>)}</ul>{fixedDocumentEligibility?.issues.some((issue) => issue.code === "MissingRingNumber") && selectedBird && <Link className="auth-secondary-action" href={`/plantel/aves/${selectedBird.birdId}/editar`}>Editar dados da ave</Link>}</div>}{fixedDocumentState === "ready" && <div className="document-wizard-inline-state is-ready" role="status"><strong>{isGenealogyCertificate ? "Ave elegível para o certificado" : "Ave elegível para o documento de procedência"}</strong><span>{selectedBird?.name} pode seguir para a prévia. Os dados abaixo serão apresentados sem completar informações ausentes.</span></div>}</section>}
+            {step === 1 && <section aria-labelledby="titulo-etapa-documento-elegibilidade"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 3 de 6</p><h2 id="titulo-etapa-documento-elegibilidade">Valide a elegibilidade</h2><p>A API verifica se a ave pode receber este documento antes de carregar a prévia.</p></div></div>{fixedDocumentState === "loading" && <div className="document-wizard-inline-state" role="status"><strong>Consultando dados da ave…</strong><span>Validando elegibilidade, genealogia e dados disponíveis do criatório.</span></div>}{fixedDocumentState === "error" && <div className="document-wizard-inline-state is-error" role="alert"><h3>Não foi possível validar a ave</h3><span>{fixedDocumentError}</span><button className="auth-secondary-action" onClick={() => void validateFixedDocument()} type="button">Tentar novamente</button></div>}{fixedDocumentState === "blocked" && <div className="document-wizard-inline-state is-error" role="alert"><h3>{isGenealogyCertificate ? "Certificado" : "Documento de procedência"} bloqueado para esta ave</h3><span>Corrija as pendências abaixo para liberar a emissão.</span><ul className="document-wizard-issue-list">{fixedDocumentEligibility?.issues.map((issue) => <li key={issue.code}>{eligibilityIssueMessage(issue)}</li>)}</ul>{fixedDocumentEligibility?.issues.some((issue) => issue.code === "MissingRingNumber") && selectedBird && <Link className="auth-secondary-action" href={`/plantel/aves/${selectedBird.birdId}/editar`}>Editar dados da ave</Link>}</div>}{fixedDocumentState === "ready" && <div className="document-wizard-inline-state is-ready" role="status"><strong>{isGenealogyCertificate ? "Ave elegível para o certificado" : "Ave elegível para o documento de procedência"}</strong><span>{selectedBird?.name} pode seguir para a prévia. Os dados abaixo serão apresentados sem completar informações ausentes.</span></div>}</section>}
 
-            {step === 2 && <section aria-labelledby="titulo-etapa-documento-previa"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 3 de 5</p><h2 id="titulo-etapa-documento-previa">Confira a prévia</h2><p>Esta composição é fixa em A4 paisagem e representa apenas os dados disponíveis no criatório.</p></div></div><div aria-label={`Prévia do ${fixedDocumentName} ${selectedBird?.name ?? ""}`} className={`document-wizard-certificate-preview${isProvenanceDocument ? " document-wizard-provenance-preview" : ""}`}><header><div><span aria-hidden="true">CV</span><small>Criatório Virtual</small></div><strong>{isGenealogyCertificate ? "Certificado de genealogia" : "Documento de procedência"}</strong><em>Documento interno</em></header><div className="document-wizard-certificate-identity"><div><p className="eyebrow">Ave selecionada</p><h3>{selectedBird?.name}</h3><p>{selectedBird?.speciesPopularName} · {selectedBird ? sexLabel(selectedBird.sex) : "Não informado"}</p></div><dl><div><dt>Anilha</dt><dd>{optionalValue(selectedBird?.ringNumber)}</dd></div><div><dt>Nascimento</dt><dd>{selectedBird?.birthDate ? formatDate(selectedBird.birthDate) : "Não informado"}</dd></div></dl></div><div className="document-wizard-certificate-farm"><h3>Dados do criatório</h3><dl><div><dt>Nome</dt><dd>{optionalValue(fixedDocumentFarm?.name ?? farmName)}</dd></div><div><dt>Responsável</dt><dd>{optionalValue(fixedDocumentFarm?.responsibleName)}</dd></div><div><dt>E-mail</dt><dd>{optionalValue(fixedDocumentFarm?.contactEmail)}</dd></div><div><dt>Telefone</dt><dd>{optionalValue(fixedDocumentFarm?.contactPhone)}</dd></div><div><dt>Registro oficial</dt><dd>{optionalValue(fixedDocumentFarm?.officialRegistrationNumber)}</dd></div></dl></div><div className="document-wizard-certificate-genealogy"><div className="document-wizard-section-heading"><div><h3>{isGenealogyCertificate ? "Estrutura genealógica" : "Pais e ancestrais registrados"}</h3><p>Somente dados retornados pela API são apresentados.</p></div><span className="document-wizard-count">{fixedDocumentAncestors.length} ancestral{fixedDocumentAncestors.length === 1 ? "" : "es"}</span></div>{fixedDocumentAncestors.length > 0 ? <ol aria-label="Ancestrais disponíveis" className="document-wizard-genealogy-list">{fixedDocumentAncestors.map((node) => <li key={node.nodeKey}><div><strong>{optionalValue(node.name)}</strong><span>{genealogyPositionLabel(node.position)} · geração {node.generation}</span></div><small>{node.ringNumber ? `Anilha ${node.ringNumber} · ` : ""}{sexLabel(node.sex)} · {genealogySourceLabel(node)}</small></li>)}</ol> : <p className="document-wizard-inline-empty">{isGenealogyCertificate ? "Nenhum ancestral foi informado para esta ave." : "Nenhum pai ou ancestral foi informado para esta ave."}</p>}{fixedDocumentGenealogy?.isTruncated && <p className="document-wizard-genealogy-note" role="status">A árvore foi limitada pela API a {fixedDocumentGenealogy.maxGenerations} gerações.</p>}</div>{isProvenanceDocument && <div className="document-wizard-provenance-details"><div><span>Data de emissão</span><strong>{formatIssueDate()}</strong></div><div className="document-wizard-provenance-signature"><span>Assinatura do responsável</span><strong>Espaço reservado para assinatura manual</strong></div></div>}<footer>{fixedDocumentNotice}</footer></div></section>}
+            {step === 2 && <section aria-labelledby="titulo-etapa-documento-previa"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 4 de 6</p><h2 id="titulo-etapa-documento-previa">Confira a prévia</h2><p>Esta composição é fixa em A4 paisagem e representa apenas os dados disponíveis no criatório.</p></div></div><div aria-label={`Prévia do ${fixedDocumentName} ${selectedBird?.name ?? ""}`} className={`document-wizard-certificate-preview${isProvenanceDocument ? " document-wizard-provenance-preview" : ""}`}><header><div><span aria-hidden="true">CV</span><small>Criatório Virtual</small></div><strong>{isGenealogyCertificate ? "Certificado de genealogia" : "Documento de procedência"}</strong><em>Documento interno</em></header><div className="document-wizard-certificate-identity"><div><p className="eyebrow">Ave selecionada</p><h3>{selectedBird?.name}</h3><p>{selectedBird?.speciesPopularName} · {selectedBird ? sexLabel(selectedBird.sex) : "Não informado"}</p></div><dl><div><dt>Anilha</dt><dd>{optionalValue(selectedBird?.ringNumber)}</dd></div><div><dt>Nascimento</dt><dd>{selectedBird?.birthDate ? formatDate(selectedBird.birthDate) : "Não informado"}</dd></div></dl></div><div className="document-wizard-certificate-farm"><h3>Dados do criatório</h3><dl><div><dt>Nome</dt><dd>{optionalValue(fixedDocumentFarm?.name ?? farmName)}</dd></div><div><dt>Responsável</dt><dd>{optionalValue(fixedDocumentFarm?.responsibleName)}</dd></div><div><dt>E-mail</dt><dd>{optionalValue(fixedDocumentFarm?.contactEmail)}</dd></div><div><dt>Telefone</dt><dd>{optionalValue(fixedDocumentFarm?.contactPhone)}</dd></div><div><dt>Registro oficial</dt><dd>{optionalValue(fixedDocumentFarm?.officialRegistrationNumber)}</dd></div></dl></div><div className="document-wizard-certificate-genealogy"><div className="document-wizard-section-heading"><div><h3>{isGenealogyCertificate ? "Estrutura genealógica" : "Pais e ancestrais registrados"}</h3><p>Somente dados retornados pela API são apresentados.</p></div><span className="document-wizard-count">{fixedDocumentAncestors.length} ancestral{fixedDocumentAncestors.length === 1 ? "" : "es"}</span></div>{fixedDocumentAncestors.length > 0 ? <ol aria-label="Ancestrais disponíveis" className="document-wizard-genealogy-list">{fixedDocumentAncestors.map((node) => <li key={node.nodeKey}><div><strong>{optionalValue(node.name)}</strong><span>{genealogyPositionLabel(node.position)} · geração {node.generation}</span></div><small>{node.ringNumber ? `Anilha ${node.ringNumber} · ` : ""}{sexLabel(node.sex)} · {genealogySourceLabel(node)}</small></li>)}</ol> : <p className="document-wizard-inline-empty">{isGenealogyCertificate ? "Nenhum ancestral foi informado para esta ave." : "Nenhum pai ou ancestral foi informado para esta ave."}</p>}{fixedDocumentGenealogy?.isTruncated && <p className="document-wizard-genealogy-note" role="status">A árvore foi limitada pela API a {fixedDocumentGenealogy.maxGenerations} gerações.</p>}</div>{isProvenanceDocument && <div className="document-wizard-provenance-details"><div><span>Data de emissão</span><strong>{formatIssueDate()}</strong></div><div className="document-wizard-provenance-signature"><span>Assinatura do responsável</span><strong>Espaço reservado para assinatura manual</strong></div></div>}<footer>{fixedDocumentNotice}</footer></div></section>}
 
-            {step === 3 && <section aria-labelledby="titulo-etapa-documento-revisao"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 4 de 5</p><h2 id="titulo-etapa-documento-revisao">Revise e gere</h2><p>O PDF será armazenado de forma privada no criatório selecionado.</p></div></div><dl className="document-wizard-review"><div><dt>Ave</dt><dd>{selectedBird?.name}<small>{selectedBird?.speciesPopularName} · Anilha {optionalValue(selectedBird?.ringNumber)}</small><button onClick={() => setStep(0)} type="button">Alterar</button></dd></div><div><dt>Criatório</dt><dd>{optionalValue(fixedDocumentFarm?.name ?? farmName)}<small>Responsável: {optionalValue(fixedDocumentFarm?.responsibleName)}</small><button onClick={() => setStep(2)} type="button">Ver prévia</button></dd></div><div><dt>Formato</dt><dd>A4 paisagem<small>{isGenealogyCertificate ? "Certificado de genealogia" : "Documento de procedência"} · {fixedDocumentAncestors.length} ancestral{fixedDocumentAncestors.length === 1 ? "" : "es"}</small></dd></div></dl><p className="document-wizard-privacy-note"><span aria-hidden="true">✓</span> {isGenealogyCertificate ? "Documento interno, sem QR genérico, e que não substitui registro oficial." : "Documento interno, sem QR genérico, e que não substitui registro SISPASS/IBAMA."}</p></section>}
+            {step === 3 && <section aria-labelledby="titulo-etapa-documento-revisao"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 5 de 6</p><h2 id="titulo-etapa-documento-revisao">Revise e gere</h2><p>O PDF será armazenado de forma privada no criatório selecionado.</p></div></div><dl className="document-wizard-review"><div><dt>Ave</dt><dd>{selectedBird?.name}<small>{selectedBird?.speciesPopularName} · Anilha {optionalValue(selectedBird?.ringNumber)}</small><button onClick={() => setStep(0)} type="button">Alterar</button></dd></div><div><dt>Criatório</dt><dd>{optionalValue(fixedDocumentFarm?.name ?? farmName)}<small>Responsável: {optionalValue(fixedDocumentFarm?.responsibleName)}</small><button onClick={() => setStep(2)} type="button">Ver prévia</button></dd></div><div><dt>Formato</dt><dd>A4 paisagem<small>{isGenealogyCertificate ? "Certificado de genealogia" : "Documento de procedência"} · {fixedDocumentAncestors.length} ancestral{fixedDocumentAncestors.length === 1 ? "" : "es"}</small></dd></div></dl><p className="document-wizard-privacy-note"><span aria-hidden="true">✓</span> {isGenealogyCertificate ? "Documento interno, sem QR genérico, e que não substitui registro oficial." : "Documento interno, sem QR genérico, e que não substitui registro SISPASS/IBAMA."}</p></section>}
 
             {step === 4 && generated && <section aria-labelledby="titulo-etapa-documento-gerado" className="document-wizard-success"><span aria-hidden="true" className="document-wizard-success-icon">✓</span><p className="eyebrow">Documento pronto</p><h2 id="titulo-etapa-documento-gerado">{isGenealogyCertificate ? "Certificado gerado com sucesso" : "Documento de procedência gerado com sucesso"}</h2><p>{generated.fileName} foi salvo como documento privado de {selectedBird?.name}.</p><dl><div><dt>Formato</dt><dd>A4 paisagem</dd></div><div><dt>Páginas</dt><dd>{generated.pageCount}</dd></div><div><dt>Dimensões</dt><dd>{generated.widthMillimeters} × {generated.heightMillimeters} mm</dd></div></dl><p className="document-wizard-privacy-note"><span aria-hidden="true">✓</span> {isGenealogyCertificate ? "Este documento é interno e não substitui registro oficial." : "Este documento é interno e não substitui registro SISPASS/IBAMA."}</p><a className="auth-primary-action" href={getApiUrl(generated.downloadUrl)} rel="noreferrer" target="_blank">{isGenealogyCertificate ? "Baixar certificado em PDF" : "Baixar documento de procedência em PDF"}</a><button className="auth-secondary-action" onClick={resetWizard} type="button">{isGenealogyCertificate ? "Gerar outro certificado" : "Gerar outro documento"}</button></section>}
 
-            {step < 4 && <div className="document-wizard-actions"><button className="settings-cancel-action" disabled={step === 0 || generationState === "loading" || fixedDocumentState === "loading"} onClick={goBack} type="button">Anterior</button><span>Etapa {step + 1} de 5</span>{step < 3 ? <button className="auth-primary-action" disabled={fixedDocumentState === "loading" || (fixedDocumentState !== "error" && !canContinue())} type="submit">{step === 1 && fixedDocumentState === "error" ? "Tentar validação" : "Continuar"}</button> : <button className="auth-primary-action" disabled={generationState === "loading" || !canContinue()} type="submit">{generationState === "loading" ? "Gerando…" : isGenealogyCertificate ? "Gerar certificado" : "Gerar documento"}</button>}</div>}
+            {step < 4 && <div className="document-wizard-actions"><button className="settings-cancel-action" disabled={step === 0 || generationState === "loading" || fixedDocumentState === "loading"} onClick={goBack} type="button">Anterior</button><span>Etapa {step + 2} de {steps.length}</span>{step < 3 ? <button className="auth-primary-action" disabled={fixedDocumentState === "loading" || (fixedDocumentState !== "error" && !canContinue())} type="submit">{step === 1 && fixedDocumentState === "error" ? "Tentar validação" : "Continuar"}</button> : <button className="auth-primary-action" disabled={generationState === "loading" || !canContinue()} type="submit">{generationState === "loading" ? "Gerando…" : isGenealogyCertificate ? "Gerar certificado" : "Gerar documento"}</button>}</div>}
+            </>}
+            {isDocumentTypeStep && <div className="document-wizard-actions"><button className="settings-cancel-action" onClick={() => changeDocumentView("history")} type="button">Cancelar</button><span>Etapa 1 de {steps.length}</span><button className="auth-primary-action" onClick={goNext} type="button">Continuar</button></div>}
           </form>
         </main>
       </AuthenticatedShell>
@@ -1025,39 +1095,31 @@ function DocumentsWizard() {
           <Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link>
         </header>
 
-        <DocumentModeSwitcher onChange={setDocumentView} view={documentView} />
+        <DocumentModeSwitcher onChange={changeDocumentView} view={documentView} />
 
-        <nav aria-label="Tipo de documento" className="document-wizard-type-switcher">
-          <span>Tipo de documento</span>
-            <div>
-            <Link aria-current="page" className="is-selected" href="/documentos">Crachá</Link>
-            <Link href="/documentos?type=GenealogyCertificate">Certificado de genealogia</Link>
-            <Link href="/documentos?type=ProvenanceDocument">Documento de procedência</Link>
-          </div>
-        </nav>
-
-          <ol aria-label={`Etapas da geração do ${documentLabel}`} className="document-wizard-progress document-wizard-progress-badge">
-          {steps.map((label, index) => <li key={label} className={index === step ? "is-current" : index < step ? "is-complete" : ""}>{index <= step ? <button aria-current={index === step ? "step" : undefined} onClick={() => { if (index < step) { setNotice(undefined); setStep(index as WizardStep); } }} type="button">{index < step ? "✓" : index + 1}<span>{label}</span></button> : <span><span aria-hidden="true">{index + 1}</span>{label}</span>}</li>)}
-        </ol>
+          <DocumentWizardProgress activeStep={progressStep} className="document-wizard-progress-badge" onSelect={(index) => { if (index === 0) { setIsDocumentTypeStep(true); setNotice(undefined); return; } if (index < progressStep) { setNotice(undefined); setIsDocumentTypeStep(false); setStep(Math.max(0, index - 1) as WizardStep); } }} steps={steps} />
 
         {notice && <p className={`document-wizard-notice document-wizard-notice-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.text}</p>}
 
         <form className="document-wizard-card" onSubmit={handleSubmit}>
-          {step === 0 && <section aria-labelledby="titulo-etapa-ave"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 1 de {steps.length}</p><h2 id="titulo-etapa-ave">Escolha a ave</h2><p>Somente aves ativas com anilha podem receber um crachá.</p></div></div><label className="document-wizard-search" htmlFor="buscar-ave"><span>Buscar por nome, anilha ou espécie</span><input id="buscar-ave" onChange={(event) => setBirdSearch(event.target.value)} placeholder="Ex.: Canário ou 123456" value={birdSearch} /></label><ul aria-label="Aves ativas disponíveis" className="document-wizard-bird-list" role="listbox">{filteredBirds.map((bird) => <li key={bird.birdId}><button aria-selected={selectedBirdId === bird.birdId} className={selectedBirdId === bird.birdId ? "is-selected" : ""} disabled={!bird.ringNumber} onClick={() => selectBird(bird)} role="option" type="button"><span className="document-wizard-bird-icon" aria-hidden="true"><DashboardIcon name="bird" /></span><span className="document-wizard-bird-copy"><strong>{bird.name}</strong><span>{bird.speciesPopularName} · {sexLabel(bird.sex)}</span><span>{bird.ringNumber ? `Anilha ${bird.ringNumber} · ${formatDate(bird.birthDate)}` : "Identificação pendente · anilha necessária"}</span></span><span aria-hidden="true" className="document-wizard-selection-mark">{selectedBirdId === bird.birdId ? "✓" : bird.ringNumber ? "＋" : "!"}</span></button></li>)}</ul>{filteredBirds.length === 0 && <p className="document-wizard-inline-empty" role="status">Nenhuma ave corresponde à busca.</p>}</section>}
+          {isDocumentTypeStep ? <DocumentTypeStep documentType={documentType} onChange={selectDocumentType} /> : <>
+          {step === 0 && <section aria-labelledby="titulo-etapa-ave"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 2 de {steps.length}</p><h2 id="titulo-etapa-ave">Escolha a ave</h2><p>Somente aves ativas com anilha podem receber um crachá.</p></div></div><label className="document-wizard-search" htmlFor="buscar-ave"><span>Buscar por nome, anilha ou espécie</span><input id="buscar-ave" onChange={(event) => setBirdSearch(event.target.value)} placeholder="Ex.: Canário ou 123456" value={birdSearch} /></label><ul aria-label="Aves ativas disponíveis" className="document-wizard-bird-list" role="listbox">{filteredBirds.map((bird) => <li key={bird.birdId}><button aria-selected={selectedBirdId === bird.birdId} className={selectedBirdId === bird.birdId ? "is-selected" : ""} disabled={!bird.ringNumber} onClick={() => selectBird(bird)} role="option" type="button"><span className="document-wizard-bird-icon" aria-hidden="true"><DashboardIcon name="bird" /></span><span className="document-wizard-bird-copy"><strong>{bird.name}</strong><span>{bird.speciesPopularName} · {sexLabel(bird.sex)}</span><span>{bird.ringNumber ? `Anilha ${bird.ringNumber} · ${formatDate(bird.birthDate)}` : "Identificação pendente · anilha necessária"}</span></span><span aria-hidden="true" className="document-wizard-selection-mark">{selectedBirdId === bird.birdId ? "✓" : bird.ringNumber ? "＋" : "!"}</span></button></li>)}</ul>{filteredBirds.length === 0 && <p className="document-wizard-inline-empty" role="status">Nenhuma ave corresponde à busca.</p>}</section>}
 
-          {step === 1 && <section aria-labelledby="titulo-etapa-modelo"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 2 de 6</p><h2 id="titulo-etapa-modelo">Escolha o modelo</h2><p>O modelo define a hierarquia visual do crachá, sem alterar os dados da ave.</p></div></div><div aria-label="Modelos de crachá" className="document-wizard-option-grid" role="radiogroup">{modelOptions.map((option) => <label className={`document-wizard-choice-card${modelId === option.id ? " is-selected" : ""}`} key={option.id}><input checked={modelId === option.id} name="badge-model" onChange={() => setModelId(option.id)} type="radio" value={option.id} /><span className="document-wizard-choice-check" aria-hidden="true">{modelId === option.id ? "✓" : ""}</span><span className={`document-wizard-mini-badge document-wizard-mini-badge-${option.id.toLowerCase()}`} aria-hidden="true"><strong>{selectedBird?.name ?? "Sua ave"}</strong><small>{selectedBird?.ringNumber ? `#${selectedBird.ringNumber}` : "Crachá"}</small></span><span><strong>{option.name}</strong><small>{option.description}</small></span></label>)}</div></section>}
+          {step === 1 && <section aria-labelledby="titulo-etapa-modelo"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 3 de {steps.length}</p><h2 id="titulo-etapa-modelo">Escolha o modelo</h2><p>O modelo define a hierarquia visual do crachá, sem alterar os dados da ave.</p></div></div><div aria-label="Modelos de crachá" className="document-wizard-option-grid" role="radiogroup">{modelOptions.map((option) => <label className={`document-wizard-choice-card${modelId === option.id ? " is-selected" : ""}`} key={option.id}><input checked={modelId === option.id} name="badge-model" onChange={() => setModelId(option.id)} type="radio" value={option.id} /><span className="document-wizard-choice-check" aria-hidden="true">{modelId === option.id ? "✓" : ""}</span><span className={`document-wizard-mini-badge document-wizard-mini-badge-${option.id.toLowerCase()}`} aria-hidden="true"><strong>{selectedBird?.name ?? "Sua ave"}</strong><small>{selectedBird?.ringNumber ? `#${selectedBird.ringNumber}` : "Crachá"}</small></span><span><strong>{option.name}</strong><small>{option.description}</small></span></label>)}</div></section>}
 
-          {step === 2 && <section aria-labelledby="titulo-etapa-campos"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 3 de 6</p><h2 id="titulo-etapa-campos">Selecione os campos</h2><p>Escolha as informações autorizadas que aparecerão no crachá.</p></div><span className="document-wizard-count">{selectedFields.length} selecionado{selectedFields.length === 1 ? "" : "s"}</span></div><div aria-label="Campos permitidos no crachá" className="document-wizard-field-grid">{fieldOptions.map((field) => <label className={`document-wizard-field-choice${selectedFields.includes(field.id) ? " is-selected" : ""}`} key={field.id}><input checked={selectedFields.includes(field.id)} onChange={() => toggleField(field.id)} type="checkbox" /><span className="document-wizard-checkbox" aria-hidden="true">{selectedFields.includes(field.id) ? "✓" : ""}</span><span><strong>{field.name}</strong><small>{field.description}</small></span></label>)}</div>{selectedFields.length === 0 && <p className="document-wizard-field-error" role="alert">Selecione pelo menos um campo para continuar.</p>}</section>}
+          {step === 2 && <section aria-labelledby="titulo-etapa-campos"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 4 de {steps.length}</p><h2 id="titulo-etapa-campos">Selecione os campos</h2><p>Escolha as informações autorizadas que aparecerão no crachá.</p></div><span className="document-wizard-count">{selectedFields.length} selecionado{selectedFields.length === 1 ? "" : "s"}</span></div><div aria-label="Campos permitidos no crachá" className="document-wizard-field-grid">{fieldOptions.map((field) => <label className={`document-wizard-field-choice${selectedFields.includes(field.id) ? " is-selected" : ""}`} key={field.id}><input checked={selectedFields.includes(field.id)} onChange={() => toggleField(field.id)} type="checkbox" /><span className="document-wizard-checkbox" aria-hidden="true">{selectedFields.includes(field.id) ? "✓" : ""}</span><span><strong>{field.name}</strong><small>{field.description}</small></span></label>)}</div>{selectedFields.length === 0 && <p className="document-wizard-field-error" role="alert">Selecione pelo menos um campo para continuar.</p>}</section>}
 
-          {step === 3 && <section aria-labelledby="titulo-etapa-tamanho"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 4 de 6</p><h2 id="titulo-etapa-tamanho">Escolha o tamanho</h2><p>Todos os tamanhos são horizontais e seguem o contrato do crachá V0.</p></div></div><div aria-label="Tamanhos do crachá" className="document-wizard-size-grid" role="radiogroup">{sizeOptions.map((option) => <label className={`document-wizard-size-choice${printSize === option.id ? " is-selected" : ""}`} key={option.id}><input checked={printSize === option.id} name="badge-size" onChange={() => setPrintSize(option.id)} type="radio" value={option.id} /><span className={`document-wizard-size-preview document-wizard-size-${option.id.toLowerCase()}`} aria-hidden="true" /><span><strong>{option.name}</strong><small>{option.dimensions}</small><small>{option.description}</small></span></label>)}</div></section>}
+          {step === 3 && <section aria-labelledby="titulo-etapa-tamanho"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 5 de {steps.length}</p><h2 id="titulo-etapa-tamanho">Escolha o tamanho</h2><p>Todos os tamanhos são horizontais e seguem o contrato do crachá V0.</p></div></div><div aria-label="Tamanhos do crachá" className="document-wizard-size-grid" role="radiogroup">{sizeOptions.map((option) => <label className={`document-wizard-size-choice${printSize === option.id ? " is-selected" : ""}`} key={option.id}><input checked={printSize === option.id} name="badge-size" onChange={() => setPrintSize(option.id)} type="radio" value={option.id} /><span className={`document-wizard-size-preview document-wizard-size-${option.id.toLowerCase()}`} aria-hidden="true" /><span><strong>{option.name}</strong><small>{option.dimensions}</small><small>{option.description}</small></span></label>)}</div></section>}
 
-          {step === 4 && <section aria-labelledby="titulo-etapa-previa"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 5 de 6</p><h2 id="titulo-etapa-previa">Confira a prévia</h2><p>Veja a hierarquia dos dados antes de revisar e gerar o arquivo.</p></div></div><div aria-label={`Prévia do crachá ${selectedBird?.name ?? ""}`} className={`document-wizard-preview document-wizard-preview-${printSize.toLowerCase()}`}><div className="document-wizard-preview-brand"><span aria-hidden="true">CV</span><small>Criatório Virtual</small></div><div className="document-wizard-preview-body"><div className="document-wizard-preview-photo" aria-hidden="true"><DashboardIcon name="bird" /></div><div><h3>{selectedBird?.name}</h3><p>{selectedBird?.speciesPopularName} · {selectedBird ? sexLabel(selectedBird.sex) : ""}</p><div className="document-wizard-preview-fields">{selectedFields.map((field) => <span key={field}>{fieldLabel(field)}{field === "RingNumber" && selectedBird?.ringNumber ? ` · ${selectedBird.ringNumber}` : ""}</span>)}</div></div></div><div className="document-wizard-preview-footer"><span>{modelLabel(modelId)}</span><span>{sizeLabel(printSize)}</span></div></div></section>}
+          {step === 4 && <section aria-labelledby="titulo-etapa-previa"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 6 de {steps.length}</p><h2 id="titulo-etapa-previa">Confira a prévia</h2><p>Veja a hierarquia dos dados antes de revisar e gerar o arquivo.</p></div></div><div aria-label={`Prévia do crachá ${selectedBird?.name ?? ""}`} className={`document-wizard-preview document-wizard-preview-${printSize.toLowerCase()}`}><div className="document-wizard-preview-brand"><span aria-hidden="true">CV</span><small>Criatório Virtual</small></div><div className="document-wizard-preview-body"><div className="document-wizard-preview-photo" aria-hidden="true"><DashboardIcon name="bird" /></div><div><h3>{selectedBird?.name}</h3><p>{selectedBird?.speciesPopularName} · {selectedBird ? sexLabel(selectedBird.sex) : ""}</p><div className="document-wizard-preview-fields">{selectedFields.map((field) => <span key={field}>{fieldLabel(field)}{field === "RingNumber" && selectedBird?.ringNumber ? ` · ${selectedBird.ringNumber}` : ""}</span>)}</div></div></div><div className="document-wizard-preview-footer"><span>{modelLabel(modelId)}</span><span>{sizeLabel(printSize)}</span></div></div></section>}
 
-          {step === 5 && <section aria-labelledby="titulo-etapa-revisao"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 6 de 6</p><h2 id="titulo-etapa-revisao">Revise e gere</h2><p>O PDF será armazenado de forma privada no criatório selecionado.</p></div></div><dl className="document-wizard-review"><div><dt>Ave</dt><dd>{selectedBird?.name}<small>{selectedBird?.speciesPopularName} · Anilha {selectedBird?.ringNumber}</small><button onClick={() => setStep(0)} type="button">Alterar</button></dd></div><div><dt>Modelo</dt><dd>{modelLabel(modelId)}<button onClick={() => setStep(1)} type="button">Alterar</button></dd></div><div><dt>Campos</dt><dd>{selectedFields.map(fieldLabel).join(", ")}<button onClick={() => setStep(2)} type="button">Alterar</button></dd></div><div><dt>Tamanho</dt><dd>{sizeLabel(printSize)}<button onClick={() => setStep(3)} type="button">Alterar</button></dd></div></dl><p className="document-wizard-privacy-note"><span aria-hidden="true">✓</span> O crachá não cria um QR genérico e não substitui registros oficiais.</p></section>}
+          {step === 5 && <section aria-labelledby="titulo-etapa-revisao"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 7 de {steps.length}</p><h2 id="titulo-etapa-revisao">Revise e gere</h2><p>O PDF será armazenado de forma privada no criatório selecionado.</p></div></div><dl className="document-wizard-review"><div><dt>Ave</dt><dd>{selectedBird?.name}<small>{selectedBird?.speciesPopularName} · Anilha {selectedBird?.ringNumber}</small><button onClick={() => setStep(0)} type="button">Alterar</button></dd></div><div><dt>Modelo</dt><dd>{modelLabel(modelId)}<button onClick={() => setStep(1)} type="button">Alterar</button></dd></div><div><dt>Campos</dt><dd>{selectedFields.map(fieldLabel).join(", ")}<button onClick={() => setStep(2)} type="button">Alterar</button></dd></div><div><dt>Tamanho</dt><dd>{sizeLabel(printSize)}<button onClick={() => setStep(3)} type="button">Alterar</button></dd></div></dl><p className="document-wizard-privacy-note"><span aria-hidden="true">✓</span> O crachá não cria um QR genérico e não substitui registros oficiais.</p></section>}
 
           {step === 6 && generated && <section aria-labelledby="titulo-etapa-gerada" className="document-wizard-success"><span aria-hidden="true" className="document-wizard-success-icon">✓</span><p className="eyebrow">Documento pronto</p><h2 id="titulo-etapa-gerada">Crachá gerado com sucesso</h2><p>{generated.fileName} foi salvo como documento privado de {selectedBird?.name}.</p><dl><div><dt>Modelo</dt><dd>{modelLabel(generated.modelId ?? "Classic")}</dd></div><div><dt>Tamanho</dt><dd>{sizeLabel(generated.printSize ?? "Medium")}</dd></div><div><dt>Dimensões</dt><dd>{generated.widthMillimeters} × {generated.heightMillimeters} mm</dd></div></dl><a className="auth-primary-action" href={getApiUrl(generated.downloadUrl)} rel="noreferrer" target="_blank">Baixar crachá em PDF</a><button className="auth-secondary-action" onClick={resetWizard} type="button">Gerar outro crachá</button></section>}
 
-          {step < 6 && <div className="document-wizard-actions"><button className="settings-cancel-action" disabled={step === 0 || generationState === "loading"} onClick={goBack} type="button">Anterior</button><span>Etapa {step + 1} de 6</span>{step < 5 ? <button className="auth-primary-action" disabled={!canContinue()} type="submit">Continuar</button> : <button className="auth-primary-action" disabled={generationState === "loading" || !canContinue()} type="submit">{generationState === "loading" ? "Gerando…" : "Gerar crachá"}</button>}</div>}
+          {step < 6 && <div className="document-wizard-actions"><button className="settings-cancel-action" disabled={step === 0 || generationState === "loading"} onClick={goBack} type="button">Anterior</button><span>Etapa {step + 2} de {steps.length}</span>{step < 5 ? <button className="auth-primary-action" disabled={!canContinue()} type="submit">Continuar</button> : <button className="auth-primary-action" disabled={generationState === "loading" || !canContinue()} type="submit">{generationState === "loading" ? "Gerando…" : "Gerar crachá"}</button>}</div>}
+          </>}
+          {isDocumentTypeStep && <div className="document-wizard-actions"><button className="settings-cancel-action" onClick={() => changeDocumentView("history")} type="button">Cancelar</button><span>Etapa 1 de {steps.length}</span><button className="auth-primary-action" onClick={goNext} type="button">Continuar</button></div>}
         </form>
       </main>
     </AuthenticatedShell>

@@ -222,13 +222,65 @@ describe("DocumentsPage", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockResolvedValueOnce(selectedFarmResponse())
-      .mockResolvedValueOnce(birdsResponse());
+      .mockResolvedValueOnce(birdsResponse())
+      .mockResolvedValueOnce(documentHistoryResponse([]));
     vi.stubGlobal("fetch", fetchMock);
 
     render(<DocumentsPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Documentos" })).toBeTruthy());
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the document history by default and combines emissions from active birds", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse([bird(), bird({ birdId: "bird-b", name: "Brisa", ringNumber: "654321", speciesPopularName: "Calopsita" })]))
+      .mockResolvedValueOnce(documentHistoryResponse())
+      .mockResolvedValueOnce(documentHistoryResponse([{
+        birdId: "bird-b",
+        contentType: "application/pdf",
+        documentId: "document-history-brisa",
+        downloadUrl: "/api/birds/bird-b/documents/document-history-brisa/content",
+        fileName: "cracha-brisa.pdf",
+        generatedAtUtc: "2026-09-10T12:00:00Z",
+        length: 1024,
+        modelId: "Classic",
+        printSize: "Medium",
+        selectedFields: ["Name"],
+        type: "Badge"
+       }]))
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DocumentsPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Documentos" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Todos os documentos" })).toBeTruthy());
+    expect(screen.getAllByText(/Aurora/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Brisa/).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Emitir novo documento" }).getAttribute("aria-pressed")).toBe("false");
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/birds/bird-a/documents"))).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/birds/bird-b/documents"))).toBe(true);
+  });
+
+  it("opens the new-document flow and changes document type without leaving the page", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse())
+      .mockResolvedValueOnce(documentHistoryResponse([]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DocumentsPage />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Emitir novo documento" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Emitir novo documento" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Certificado de genealogia" }));
+
+    expect(screen.getByRole("button", { name: "Certificado de genealogia" }).getAttribute("aria-pressed")).toBe("true");
+    expect(window.location.search).toContain("type=GenealogyCertificate");
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
   });
 
   it("completes the badge wizard and sends the backend contract", async () => {
@@ -242,6 +294,8 @@ describe("DocumentsPage", () => {
 
     render(<DocumentsPage />);
 
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
     expect(screen.getByRole("option", { name: /Aurora/ }).getAttribute("aria-selected")).toBe("true");
 
@@ -280,8 +334,11 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(birdsResponse([bird({ ringNumber: null, identificationPending: true })]));
     vi.stubGlobal("fetch", fetchMock);
 
+    window.history.pushState({}, "", "/documentos?type=Badge");
     render(<DocumentsPage />);
 
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByText("Identificação pendente · anilha necessária")).toBeTruthy());
     expect((screen.getByRole("option", { name: /Aurora/ }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole("button", { name: "Continuar" }) as HTMLButtonElement).disabled).toBe(true);
@@ -314,8 +371,10 @@ describe("DocumentsPage", () => {
 
     render(<DocumentsPage />);
 
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Certificado de genealogia" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
-    expect(screen.getByRole("link", { name: "Certificado de genealogia" }).getAttribute("aria-current")).toBe("page");
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Valide a elegibilidade" })).toBeTruthy());
@@ -355,6 +414,8 @@ describe("DocumentsPage", () => {
 
     render(<DocumentsPage />);
 
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByText("Identificação pendente · anilha necessária")).toBeTruthy());
     fireEvent.click(screen.getByRole("option", { name: /Aurora/ }));
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -375,6 +436,8 @@ describe("DocumentsPage", () => {
 
     render(<DocumentsPage />);
 
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
     fireEvent.click(screen.getByRole("option", { name: /Aurora/ }));
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -398,8 +461,10 @@ describe("DocumentsPage", () => {
 
     render(<DocumentsPage />);
 
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Documento de procedência" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
-    expect(screen.getByRole("link", { name: "Documento de procedência" }).getAttribute("aria-current")).toBe("page");
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Valide a elegibilidade" })).toBeTruthy());
@@ -440,6 +505,8 @@ describe("DocumentsPage", () => {
 
     render(<DocumentsPage />);
 
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByText("Ave elegível para o documento de procedência")).toBeTruthy());
@@ -463,7 +530,7 @@ describe("DocumentsPage", () => {
 
     render(<DocumentsPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Histórico de documentos" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Documentos" })).toBeTruthy());
     await waitFor(() => expect(screen.getByText("Crachá/Badge")).toBeTruthy());
     expect(screen.getByText("certificado-aurora.pdf")).toBeTruthy();
     expect(screen.queryByText("internal-record.pdf")).toBeNull();
@@ -554,7 +621,7 @@ describe("DocumentsPage", () => {
     render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByText("Não foi possível consultar o histórico")).toBeTruthy());
-    expect(screen.getByText("Sua conta não tem permissão para consultar os documentos desta ave.")).toBeTruthy();
+    expect(screen.getByText("Sua conta não tem permissão para consultar os documentos deste criatório.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeTruthy();
   });
 });
