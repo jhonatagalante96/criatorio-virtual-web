@@ -28,7 +28,9 @@ function birdResponse(overrides: Record<string, unknown> = {}): Response {
     breedingFarmId: "farm-a",
     deathDate: null,
     externalFatherName: null,
+    externalFatherSex: null,
     externalMotherName: null,
+    externalMotherSex: null,
     father: null,
     fatherBirdId: null,
     genealogyRootId: "root-a",
@@ -139,10 +141,103 @@ describe("BirdEditPage", () => {
     expect(new Headers(updateRequest.headers).get("X-XSRF-TOKEN")).toBe("csrf-token");
     expect(JSON.parse(updateRequest.body as string)).toEqual({
       externalFatherName: null,
+      externalFatherSex: null,
       externalMotherName: null,
+      externalMotherSex: null,
       fatherBirdId: "father-a",
       motherBirdId: null
     });
+  });
+
+  it("registers external parents with their parental positions and keeps them outside the plantel", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdResponse())
+      .mockResolvedValueOnce(tokenResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        birdId: "bird-a",
+        externalFatherName: "Pai sem cadastro",
+        externalFatherSex: "Male",
+        externalMotherName: "Mãe sem cadastro",
+        externalMotherSex: "Female",
+        fatherBirdId: null,
+        motherBirdId: null
+      }), { headers: { "content-type": "application/json" }, status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openEditForm(fetchMock);
+    fireEvent.click(screen.getByRole("button", { name: "Informar nome do pai sem cadastro" }));
+    fireEvent.change(screen.getByLabelText("Nome do pai"), { target: { value: "Pai sem cadastro" } });
+    fireEvent.click(screen.getByRole("button", { name: "Informar nome da mãe sem cadastro" }));
+    fireEvent.change(screen.getByLabelText("Nome da mãe"), { target: { value: "Mãe sem cadastro" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar e salvar genealogia" }));
+
+    expect(await screen.findByText("Genealogia atualizada com sucesso.")).toBeTruthy();
+    const updateRequest = fetchMock.mock.calls[4][1] as RequestInit;
+    expect(JSON.parse(updateRequest.body as string)).toEqual({
+      externalFatherName: "Pai sem cadastro",
+      externalFatherSex: "Male",
+      externalMotherName: "Mãe sem cadastro",
+      externalMotherSex: "Female",
+      fatherBirdId: null,
+      motherBirdId: null
+    });
+    expect(screen.getByText("Pai sem cadastro", { selector: "dd" })).toBeTruthy();
+  });
+
+  it("loads an external parent as an editable value without creating a lookup request", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdResponse({ externalFatherName: "Pai legado", externalFatherSex: "Male" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openEditForm(fetchMock);
+
+    expect(screen.getByLabelText("Nome do pai")).toHaveProperty("value", "Pai legado");
+    expect(screen.getByRole("button", { name: "Buscar pai cadastrado" })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("validates the external parent name before requesting the genealogy update", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openEditForm(fetchMock);
+    fireEvent.click(screen.getByRole("button", { name: "Informar nome do pai sem cadastro" }));
+    fireEvent.change(screen.getByLabelText("Nome do pai"), { target: { value: "x".repeat(201) } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar e salvar genealogia" }));
+
+    expect(await screen.findByText("O nome do pai sem cadastro não pode exceder 200 caracteres.")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("preserves an external parent value and maps backend validation errors", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdResponse())
+      .mockResolvedValueOnce(tokenResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        errors: { ExternalFatherName: ["The external father name cannot exceed 200 characters."] },
+        status: 400,
+        title: "Bird genealogy data is invalid."
+      }), { headers: { "content-type": "application/problem+json" }, status: 400 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openEditForm(fetchMock);
+    fireEvent.click(screen.getByRole("button", { name: "Informar nome do pai sem cadastro" }));
+    fireEvent.change(screen.getByLabelText("Nome do pai"), { target: { value: "Pai externo" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar e salvar genealogia" }));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Revise os vínculos"));
+    expect(screen.getByText("O nome do pai sem cadastro não pode exceder 200 caracteres.")).toBeTruthy();
+    expect(screen.getByDisplayValue("Pai externo")).toBeTruthy();
+    expect(screen.queryByText("Genealogia atualizada com sucesso.")).toBeNull();
   });
 
   it("shows empty and retryable error states while searching registered ancestors", async () => {

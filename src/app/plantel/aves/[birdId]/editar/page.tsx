@@ -32,7 +32,9 @@ interface BirdDetailsResponse {
   breedingFarmId: string;
   deathDate: string | null;
   externalFatherName: string | null;
+  externalFatherSex: "Male" | null;
   externalMotherName: string | null;
+  externalMotherSex: "Female" | null;
   father: BirdParentSummary | null;
   fatherBirdId: string | null;
   genealogyRootId: string | null;
@@ -62,7 +64,9 @@ interface BirdParentSummary {
 interface BirdGenealogyUpdateResponse {
   birdId: string;
   externalFatherName: string | null;
+  externalFatherSex: "Male" | null;
   externalMotherName: string | null;
+  externalMotherSex: "Female" | null;
   fatherBirdId: string | null;
   motherBirdId: string | null;
 }
@@ -96,7 +100,9 @@ interface ParentSelection {
 
 interface GenealogyFields {
   externalFatherName: string | null;
+  externalFatherSex: "Male" | null;
   externalMotherName: string | null;
+  externalMotherSex: "Female" | null;
   father: ParentSelection | undefined;
   mother: ParentSelection | undefined;
 }
@@ -164,19 +170,39 @@ function parentSelectionFromBird(parent: BirdParentSummary | null): ParentSelect
 function genealogyFromBird(bird: BirdDetailsResponse): GenealogyFields {
   return {
     externalFatherName: bird.externalFatherName,
+    externalFatherSex: bird.externalFatherSex,
     externalMotherName: bird.externalMotherName,
+    externalMotherSex: bird.externalMotherSex,
     father: parentSelectionFromBird(bird.father),
     mother: parentSelectionFromBird(bird.mother)
   };
 }
 
 function genealogyRequestBody(genealogy: GenealogyFields) {
+  const externalFatherName = genealogy.father ? null : genealogy.externalFatherName?.trim() || null;
+  const externalMotherName = genealogy.mother ? null : genealogy.externalMotherName?.trim() || null;
+
   return {
-    externalFatherName: genealogy.father ? null : genealogy.externalFatherName,
-    externalMotherName: genealogy.mother ? null : genealogy.externalMotherName,
+    externalFatherName,
+    externalFatherSex: externalFatherName ? "Male" : null,
+    externalMotherName,
+    externalMotherSex: externalMotherName ? "Female" : null,
     fatherBirdId: genealogy.father?.birdId ?? null,
     motherBirdId: genealogy.mother?.birdId ?? null
   };
+}
+
+function validateGenealogy(genealogy: GenealogyFields): ValidationErrors {
+  const errors: ValidationErrors = {};
+
+  if (!genealogy.father && (genealogy.externalFatherName?.trim().length ?? 0) > 200) {
+    errors.externalFatherName = ["O nome do pai sem cadastro não pode exceder 200 caracteres."];
+  }
+  if (!genealogy.mother && (genealogy.externalMotherName?.trim().length ?? 0) > 200) {
+    errors.externalMotherName = ["O nome da mãe sem cadastro não pode exceder 200 caracteres."];
+  }
+
+  return errors;
 }
 
 function sameGenealogy(left: GenealogyFields, right: GenealogyFields): boolean {
@@ -202,6 +228,30 @@ function localizeGenealogyError(error: ApiError): string {
   if (error.status === 409) return "Selecione novamente um criatório antes de alterar a genealogia.";
   if (error.status >= 500) return "O serviço está indisponível no momento. Tente novamente em instantes.";
   return "Não foi possível atualizar a genealogia agora. Tente novamente.";
+}
+
+function localizeGenealogyValidationErrors(errors: ValidationErrors): ValidationErrors {
+  return Object.fromEntries(Object.entries(errors).map(([field, messages]) => {
+    const normalizedField = field.toLowerCase();
+    const originalMessage = messages[0]?.toLowerCase() ?? "";
+    let message = "Revise este vínculo e tente novamente.";
+
+    if (normalizedField === "externalfathername") {
+      message = originalMessage.includes("required")
+        ? "Informe o nome do pai sem cadastro."
+        : "O nome do pai sem cadastro não pode exceder 200 caracteres.";
+    }
+    if (normalizedField === "externalmothername") {
+      message = originalMessage.includes("required")
+        ? "Informe o nome da mãe sem cadastro."
+        : "O nome da mãe sem cadastro não pode exceder 200 caracteres.";
+    }
+    if (normalizedField === "externalfathersex") message = "O pai externo precisa ser informado na posição masculina.";
+    if (normalizedField === "externalmothersex") message = "A mãe externa precisa ser informada na posição feminina.";
+    if (normalizedField === "parent") message = "Escolha uma ave cadastrada ou informe um ancestral externo, sem combinar as duas opções.";
+
+    return [field, [message]];
+  }));
 }
 
 function validateFields(fields: BirdFields, species?: SpeciesSummary): ValidationErrors {
@@ -374,6 +424,7 @@ function ParentPicker({
   client,
   currentBirdId,
   disabled,
+  error,
   externalName,
   label,
   onChange,
@@ -385,6 +436,7 @@ function ParentPicker({
   client: ApiClient;
   currentBirdId: string;
   disabled: boolean;
+  error?: string;
   externalName: string | null;
   label: string;
   onChange: (selection: ParentSelection | undefined) => void;
@@ -398,7 +450,7 @@ function ParentPicker({
   const [searchState, setSearchState] = useState<ParentSearchState>("idle");
   const [errorMessage, setErrorMessage] = useState<string>();
   const [reloadVersion, setReloadVersion] = useState(0);
-  const [mode, setMode] = useState<"external" | "search">(externalName && !selection ? "external" : "search");
+  const [mode, setMode] = useState<"external" | "search">(externalName?.trim() && !selection ? "external" : "search");
 
   useEffect(() => {
     if (mode !== "search") return;
@@ -455,9 +507,11 @@ function ParentPicker({
 
   const pickerId = sex === "Male" ? "father" : "mother";
   const parentName = sex === "Male" ? "pai" : "mãe";
+  const parentArticle = sex === "Male" ? "do" : "da";
+  const registeredParent = sex === "Male" ? "cadastrado" : "cadastrada";
   const selectedParent = selection;
 
-  function startSearch() {
+  function switchToSearch() {
     setMode("search");
     setQuery("");
     setOptions([]);
@@ -465,6 +519,15 @@ function ParentPicker({
     setErrorMessage(undefined);
     onChange(undefined);
     onExternalNameChange(null);
+  }
+
+  function switchToExternal() {
+    setMode("external");
+    setQuery("");
+    setOptions([]);
+    setSearchState("idle");
+    setErrorMessage(undefined);
+    onChange(undefined);
   }
 
   function selectParent(option: ParentOption) {
@@ -480,25 +543,34 @@ function ParentPicker({
       <div className="bird-parent-heading">
         <div>
           <span className="bird-field-label" id={`${pickerId}-label`}>{label} <span>(opcional)</span></span>
-          <p>Busque por nome ou anilha entre as aves ativas do criatório.</p>
+          <p>Busque uma ave ativa ou informe um ancestral sem cadastro.</p>
         </div>
+        {mode === "search"
+          ? <button className="text-action" disabled={disabled} onClick={switchToExternal} type="button">Informar nome {parentArticle} {parentName} sem cadastro</button>
+          : <button className="text-action" disabled={disabled} onClick={switchToSearch} type="button">Buscar {parentName} {registeredParent}</button>}
       </div>
 
-      {externalName && !selectedParent && mode === "external" ? (
-        <div className="bird-parent-selected is-external" role="status">
-          <span className="bird-parent-selected-copy">
-            <strong>{externalName}</strong>
-            <span>Nome informado anteriormente · sem cadastro</span>
-          </span>
-          <button className="text-action" disabled={disabled} onClick={startSearch} type="button">Vincular {parentName}</button>
-        </div>
+      {mode === "external" ? (
+        <>
+          <Field
+            disabled={disabled}
+            error={error}
+            id={`${pickerId}-external-name`}
+            label={`Nome ${parentArticle} ${parentName}`}
+            maxLength={200}
+            onChange={(event) => onExternalNameChange(event.target.value)}
+            placeholder={`Ex.: ${sex === "Male" ? "Pai Azul" : "Mãe Rubi"}`}
+            value={externalName ?? ""}
+          />
+          <p className="bird-field-help">A posição {parentName} define o sexo {sex === "Male" ? "macho" : "fêmea"}; nenhum registro de ave será criado.</p>
+        </>
       ) : selectedParent ? (
         <div className="bird-parent-selected" role="status">
           <span className="bird-parent-selected-copy">
             <strong>{selectedParent.name}</strong>
             <span>{selectedParent.ringNumber ? `Anilha ${selectedParent.ringNumber}` : "Sem anilha informada"}</span>
           </span>
-          <button className="text-action" disabled={disabled} onClick={startSearch} type="button">Alterar {parentName}</button>
+          <button className="text-action" disabled={disabled} onClick={switchToSearch} type="button">Alterar {parentName}</button>
         </div>
       ) : (
         <>
@@ -564,6 +636,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
   const [farmName, setFarmName] = useState<string>();
   const [farmState, setFarmState] = useState<FarmState>("loading");
   const [formError, setFormError] = useState<string>();
+  const [genealogyErrors, setGenealogyErrors] = useState<ValidationErrors>({});
   const [genealogy, setGenealogy] = useState<GenealogyFields>();
   const [genealogyError, setGenealogyError] = useState<string>();
   const [genealogySuccess, setGenealogySuccess] = useState<string>();
@@ -588,6 +661,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
     setLoadState("loading");
     setFarmError(undefined);
     setFormError(undefined);
+    setGenealogyErrors({});
     setGenealogyError(undefined);
     setGenealogySuccess(undefined);
     setErrors({});
@@ -664,6 +738,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
 
   function updateGenealogyPosition(position: "father" | "mother", selection: ParentSelection | undefined) {
     setGenealogy((current) => current ? { ...current, [position]: selection } : current);
+    setGenealogyErrors((current) => clearError(current, position === "father" ? "externalFatherName" : "externalMotherName"));
     setGenealogyError(undefined);
     setGenealogySuccess(undefined);
   }
@@ -671,6 +746,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
   function updateExternalParent(position: "father" | "mother", name: string | null) {
     const field = position === "father" ? "externalFatherName" : "externalMotherName";
     setGenealogy((current) => current ? { ...current, [field]: name } : current);
+    setGenealogyErrors((current) => clearError(current, field));
     setGenealogyError(undefined);
     setGenealogySuccess(undefined);
   }
@@ -737,8 +813,13 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
     event.preventDefault();
     if (!genealogy || !bird || bird.status === "Transferred") return;
 
+    const validationErrors = validateGenealogy(genealogy);
+    setGenealogyErrors(validationErrors);
+    setGenealogyError(undefined);
+    setGenealogySuccess(undefined);
+    if (Object.keys(validationErrors).length > 0) return;
+
     if (initialGenealogy.current && sameGenealogy(initialGenealogy.current, genealogy)) {
-      setGenealogyError(undefined);
       setGenealogySuccess("Nenhuma alteração de genealogia foi feita.");
       return;
     }
@@ -746,6 +827,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
     setIsGenealogySubmitting(true);
     setGenealogyError(undefined);
     setGenealogySuccess(undefined);
+    setGenealogyErrors({});
     try {
       if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
 
@@ -756,7 +838,9 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
       });
       const nextGenealogy: GenealogyFields = {
         externalFatherName: response.externalFatherName,
+        externalFatherSex: response.externalFatherSex,
         externalMotherName: response.externalMotherName,
+        externalMotherSex: response.externalMotherSex,
         father: response.fatherBirdId === genealogy.father?.birdId ? genealogy.father : undefined,
         mother: response.motherBirdId === genealogy.mother?.birdId ? genealogy.mother : undefined
       };
@@ -764,12 +848,15 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
       setBird((current) => current ? {
         ...current,
         externalFatherName: response.externalFatherName,
+        externalFatherSex: response.externalFatherSex,
         externalMotherName: response.externalMotherName,
+        externalMotherSex: response.externalMotherSex,
         fatherBirdId: response.fatherBirdId,
         motherBirdId: response.motherBirdId
       } : current);
       setGenealogy(nextGenealogy);
       initialGenealogy.current = nextGenealogy;
+      setGenealogyErrors({});
       setGenealogySuccess("Genealogia atualizada com sucesso.");
     } catch (error) {
       if (error instanceof ApiError) {
@@ -781,6 +868,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
           setLoadState("not-found");
           return;
         }
+        setGenealogyErrors(localizeGenealogyValidationErrors(error.fields));
         setGenealogyError(localizeGenealogyError(error));
       } else {
         setGenealogyError("Não foi possível atualizar a genealogia. Verifique sua conexão e tente novamente.");
@@ -886,7 +974,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
                 <div>
                   <p className="eyebrow">VÍNCULO POR CADASTRO</p>
                   <h2 id="titulo-genealogia-ave">Genealogia</h2>
-                  <p>Escolha aves ativas deste criatório para registrar o pai e a mãe da ave.</p>
+                  <p>Vincule aves ativas deste criatório ou informe o nome de ancestrais sem cadastro.</p>
                 </div>
               </div>
 
@@ -900,6 +988,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
                     client={client.current!}
                     currentBirdId={birdId}
                     disabled={isSubmitting || isGenealogySubmitting}
+                    error={firstError(genealogyErrors, "externalFatherName")}
                     externalName={genealogy.externalFatherName}
                     label="Pai"
                     onChange={(selection) => updateGenealogyPosition("father", selection)}
@@ -912,6 +1001,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
                     client={client.current!}
                     currentBirdId={birdId}
                     disabled={isSubmitting || isGenealogySubmitting}
+                    error={firstError(genealogyErrors, "externalMotherName")}
                     externalName={genealogy.externalMotherName}
                     label="Mãe"
                     onChange={(selection) => updateGenealogyPosition("mother", selection)}
