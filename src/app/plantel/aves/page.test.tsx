@@ -71,6 +71,10 @@ function tokenResponse(): Response {
   return new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 });
 }
 
+function pdfResponse(): Response {
+  return new Response("%PDF-1.7", { headers: { "content-type": "application/pdf" }, status: 200 });
+}
+
 function statusResponse(status = "Deceased"): Response {
   return new Response(JSON.stringify({
     deathDate: status === "Deceased" ? "2025-02-01" : null,
@@ -348,6 +352,70 @@ describe("BirdListPage", () => {
     await waitFor(() => expect(screen.getByRole("article", { name: "Ave Aurora" })).toBeTruthy());
     expect(window.location.search).toBe("");
     expect(listUrl(fetchMock, 3)).not.toContain("search=");
+  });
+
+  it("opens a temporary PDF preview with the active report filters and offers the same file for download", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([bird()]))
+      .mockResolvedValueOnce(listResponse([bird({ status: "Deceased" })]))
+      .mockResolvedValueOnce(pdfResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = vi.fn(() => "blob:birds-report");
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL, writable: true });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revokeObjectURL, writable: true });
+
+    try {
+      await openList(fetchMock);
+      fireEvent.change(document.getElementById("bird-status-filter") as HTMLSelectElement, { target: { value: "Deceased" } });
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+
+      fireEvent.click(screen.getByRole("button", { name: "Gerar relatório" }));
+      expect(screen.getByRole("dialog", { name: "Prévia do relatório de aves" })).toBeTruthy();
+      expect(screen.getByText("Falecidas")).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "Gerar prévia do PDF" }));
+
+      await waitFor(() => expect(screen.getByTitle("Prévia do relatório de aves cadastradas")).toBeTruthy());
+      expect(listUrl(fetchMock, 4)).toContain("/api/reports/birds/pdf?status=Deceased");
+      expect(screen.getByRole("link", { name: "Baixar relatório em PDF" }).getAttribute("href")).toBe("blob:birds-report");
+      expect(screen.getByRole("link", { name: "Baixar relatório em PDF" }).getAttribute("download")).toBe("relatorio-aves-cadastradas.pdf");
+
+      fireEvent.click(screen.getByRole("button", { name: "Fechar prévia" }));
+      expect(screen.queryByRole("dialog", { name: "Prévia do relatório de aves" })).toBeNull();
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:birds-report");
+    } finally {
+      if (originalCreateObjectURL) {
+        Object.defineProperty(URL, "createObjectURL", { configurable: true, value: originalCreateObjectURL, writable: true });
+      } else {
+        Reflect.deleteProperty(URL, "createObjectURL");
+      }
+      if (originalRevokeObjectURL) {
+        Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: originalRevokeObjectURL, writable: true });
+      } else {
+        Reflect.deleteProperty(URL, "revokeObjectURL");
+      }
+    }
+  });
+
+  it("shows a permission error when the report PDF is forbidden", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([bird()]))
+      .mockResolvedValueOnce(new Response(null, { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openList(fetchMock);
+    fireEvent.click(screen.getByRole("button", { name: "Gerar relatório" }));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar prévia do PDF" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("não tem permissão");
+    expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeTruthy();
   });
 
   it("paginates through the API result and represents the current page in the URL", async () => {

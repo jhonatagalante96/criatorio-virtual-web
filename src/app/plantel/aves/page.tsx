@@ -580,6 +580,213 @@ function BirdPagination({
   );
 }
 
+function birdsReportError(error: unknown): string {
+  if (error instanceof ApiError && error.status === 400) return "Os filtros do relatório não foram aceitos. Revise a situação, o sexo ou a espécie.";
+  if (error instanceof ApiError && error.status === 401) return "Sua sessão expirou. Entre novamente para visualizar o relatório.";
+  if (error instanceof ApiError && error.status === 403) return "Sua conta não tem permissão para gerar o relatório deste criatório.";
+  if (error instanceof ApiError && error.status === 404) return "O criatório selecionado não está disponível.";
+  if (error instanceof ApiError && error.status === 409) return "Selecione novamente um criatório antes de gerar o relatório.";
+  if (error instanceof ApiError && error.status >= 500) return "O serviço está indisponível no momento. Tente novamente em instantes.";
+  if (error instanceof TypeError) return "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.";
+  if (error instanceof StaleTenantResponseError) return "O criatório selecionado mudou. Feche a prévia e tente novamente.";
+  return "Não foi possível gerar a prévia do relatório. Tente novamente.";
+}
+
+function reportSexLabel(sex: BirdFilters["sex"]): string {
+  if (sex === "Female") return "Fêmeas";
+  if (sex === "Male") return "Machos";
+  if (sex === "Unknown") return "Não identificados";
+  return "Todos os sexos";
+}
+
+function BirdsReportDialog({
+  client,
+  farmName,
+  filters,
+  onClearFilters,
+  onClose,
+  onSessionExpired
+}: Readonly<{
+  client: ApiClient;
+  farmName: string;
+  filters: BirdFilters;
+  onClearFilters: () => void;
+  onClose: () => void;
+  onSessionExpired: () => Promise<unknown> | void;
+}>) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const abortControllerRef = useRef<AbortController | undefined>(undefined);
+  const previewUrlRef = useRef<string | undefined>(undefined);
+  const [previewState, setPreviewState] = useState<"error" | "idle" | "loading" | "ready">("idle");
+  const [previewError, setPreviewError] = useState<string>();
+  const [previewUrl, setPreviewUrl] = useState<string>();
+
+  function releasePreview() {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = undefined;
+    }
+    setPreviewUrl(undefined);
+  }
+
+  function closeDialog() {
+    abortControllerRef.current?.abort();
+    releasePreview();
+    onClose();
+  }
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+    closeButtonRef.current?.focus();
+
+    return () => {
+      abortControllerRef.current?.abort();
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      previouslyFocused?.focus();
+    };
+  }, []);
+
+  async function generatePreview() {
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    releasePreview();
+    setPreviewState("loading");
+    setPreviewError(undefined);
+
+    const params = new URLSearchParams();
+    if (filters.status) params.set("status", filters.status);
+    if (filters.sex) params.set("sex", filters.sex);
+    if (filters.speciesId) params.set("speciesId", filters.speciesId);
+
+    try {
+      const blob = await client.requestBlob(`api/reports/birds/pdf${params.toString() ? `?${params.toString()}` : ""}`, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      const nextUrl = URL.createObjectURL(blob);
+      previewUrlRef.current = nextUrl;
+      setPreviewUrl(nextUrl);
+      setPreviewState("ready");
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      if (error instanceof ApiError && error.status === 401) void onSessionExpired();
+      setPreviewError(birdsReportError(error));
+      setPreviewState("error");
+    }
+  }
+
+  function handleDialogKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeDialog();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+      "button:not([disabled]), a[href], iframe, select, input, [tabindex]:not([tabindex=\"-1\"])"
+    ) ?? []);
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  const hasUnsupportedListFilters = Boolean(filters.search || filters.identificationPending);
+  const speciesLabel = filters.speciesId ? filters.speciesName || "Espécie selecionada" : "Todas as espécies";
+
+  return (
+    <div
+      className="bird-report-dialog-backdrop"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) closeDialog(); }}
+      role="presentation"
+    >
+      <section
+        aria-describedby="bird-report-dialog-description"
+        aria-labelledby="bird-report-dialog-title"
+        aria-modal="true"
+        className="bird-report-dialog"
+        onKeyDown={handleDialogKeyDown}
+        ref={dialogRef}
+        role="dialog"
+      >
+        <header className="bird-report-dialog-heading">
+          <div>
+            <p className="eyebrow">Relatório do criatório</p>
+            <h2 id="bird-report-dialog-title">Prévia do relatório de aves</h2>
+          </div>
+          <button aria-label="Fechar prévia" className="bird-report-dialog-close" onClick={closeDialog} ref={closeButtonRef} type="button">×</button>
+        </header>
+
+        <p className="bird-report-dialog-intro" id="bird-report-dialog-description">
+          Gere uma prévia temporária em PDF com os dados autorizados de <strong>{farmName}</strong>. O arquivo não é salvo no navegador.
+        </p>
+
+        <dl className="bird-report-dialog-filters">
+          <div><dt>Situação</dt><dd>{filters.status ? statusLabel(filters.status) : "Todas as situações"}</dd></div>
+          <div><dt>Sexo</dt><dd>{reportSexLabel(filters.sex)}</dd></div>
+          <div><dt>Espécie</dt><dd>{speciesLabel}</dd></div>
+        </dl>
+
+        {hasUnsupportedListFilters && (
+          <p className="bird-report-dialog-note" role="note">
+            A busca por nome/anilha e o filtro de identificação pertencem somente à listagem e não alteram este relatório.
+          </p>
+        )}
+
+        {previewState === "idle" && (
+          <div className="bird-report-dialog-empty" role="status">
+            <span aria-hidden="true" className="bird-report-dialog-mark"><DashboardIcon name="document" /></span>
+            <div>
+              <h3>Resumo em PDF</h3>
+              <p>O documento reúne Matrizes, Filhotes, grupos por sexo e totais calculados pelo backend.</p>
+            </div>
+            <button className="auth-primary-action" onClick={() => void generatePreview()} type="button">Gerar prévia do PDF</button>
+          </div>
+        )}
+
+        {previewState === "loading" && (
+          <div className="bird-report-dialog-loading" role="status" aria-live="polite">
+            <span className="bird-report-dialog-spinner" aria-hidden="true" />
+            <strong>Gerando prévia…</strong>
+            <span>Consultando os dados autorizados do criatório.</span>
+          </div>
+        )}
+
+        {previewState === "error" && (
+          <div className="bird-report-dialog-error" role="alert">
+            <strong>Não foi possível abrir a prévia</strong>
+            <span>{previewError}</span>
+            <button className="auth-secondary-action" onClick={() => void generatePreview()} type="button">Tentar novamente</button>
+          </div>
+        )}
+
+        {previewState === "ready" && previewUrl && (
+          <div className="bird-report-dialog-preview">
+            <iframe title="Prévia do relatório de aves cadastradas" src={previewUrl} />
+            <div className="bird-report-dialog-actions">
+              <a className="auth-primary-action" download="relatorio-aves-cadastradas.pdf" href={previewUrl}>Baixar relatório em PDF</a>
+              <button className="auth-secondary-action" onClick={() => void generatePreview()} type="button">Gerar novamente</button>
+            </div>
+          </div>
+        )}
+
+        <footer className="bird-report-dialog-footer">
+          <button className="text-action" onClick={() => { onClearFilters(); closeDialog(); }} type="button">Limpar filtros da listagem</button>
+          <button className="auth-secondary-action" onClick={closeDialog} type="button">Fechar</button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 function BirdListPage() {
   const { refresh, session } = useAuth();
   const [birds, setBirds] = useState<BirdListItem[]>([]);
@@ -602,6 +809,7 @@ function BirdListPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [reloadVersion, setReloadVersion] = useState(0);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
   const farmRequestVersion = useRef(0);
@@ -837,7 +1045,10 @@ function BirdListPage() {
           <h1 id="titulo-lista-aves">Aves</h1>
           <p className="lede">Gerencie as aves cadastradas no seu criatório.</p>
         </div>
-        <Link className="auth-primary-action bird-list-register-action" href="/plantel/aves/novo"><span aria-hidden="true">＋</span> Cadastrar ave</Link>
+        <div className="bird-list-header-side">
+          <button className="auth-secondary-action bird-list-report-action" onClick={() => setIsReportOpen(true)} type="button"><DashboardIcon name="document" /> Gerar relatório</button>
+          <Link className="auth-primary-action bird-list-register-action" href="/plantel/aves/novo"><span aria-hidden="true">＋</span> Cadastrar ave</Link>
+        </div>
       </header>
 
       <section aria-labelledby="titulo-busca-aves" className="bird-list-toolbar">
@@ -987,6 +1198,16 @@ function BirdListPage() {
       </section>
 
       <p className="auth-footer">Os dados exibidos ficam vinculados somente ao criatório selecionado.</p>
+      {isReportOpen && (
+        <BirdsReportDialog
+          client={client.current!}
+          farmName={farmName ?? "Criatório selecionado"}
+          filters={filters}
+          onClearFilters={clearFilters}
+          onClose={() => setIsReportOpen(false)}
+          onSessionExpired={handleSessionExpired}
+        />
+      )}
     </BirdListLayout>
   );
 }
