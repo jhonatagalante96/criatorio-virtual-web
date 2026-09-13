@@ -22,6 +22,9 @@ self.addEventListener("fetch", (event) => {
 
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
+  // Passkey ceremonies are one-time, credential-sensitive exchanges. They
+  // must always go to the network and never be served from a PWA cache.
+  if (requestUrl.pathname.startsWith("/api/auth/passkeys/")) return;
   if (!["font", "image", "script", "style"].includes(event.request.destination)) return;
 
   event.respondWith(
