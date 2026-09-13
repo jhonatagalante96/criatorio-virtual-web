@@ -344,4 +344,24 @@ describe("LoginPage", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("offers confirmation-link recovery after an expired confirmation blocks login", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(unauthenticatedResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 }))
+      .mockResolvedValueOnce(apiErrorResponse(403, "email_confirmation_required"));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre na sua conta" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.com" } });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "StrongPassword!123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Acesso bloqueado" })).toBeTruthy());
+    expect(screen.getByRole("link", { name: "Enviar novo link de confirmação" }).getAttribute("href"))
+      .toBe("/auth/confirm-email");
+    expect(screen.getByRole("button", { name: "Verificar novamente" })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
 });

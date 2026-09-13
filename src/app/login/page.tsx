@@ -3,7 +3,7 @@
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
+import { AuthProvider, emailConfirmationRequiredCode, useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, createApiClient, getApiUrl } from "../../lib/http/api-client";
 import { AppLoadingState } from "../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../components/brand";
@@ -67,8 +67,9 @@ function AuthState({
   heading,
   message,
   onRetry,
+  resendConfirmationHref,
   retryLabel = "Tentar novamente"
-}: Readonly<{ heading: string; message: string; onRetry?: () => void; retryLabel?: string }>) {
+}: Readonly<{ heading: string; message: string; onRetry?: () => void; resendConfirmationHref?: string; retryLabel?: string }>) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -80,6 +81,7 @@ function AuthState({
       <BrandLockup stacked />
       <h1 ref={headingRef} tabIndex={-1}>{heading}</h1>
       <p className="lede">{message}</p>
+      {resendConfirmationHref && <Link className="auth-primary-action" href={resendConfirmationHref}>Enviar novo link de confirmação</Link>}
       {onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">{retryLabel}</button>}
       <Link className="text-action" href="/">Voltar para a página inicial</Link>
     </div>
@@ -399,7 +401,7 @@ function LoginForm() {
 }
 
 function LoginScreen() {
-  const { error, refresh, status } = useAuth();
+  const { error, errorCode, refresh, status } = useAuth();
 
   if (status === "loading") return <AppLoadingState label="Carregando acesso" message="Um instante enquanto verificamos seu acesso." />;
   if (status === "authenticating") return <AppLoadingState label="Entrando na conta" message="Um instante enquanto verificamos seus dados de acesso." />;
@@ -408,7 +410,13 @@ function LoginScreen() {
   const content = status === "error"
       ? <AuthState heading="Não foi possível restaurar sua sessão" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />
       : status === "forbidden"
-        ? <AuthState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar esta área."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />
+        ? <AuthState
+            heading="Acesso bloqueado"
+            message={error ?? "Sua conta não tem permissão para acessar esta área."}
+            onRetry={() => void refresh()}
+            resendConfirmationHref={errorCode === emailConfirmationRequiredCode ? "/auth/confirm-email" : undefined}
+            retryLabel="Verificar novamente"
+          />
         : status === "authenticated"
           ? <LoginDestination />
           : <LoginForm />;
