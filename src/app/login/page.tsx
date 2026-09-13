@@ -8,6 +8,7 @@ import { ApiClient, ApiError, createApiClient, getApiUrl } from "../../lib/http/
 import { AppLoadingState } from "../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../components/brand";
 import { GoogleAuthenticationCallback, googleAuthenticationMessageType, googleAuthenticationWindowName } from "../components/google-authentication-callback";
+import { PasskeyLoginAction } from "../components/passkey-login-action";
 
 interface LoginFieldErrors {
   email?: string;
@@ -63,6 +64,18 @@ function messageForGoogleFailure(code?: string): string {
   return (code && googleErrorMessages[code]) ?? "Não foi possível concluir a entrada com Google. Tente novamente.";
 }
 
+function safeReturnUrl(value: string | null): string | undefined {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return undefined;
+
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.origin !== window.location.origin) return undefined;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return undefined;
+  }
+}
+
 function AuthState({
   heading,
   message,
@@ -106,6 +119,7 @@ function LoginDestination() {
     async function openDestination() {
       setMessage("Só um instante enquanto abrimos o espaço certo para você.");
       setDestinationError(undefined);
+      const returnUrl = safeReturnUrl(new URLSearchParams(window.location.search).get("returnUrl"));
       try {
         const selection = await client.current!.request<BreedingFarmSelectionResponse>("api/breeding-farms");
         if (cancelled) return;
@@ -128,7 +142,7 @@ function LoginDestination() {
         }
         if (cancelled) return;
         hasRedirected.current = true;
-        router.replace("/dashboard");
+        router.replace(returnUrl ?? "/dashboard");
       } catch (error) {
         if (cancelled) return;
         if (error instanceof ApiError && error.status === 401) {
@@ -383,6 +397,7 @@ function LoginForm() {
       <p className="password-recovery-link"><Link href="/auth/forgot-password">Esqueci minha senha</Link></p>
 
       <div aria-label="outras opções de entrada" className="auth-divider" role="separator"><span>ou</span></div>
+      <PasskeyLoginAction />
       <button className="google-action" disabled={isSubmitting || isGooglePending} onClick={startGoogleAuthentication} type="button">
         <GoogleMark />
         {isGooglePending ? "Aguardando Google…" : "Continuar com Google"}
