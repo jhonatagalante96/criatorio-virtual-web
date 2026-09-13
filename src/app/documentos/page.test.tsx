@@ -133,6 +133,24 @@ function generatedCertificateResponse(): Response {
   }), { headers: { "content-type": "application/json" }, status: 201 });
 }
 
+function generatedProvenanceResponse(): Response {
+  return new Response(JSON.stringify({
+    contentType: "application/pdf",
+    documentId: "document-provenance-a",
+    downloadUrl: "/api/birds/bird-a/documents/document-provenance-a/content",
+    fileName: "documento-procedencia-aurora.pdf",
+    generatedAtUtc: "2026-09-13T12:00:00Z",
+    heightMillimeters: 210,
+    length: 4096,
+    modelId: null,
+    pageCount: 1,
+    printSize: null,
+    selectedFields: [],
+    type: "ProvenanceDocument",
+    widthMillimeters: 297
+  }), { headers: { "content-type": "application/json" }, status: 201 });
+}
+
 describe("DocumentsPage", () => {
   it("refreshes an expired session before loading the selected farm", async () => {
     const fetchMock = vi.fn()
@@ -298,5 +316,74 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível validar a ave" })).toBeTruthy());
     expect(screen.getByText("Sua conta não tem permissão para consultar esta ave ou criatório.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeTruthy();
+  });
+
+  it("completes the provenance document flow with the fixed backend contract", async () => {
+    window.history.pushState({}, "", "/documentos?type=ProvenanceDocument&birdId=bird-a");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse())
+      .mockResolvedValueOnce(certificateEligibilityResponse())
+      .mockResolvedValueOnce(certificateGenealogyResponse())
+      .mockResolvedValueOnce(certificateFarmSettingsResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 }))
+      .mockResolvedValueOnce(generatedProvenanceResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DocumentsPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
+    expect(screen.getByRole("link", { name: "Documento de procedência" }).getAttribute("aria-current")).toBe("page");
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Valide a elegibilidade" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Ave elegível para o documento de procedência")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
+    expect(screen.getByText("Pais e ancestrais registrados")).toBeTruthy();
+    expect(screen.getByText("Data de emissão")).toBeTruthy();
+    expect(screen.getByText("Assinatura do responsável")).toBeTruthy();
+    expect(screen.getByText("Documento interno · não substitui registro SISPASS/IBAMA")).toBeTruthy();
+    expect(screen.queryByText("Escolha o modelo")).toBeNull();
+    expect(screen.queryByText("Escolha o tamanho")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Revise e gere" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Gerar documento" }));
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Documento de procedência gerado com sucesso" })).toBeTruthy());
+    const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
+    expect(postCall).toBeTruthy();
+    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({ type: "ProvenanceDocument" });
+    expect(screen.getByRole("link", { name: "Baixar documento de procedência em PDF" }).getAttribute("href"))
+      .toContain("/api/birds/bird-a/documents/document-provenance-a/content");
+  });
+
+  it("keeps the provenance review recoverable when private storage is unavailable", async () => {
+    window.history.pushState({}, "", "/documentos?type=ProvenanceDocument&birdId=bird-a");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse())
+      .mockResolvedValueOnce(certificateEligibilityResponse())
+      .mockResolvedValueOnce(certificateGenealogyResponse())
+      .mockResolvedValueOnce(certificateFarmSettingsResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DocumentsPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    await waitFor(() => expect(screen.getByText("Ave elegível para o documento de procedência")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Revise e gere" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Gerar documento" }));
+
+    await waitFor(() => expect(screen.getByText("O armazenamento privado está indisponível. Tente novamente em instantes.")).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Gerar documento" })).toBeTruthy();
   });
 });
