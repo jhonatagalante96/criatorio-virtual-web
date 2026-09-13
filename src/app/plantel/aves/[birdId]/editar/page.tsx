@@ -31,7 +31,14 @@ interface BirdDetailsResponse {
   birdId: string;
   breedingFarmId: string;
   deathDate: string | null;
+  externalFatherName: string | null;
+  externalMotherName: string | null;
+  father: BirdParentSummary | null;
+  fatherBirdId: string | null;
+  genealogyRootId: string | null;
   identificationPending: boolean;
+  mother: BirdParentSummary | null;
+  motherBirdId: string | null;
   name: string;
   notes: string | null;
   ringNumber: string | null;
@@ -43,6 +50,36 @@ interface BirdDetailsResponse {
   updatedAtUtc: string;
 }
 
+interface BirdParentSummary {
+  birthDate: string | null;
+  birdId: string;
+  name: string;
+  ringNumber: string | null;
+  sex: "Female" | "Male" | "Unknown";
+  status: BirdStatus;
+}
+
+interface BirdGenealogyUpdateResponse {
+  birdId: string;
+  externalFatherName: string | null;
+  externalMotherName: string | null;
+  fatherBirdId: string | null;
+  motherBirdId: string | null;
+}
+
+interface ParentOption {
+  birthDate: string | null;
+  birdId: string;
+  name: string;
+  ringNumber: string | null;
+  sex: "Female" | "Male";
+}
+
+interface ParentOptionsResponse {
+  breedingFarmId: string;
+  items: ParentOption[];
+}
+
 interface BirdFields {
   birthDate: string;
   name: string;
@@ -50,6 +87,21 @@ interface BirdFields {
   ringNumber: string;
   sex: BirdSex | "";
 }
+
+interface ParentSelection {
+  birdId: string;
+  name: string;
+  ringNumber: string | null;
+}
+
+interface GenealogyFields {
+  externalFatherName: string | null;
+  externalMotherName: string | null;
+  father: ParentSelection | undefined;
+  mother: ParentSelection | undefined;
+}
+
+type ParentSearchState = "empty" | "error" | "idle" | "loading" | "ready";
 
 const statusLabels: Record<BirdStatus, string> = {
   Active: "ativa",
@@ -103,6 +155,53 @@ function speciesFromBird(bird: BirdDetailsResponse): SpeciesSummary {
     scientificName: bird.speciesScientificName,
     speciesId: bird.speciesId
   };
+}
+
+function parentSelectionFromBird(parent: BirdParentSummary | null): ParentSelection | undefined {
+  return parent ? { birdId: parent.birdId, name: parent.name, ringNumber: parent.ringNumber } : undefined;
+}
+
+function genealogyFromBird(bird: BirdDetailsResponse): GenealogyFields {
+  return {
+    externalFatherName: bird.externalFatherName,
+    externalMotherName: bird.externalMotherName,
+    father: parentSelectionFromBird(bird.father),
+    mother: parentSelectionFromBird(bird.mother)
+  };
+}
+
+function genealogyRequestBody(genealogy: GenealogyFields) {
+  return {
+    externalFatherName: genealogy.father ? null : genealogy.externalFatherName,
+    externalMotherName: genealogy.mother ? null : genealogy.externalMotherName,
+    fatherBirdId: genealogy.father?.birdId ?? null,
+    motherBirdId: genealogy.mother?.birdId ?? null
+  };
+}
+
+function sameGenealogy(left: GenealogyFields, right: GenealogyFields): boolean {
+  return JSON.stringify(genealogyRequestBody(left)) === JSON.stringify(genealogyRequestBody(right));
+}
+
+function formatParentOption(option: ParentOption): string {
+  return option.ringNumber ? `${option.name} · anilha ${option.ringNumber}` : option.name;
+}
+
+function localizeGenealogyError(error: ApiError): string {
+  const parentError = firstError(error.fields, "parent")?.toLowerCase() ?? "";
+  const rawMessage = `${parentError} ${error.message.toLowerCase()}`;
+
+  if (rawMessage.includes("belong to the selected breeding farm")) return "A ave escolhida não pertence ao criatório selecionado.";
+  if (rawMessage.includes("father must be male")) return "O pai precisa ser macho e a mãe precisa ser fêmea.";
+  if (rawMessage.includes("same bird cannot")) return "A mesma ave não pode ocupar os dois vínculos.";
+  if (rawMessage.includes("genealogy cycle")) return "Esse vínculo criaria um ciclo na genealogia. Escolha outra ave.";
+  if (rawMessage.includes("transfer is pending")) return "A genealogia não pode ser alterada enquanto houver uma transferência pendente.";
+  if (error.status === 400) return "Revise os vínculos selecionados e tente novamente.";
+  if (error.status === 403) return "Sua conta não tem permissão para alterar a genealogia desta ave.";
+  if (error.status === 404) return "A ave ou o criatório selecionado não foi encontrado.";
+  if (error.status === 409) return "Selecione novamente um criatório antes de alterar a genealogia.";
+  if (error.status >= 500) return "O serviço está indisponível no momento. Tente novamente em instantes.";
+  return "Não foi possível atualizar a genealogia agora. Tente novamente.";
 }
 
 function validateFields(fields: BirdFields, species?: SpeciesSummary): ValidationErrors {
@@ -271,6 +370,191 @@ function Field({
   );
 }
 
+function ParentPicker({
+  client,
+  currentBirdId,
+  disabled,
+  externalName,
+  label,
+  onChange,
+  onExternalNameChange,
+  onSessionExpired,
+  selection,
+  sex
+}: Readonly<{
+  client: ApiClient;
+  currentBirdId: string;
+  disabled: boolean;
+  externalName: string | null;
+  label: string;
+  onChange: (selection: ParentSelection | undefined) => void;
+  onExternalNameChange: (name: string | null) => void;
+  onSessionExpired: () => void;
+  selection: ParentSelection | undefined;
+  sex: "Female" | "Male";
+}>) {
+  const [options, setOptions] = useState<ParentOption[]>([]);
+  const [query, setQuery] = useState("");
+  const [searchState, setSearchState] = useState<ParentSearchState>("idle");
+  const [errorMessage, setErrorMessage] = useState<string>();
+  const [reloadVersion, setReloadVersion] = useState(0);
+  const [mode, setMode] = useState<"external" | "search">(externalName && !selection ? "external" : "search");
+
+  useEffect(() => {
+    if (mode !== "search") return;
+
+    const controller = new AbortController();
+    const normalizedQuery = query.trim();
+    if (normalizedQuery.length < 2) {
+      setOptions([]);
+      setErrorMessage(undefined);
+      setSearchState("idle");
+      return () => controller.abort();
+    }
+
+    setSearchState("loading");
+    setErrorMessage(undefined);
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await client.request<ParentOptionsResponse>(
+          `api/birds/parent-options?search=${encodeURIComponent(normalizedQuery)}&sex=${sex}&limit=5`,
+          { signal: controller.signal }
+        );
+        if (controller.signal.aborted) return;
+
+        const filteredOptions = response.items.filter((option) => option.birdId !== currentBirdId);
+        setOptions(filteredOptions);
+        setSearchState(filteredOptions.length > 0 ? "ready" : "empty");
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiError && error.status === 401) {
+          setErrorMessage("Sua sessão expirou. Faça a autenticação novamente para buscar ancestrais.");
+          setSearchState("error");
+          onSessionExpired();
+          return;
+        }
+
+        setErrorMessage(error instanceof ApiError && error.status === 403
+          ? "Sua conta não tem permissão para buscar ancestrais."
+          : error instanceof ApiError && error.status === 404
+            ? "O criatório selecionado não foi encontrado."
+            : error instanceof ApiError && error.status === 409
+              ? "Selecione novamente um criatório para buscar ancestrais."
+              : error instanceof ApiError && error.status >= 500
+                ? "A busca de ancestrais está indisponível. Tente novamente em instantes."
+                : "Não foi possível buscar os ancestrais agora.");
+        setSearchState("error");
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [client, currentBirdId, mode, onSessionExpired, query, reloadVersion, sex]);
+
+  const pickerId = sex === "Male" ? "father" : "mother";
+  const parentName = sex === "Male" ? "pai" : "mãe";
+  const selectedParent = selection;
+
+  function startSearch() {
+    setMode("search");
+    setQuery("");
+    setOptions([]);
+    setSearchState("idle");
+    setErrorMessage(undefined);
+    onChange(undefined);
+    onExternalNameChange(null);
+  }
+
+  function selectParent(option: ParentOption) {
+    onChange({ birdId: option.birdId, name: option.name, ringNumber: option.ringNumber });
+    onExternalNameChange(null);
+    setQuery("");
+    setOptions([]);
+    setSearchState("idle");
+  }
+
+  return (
+    <div className="bird-parent-picker">
+      <div className="bird-parent-heading">
+        <div>
+          <span className="bird-field-label" id={`${pickerId}-label`}>{label} <span>(opcional)</span></span>
+          <p>Busque por nome ou anilha entre as aves ativas do criatório.</p>
+        </div>
+      </div>
+
+      {externalName && !selectedParent && mode === "external" ? (
+        <div className="bird-parent-selected is-external" role="status">
+          <span className="bird-parent-selected-copy">
+            <strong>{externalName}</strong>
+            <span>Nome informado anteriormente · sem cadastro</span>
+          </span>
+          <button className="text-action" disabled={disabled} onClick={startSearch} type="button">Vincular {parentName}</button>
+        </div>
+      ) : selectedParent ? (
+        <div className="bird-parent-selected" role="status">
+          <span className="bird-parent-selected-copy">
+            <strong>{selectedParent.name}</strong>
+            <span>{selectedParent.ringNumber ? `Anilha ${selectedParent.ringNumber}` : "Sem anilha informada"}</span>
+          </span>
+          <button className="text-action" disabled={disabled} onClick={startSearch} type="button">Alterar {parentName}</button>
+        </div>
+      ) : (
+        <>
+          <div className="bird-parent-search-control">
+            <input
+              aria-controls={`${pickerId}-options`}
+              aria-describedby={`${pickerId}-help`}
+              aria-labelledby={`${pickerId}-label`}
+              autoComplete="off"
+              disabled={disabled}
+              id={`${pickerId}-search`}
+              maxLength={100}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }}
+              placeholder={`Ex.: ${sex === "Male" ? "Pai Azul ou 930001" : "Mãe Rubi ou 930002"}`}
+              type="search"
+              value={query}
+            />
+            {query && <button aria-label={`Limpar busca de ${label.toLowerCase()}`} className="bird-parent-search-clear" disabled={disabled} onClick={() => setQuery("")} type="button">×</button>}
+          </div>
+          <p className="bird-parent-help" id={`${pickerId}-help`}>Digite pelo menos dois caracteres para consultar.</p>
+          <div aria-live="polite" className="bird-parent-results" id={`${pickerId}-options`}>
+            {searchState === "loading" && <p role="status">Buscando opções…</p>}
+            {searchState === "idle" && <p role="status">Nenhum ancestral selecionado.</p>}
+            {searchState === "empty" && <p role="status">Nenhuma ave ativa encontrada.</p>}
+            {searchState === "error" && (
+              <div className="bird-parent-error">
+                <p role="alert">{errorMessage}</p>
+                <button className="auth-secondary-action" disabled={disabled} onClick={() => setReloadVersion((value) => value + 1)} type="button">Tentar novamente</button>
+              </div>
+            )}
+            {searchState === "ready" && (
+              <ul aria-label={`Opções para ${label.toLowerCase()}`} className="bird-parent-options" role="listbox">
+                {options.map((option) => (
+                  <li key={option.birdId}>
+                    <button
+                      aria-selected={false}
+                      disabled={disabled}
+                      onClick={() => selectParent(option)}
+                      role="option"
+                      type="button"
+                    >
+                      <strong>{option.name}</strong>
+                      <span>{formatParentOption(option)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
   const { refresh, session } = useAuth();
   const [bird, setBird] = useState<BirdDetailsResponse>();
@@ -280,6 +564,10 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
   const [farmName, setFarmName] = useState<string>();
   const [farmState, setFarmState] = useState<FarmState>("loading");
   const [formError, setFormError] = useState<string>();
+  const [genealogy, setGenealogy] = useState<GenealogyFields>();
+  const [genealogyError, setGenealogyError] = useState<string>();
+  const [genealogySuccess, setGenealogySuccess] = useState<string>();
+  const [isGenealogySubmitting, setIsGenealogySubmitting] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [reloadVersion, setReloadVersion] = useState(0);
   const [selectedSpecies, setSelectedSpecies] = useState<SpeciesSummary>();
@@ -287,6 +575,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
+  const initialGenealogy = useRef<GenealogyFields | undefined>(undefined);
   const requestVersion = useRef(0);
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
@@ -299,6 +588,8 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
     setLoadState("loading");
     setFarmError(undefined);
     setFormError(undefined);
+    setGenealogyError(undefined);
+    setGenealogySuccess(undefined);
     setErrors({});
 
     try {
@@ -322,6 +613,9 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
 
       setBird(details);
       setFields(fieldsFromBird(details));
+      const nextGenealogy = genealogyFromBird(details);
+      setGenealogy(nextGenealogy);
+      initialGenealogy.current = nextGenealogy;
       setSelectedSpecies(speciesFromBird(details));
       setLoadState("ready");
     } catch (error) {
@@ -366,6 +660,19 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
     setErrors((current) => clearError(current, "speciesId"));
     setFormError(undefined);
     setSuccessMessage(undefined);
+  }
+
+  function updateGenealogyPosition(position: "father" | "mother", selection: ParentSelection | undefined) {
+    setGenealogy((current) => current ? { ...current, [position]: selection } : current);
+    setGenealogyError(undefined);
+    setGenealogySuccess(undefined);
+  }
+
+  function updateExternalParent(position: "father" | "mother", name: string | null) {
+    const field = position === "father" ? "externalFatherName" : "externalMotherName";
+    setGenealogy((current) => current ? { ...current, [field]: name } : current);
+    setGenealogyError(undefined);
+    setGenealogySuccess(undefined);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -426,6 +733,63 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
     }
   }
 
+  async function handleGenealogySubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!genealogy || !bird || bird.status === "Transferred") return;
+
+    if (initialGenealogy.current && sameGenealogy(initialGenealogy.current, genealogy)) {
+      setGenealogyError(undefined);
+      setGenealogySuccess("Nenhuma alteração de genealogia foi feita.");
+      return;
+    }
+
+    setIsGenealogySubmitting(true);
+    setGenealogyError(undefined);
+    setGenealogySuccess(undefined);
+    try {
+      if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
+
+      const response = await client.current!.request<BirdGenealogyUpdateResponse>(`api/birds/${encodeURIComponent(birdId)}/genealogy`, {
+        body: JSON.stringify(genealogyRequestBody(genealogy)),
+        headers: { "content-type": "application/json" },
+        method: "PUT"
+      });
+      const nextGenealogy: GenealogyFields = {
+        externalFatherName: response.externalFatherName,
+        externalMotherName: response.externalMotherName,
+        father: response.fatherBirdId === genealogy.father?.birdId ? genealogy.father : undefined,
+        mother: response.motherBirdId === genealogy.mother?.birdId ? genealogy.mother : undefined
+      };
+
+      setBird((current) => current ? {
+        ...current,
+        externalFatherName: response.externalFatherName,
+        externalMotherName: response.externalMotherName,
+        fatherBirdId: response.fatherBirdId,
+        motherBirdId: response.motherBirdId
+      } : current);
+      setGenealogy(nextGenealogy);
+      initialGenealogy.current = nextGenealogy;
+      setGenealogySuccess("Genealogia atualizada com sucesso.");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          await refresh();
+          return;
+        }
+        if (error.status === 404) {
+          setLoadState("not-found");
+          return;
+        }
+        setGenealogyError(localizeGenealogyError(error));
+      } else {
+        setGenealogyError("Não foi possível atualizar a genealogia. Verifique sua conexão e tente novamente.");
+      }
+    } finally {
+      setIsGenealogySubmitting(false);
+    }
+  }
+
   if (farmState === "loading" || (farmState === "ready" && loadState === "loading")) {
     return <AppLoadingState activeNav="birds" email={session?.email} farmName={farmName ?? "Criatório selecionado"} label="Carregando edição" message="Buscando as informações da ave para edição." />;
   }
@@ -435,7 +799,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
   if (farmState === "error") {
     return <AuthenticatedEditState actionHref={`/plantel/aves/${encodeURIComponent(birdId)}`} email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"} heading="Não foi possível carregar a ave" message={farmError ?? "Tente novamente para continuar."} onRetry={() => setReloadVersion((value) => value + 1)} />;
   }
-  if (loadState === "not-found" || !bird || !fields || !selectedSpecies) {
+  if (loadState === "not-found" || !bird || !fields || !selectedSpecies || !genealogy) {
     return <AuthenticatedEditState actionHref="/plantel/aves" email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"} actionLabel="Voltar para o plantel" heading="Ave não encontrada" message="Não foi possível localizar esta ave no criatório selecionado." />;
   }
   if (bird.status === "Transferred") {
@@ -453,7 +817,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
         <div className="bird-form-page-header">
           <p className="eyebrow">Ficha privada{farmName ? ` · ${farmName}` : ""}</p>
           <h1 id="titulo-edicao-ave">Editar dados da ave</h1>
-          <p className="lede">Atualize os dados cadastrais de {bird.name} sem alterar a genealogia ou a situação registrada.</p>
+          <p className="lede">Atualize os dados cadastrais e os vínculos genealógicos de {bird.name}. A situação registrada segue em um fluxo separado.</p>
         </div>
 
         <div className="bird-form-layout">
@@ -516,6 +880,62 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
                 <button className="auth-primary-action submit-action" disabled={isSubmitting} type="submit">{isSubmitting ? "Salvando alterações…" : "Salvar alterações"}</button>
             </div>
             </form>
+
+            <section aria-labelledby="titulo-genealogia-ave" className="bird-genealogy-editor">
+              <div className="bird-genealogy-editor-heading">
+                <div>
+                  <p className="eyebrow">VÍNCULO POR CADASTRO</p>
+                  <h2 id="titulo-genealogia-ave">Genealogia</h2>
+                  <p>Escolha aves ativas deste criatório para registrar o pai e a mãe da ave.</p>
+                </div>
+              </div>
+
+              <form aria-label="Edição de genealogia" className="onboarding-form bird-registration-form" noValidate onSubmit={handleGenealogySubmit}>
+                {genealogyError && <div className="form-error" role="alert">{genealogyError}</div>}
+                {genealogySuccess && <p className="confirmation-feedback" role="status">{genealogySuccess}</p>}
+
+                <fieldset className="onboarding-fieldset bird-genealogy-fieldset">
+                  <legend>Vínculos <span>(opcional)</span></legend>
+                  <ParentPicker
+                    client={client.current!}
+                    currentBirdId={birdId}
+                    disabled={isSubmitting || isGenealogySubmitting}
+                    externalName={genealogy.externalFatherName}
+                    label="Pai"
+                    onChange={(selection) => updateGenealogyPosition("father", selection)}
+                    onExternalNameChange={(name) => updateExternalParent("father", name)}
+                    onSessionExpired={() => void refresh()}
+                    selection={genealogy.father}
+                    sex="Male"
+                  />
+                  <ParentPicker
+                    client={client.current!}
+                    currentBirdId={birdId}
+                    disabled={isSubmitting || isGenealogySubmitting}
+                    externalName={genealogy.externalMotherName}
+                    label="Mãe"
+                    onChange={(selection) => updateGenealogyPosition("mother", selection)}
+                    onExternalNameChange={(name) => updateExternalParent("mother", name)}
+                    onSessionExpired={() => void refresh()}
+                    selection={genealogy.mother}
+                    sex="Female"
+                  />
+                </fieldset>
+
+                <section aria-live="polite" className="bird-genealogy-review">
+                  <p className="bird-field-label">Resumo dos vínculos</p>
+                  <dl>
+                    <div><dt>Pai</dt><dd>{genealogy.father?.name ?? genealogy.externalFatherName ?? "Não informado"}</dd></div>
+                    <div><dt>Mãe</dt><dd>{genealogy.mother?.name ?? genealogy.externalMotherName ?? "Não informado"}</dd></div>
+                  </dl>
+                </section>
+
+                <div className="bird-edit-actions">
+                  <Link className="auth-secondary-action" href={`/plantel/aves/${encodeURIComponent(birdId)}`}>Cancelar</Link>
+                  <button className="auth-primary-action submit-action" disabled={isGenealogySubmitting} type="submit">{isGenealogySubmitting ? "Salvando genealogia…" : "Confirmar e salvar genealogia"}</button>
+                </div>
+              </form>
+            </section>
             </div>
           </div>
 
@@ -531,8 +951,8 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
             </section>
             <section className="bird-form-aside-card bird-form-aside-card-soft">
               <p className="eyebrow">ATENÇÃO</p>
-              <h2>Dados cadastrais</h2>
-              <p>A edição mantém o criatório e a genealogia. A situação da ave é alterada em um fluxo separado.</p>
+              <h2>Vínculos seguros</h2>
+              <p>A API valida sexo, duplicidade, ciclos e o criatório de cada ancestral. A situação da ave é alterada em um fluxo separado.</p>
             </section>
           </aside>
         </div>

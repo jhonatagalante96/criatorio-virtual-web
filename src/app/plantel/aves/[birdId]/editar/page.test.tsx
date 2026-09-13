@@ -27,7 +27,14 @@ function birdResponse(overrides: Record<string, unknown> = {}): Response {
     birdId: "bird-a",
     breedingFarmId: "farm-a",
     deathDate: null,
+    externalFatherName: null,
+    externalMotherName: null,
+    father: null,
+    fatherBirdId: null,
+    genealogyRootId: "root-a",
     identificationPending: false,
+    mother: null,
+    motherBirdId: null,
     name: "Aurora",
     notes: "Ave acompanhada desde o primeiro cadastro.",
     ringNumber: "123456",
@@ -43,6 +50,10 @@ function birdResponse(overrides: Record<string, unknown> = {}): Response {
 
 function tokenResponse(): Response {
   return new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 200 });
+}
+
+function parentOptionsResponse(items: unknown[] = [{ birdId: "father-a", name: "Pai Azul", ringNumber: "930001", sex: "Male", birthDate: "2018-06-01" }]): Response {
+  return new Response(JSON.stringify({ breedingFarmId: "farm-a", items }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
 async function openEditForm(fetchMock: ReturnType<typeof vi.fn>) {
@@ -94,6 +105,90 @@ describe("BirdEditPage", () => {
     expect((screen.getByRole("radio", { name: "Fêmea" }) as HTMLInputElement).checked).toBe(true);
     expect(screen.getByDisplayValue("Ave acompanhada desde o primeiro cadastro.")).toBeTruthy();
     expect(screen.getAllByText("Criatório Aurora").length).toBeGreaterThan(0);
+  });
+
+  it("searches a registered father, reviews the summary, and sends the genealogy contract", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdResponse())
+      .mockResolvedValueOnce(parentOptionsResponse())
+      .mockResolvedValueOnce(tokenResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        birdId: "bird-a",
+        externalFatherName: null,
+        externalMotherName: null,
+        fatherBirdId: "father-a",
+        motherBirdId: null
+      }), { headers: { "content-type": "application/json" }, status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openEditForm(fetchMock);
+    fireEvent.change(screen.getByRole("searchbox", { name: /^Pai/ }), { target: { value: "Pai" } });
+
+    await waitFor(() => expect(screen.getByRole("option", { name: /Pai Azul/ })).toBeTruthy(), { timeout: 1000 });
+    fireEvent.click(screen.getByRole("option", { name: /Pai Azul/ }));
+    expect(screen.getAllByText("Pai Azul").length).toBeGreaterThan(0);
+    expect(screen.getByText("Resumo dos vínculos").parentElement?.textContent).toContain("Pai Azul");
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar e salvar genealogia" }));
+
+    expect(await screen.findByText("Genealogia atualizada com sucesso.")).toBeTruthy();
+    const updateRequest = fetchMock.mock.calls[5][1] as RequestInit;
+    expect(updateRequest.method).toBe("PUT");
+    expect(new Headers(updateRequest.headers).get("X-XSRF-TOKEN")).toBe("csrf-token");
+    expect(JSON.parse(updateRequest.body as string)).toEqual({
+      externalFatherName: null,
+      externalMotherName: null,
+      fatherBirdId: "father-a",
+      motherBirdId: null
+    });
+  });
+
+  it("shows empty and retryable error states while searching registered ancestors", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdResponse())
+      .mockResolvedValueOnce(parentOptionsResponse([]))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Service unavailable" }), { headers: { "content-type": "application/problem+json" }, status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openEditForm(fetchMock);
+    fireEvent.change(screen.getByRole("searchbox", { name: /^Pai/ }), { target: { value: "Inexistente" } });
+    await waitFor(() => expect(screen.getByText("Nenhuma ave ativa encontrada.")).toBeTruthy(), { timeout: 1000 });
+
+    fireEvent.change(screen.getByRole("searchbox", { name: /^Mãe/ }), { target: { value: "Ma" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeTruthy(), { timeout: 1000 });
+    expect(screen.getByText("A busca de ancestrais está indisponível. Tente novamente em instantes.")).toBeTruthy();
+  });
+
+  it.each([
+    ["The father must be male and the mother must be female.", "O pai precisa ser macho e a mãe precisa ser fêmea."],
+    ["The selected parent would create a genealogy cycle.", "Esse vínculo criaria um ciclo na genealogia. Escolha outra ave."],
+    ["A linked parent must belong to the selected breeding farm.", "A ave escolhida não pertence ao criatório selecionado."]
+  ])("maps the genealogy API validation error: %s", async (apiMessage, expectedMessage) => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdResponse())
+      .mockResolvedValueOnce(parentOptionsResponse())
+      .mockResolvedValueOnce(tokenResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        errors: { parent: [apiMessage] },
+        status: 400,
+        title: "Bird genealogy data is invalid."
+      }), { headers: { "content-type": "application/problem+json" }, status: 400 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openEditForm(fetchMock);
+    fireEvent.change(screen.getByRole("searchbox", { name: /^Pai/ }), { target: { value: "Pai" } });
+    await waitFor(() => expect(screen.getByRole("option", { name: /Pai Azul/ })).toBeTruthy(), { timeout: 1000 });
+    fireEvent.click(screen.getByRole("option", { name: /Pai Azul/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar e salvar genealogia" }));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain(expectedMessage));
+    expect(screen.queryByText("Genealogia atualizada com sucesso.")).toBeNull();
   });
 
   it("blocks all edits for a transferred bird", async () => {
