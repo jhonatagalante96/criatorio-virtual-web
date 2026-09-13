@@ -151,6 +151,72 @@ function generatedProvenanceResponse(): Response {
   }), { headers: { "content-type": "application/json" }, status: 201 });
 }
 
+function documentHistoryResponse(items = [
+  {
+    birdId: "bird-a",
+    contentType: "application/pdf",
+    documentId: "document-history-badge",
+    downloadUrl: "/api/birds/bird-a/documents/document-history-badge/content",
+    fileName: "cracha-aurora.pdf",
+    generatedAtUtc: "2026-09-13T12:00:00Z",
+    length: 2048,
+    modelId: "Classic",
+    printSize: "Medium",
+    selectedFields: ["Name", "RingNumber", "Species", "Sex"],
+    type: "Badge"
+  },
+  {
+    birdId: "bird-a",
+    contentType: "application/pdf",
+    documentId: "document-history-certificate",
+    downloadUrl: "/api/birds/bird-a/documents/document-history-certificate/content",
+    fileName: "certificado-aurora.pdf",
+    generatedAtUtc: "2026-09-12T12:00:00Z",
+    length: 4096,
+    modelId: null,
+    printSize: null,
+    selectedFields: [],
+    type: "GenealogyCertificate"
+  },
+  {
+    birdId: "bird-a",
+    contentType: "application/pdf",
+    documentId: "document-history-internal",
+    downloadUrl: "/api/birds/bird-a/documents/document-history-internal/content",
+    fileName: "internal-record.pdf",
+    generatedAtUtc: "2026-09-11T12:00:00Z",
+    length: 1024,
+    modelId: null,
+    printSize: null,
+    selectedFields: [],
+    type: "InternalRecord"
+  }
+]): Response {
+  return new Response(JSON.stringify({ breedingFarmId: "farm-a", birdId: "bird-a", items }), {
+    headers: { "content-type": "application/json" },
+    status: 200
+  });
+}
+
+function reissuedDocumentResponse(): Response {
+  return new Response(JSON.stringify({
+    birdId: "bird-a",
+    contentType: "application/pdf",
+    documentId: "document-history-badge-reissued",
+    downloadUrl: "/api/birds/bird-a/documents/document-history-badge-reissued/content",
+    fileName: "cracha-aurora-reemitido.pdf",
+    generatedAtUtc: "2026-09-13T13:00:00Z",
+    heightMillimeters: 88,
+    length: 3072,
+    modelId: "Photographic",
+    pageCount: 1,
+    printSize: "Large",
+    selectedFields: ["Name", "RingNumber", "BirdPhoto"],
+    type: "Badge",
+    widthMillimeters: 125
+  }), { headers: { "content-type": "application/json" }, status: 201 });
+}
+
 describe("DocumentsPage", () => {
   it("refreshes an expired session before loading the selected farm", async () => {
     const fetchMock = vi.fn()
@@ -385,5 +451,110 @@ describe("DocumentsPage", () => {
 
     await waitFor(() => expect(screen.getByText("O armazenamento privado está indisponível. Tente novamente em instantes.")).toBeTruthy());
     expect(screen.getByRole("button", { name: "Gerar documento" })).toBeTruthy();
+  });
+
+  it("lists only supported document emissions and filters them by type", async () => {
+    window.history.pushState({}, "", "/documentos?view=history&birdId=bird-a");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse())
+      .mockResolvedValueOnce(documentHistoryResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DocumentsPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Histórico de documentos" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Crachá/Badge")).toBeTruthy());
+    expect(screen.getByText("certificado-aurora.pdf")).toBeTruthy();
+    expect(screen.queryByText("internal-record.pdf")).toBeNull();
+    expect(fetchMock.mock.calls[2]?.[0]).toContain("/api/birds/bird-a/documents");
+
+    fireEvent.change(screen.getByLabelText("Filtrar por tipo"), { target: { value: "GenealogyCertificate" } });
+
+    expect(screen.getByText("certificado-aurora.pdf")).toBeTruthy();
+    expect(screen.queryByText("cracha-aurora.pdf")).toBeNull();
+    expect(screen.getByRole("link", { name: "Baixar original" }).getAttribute("href"))
+      .toContain("/api/birds/bird-a/documents/document-history-certificate/content");
+  });
+
+  it("opens an authenticated PDF preview and offers the original download", async () => {
+    window.history.pushState({}, "", "/documentos?view=history&birdId=bird-a");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse())
+      .mockResolvedValueOnce(documentHistoryResponse())
+      .mockResolvedValueOnce(new Response(new Blob(["%PDF-1.7"]), { headers: { "content-type": "application/pdf" }, status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = vi.fn(() => "blob:document-preview");
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL, writable: true });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revokeObjectURL, writable: true });
+
+    try {
+      render(<DocumentsPage />);
+      await waitFor(() => expect(screen.getAllByRole("button", { name: "Visualizar PDF" })).not.toHaveLength(0));
+      fireEvent.click(screen.getAllByRole("button", { name: "Visualizar PDF" })[0]);
+
+      await waitFor(() => expect(screen.getByTitle("Prévia de cracha-aurora.pdf")).toBeTruthy());
+      expect(fetchMock.mock.calls[3]?.[0]).toContain("/api/birds/bird-a/documents/document-history-badge/content");
+      expect(screen.getByRole("link", { name: "Baixar PDF original" }).getAttribute("href")).toBe("blob:document-preview");
+      fireEvent.click(screen.getByRole("button", { name: "Fechar prévia do PDF" }));
+      expect(screen.queryByRole("dialog", { name: "Prévia do PDF" })).toBeNull();
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:document-preview");
+    } finally {
+      Object.defineProperty(URL, "createObjectURL", { configurable: true, value: originalCreateObjectURL, writable: true });
+      Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: originalRevokeObjectURL, writable: true });
+    }
+  });
+
+  it("reissues a badge with the optional allowed configuration and keeps the original", async () => {
+    window.history.pushState({}, "", "/documentos?view=history&birdId=bird-a");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse())
+      .mockResolvedValueOnce(documentHistoryResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 }))
+      .mockResolvedValueOnce(reissuedDocumentResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DocumentsPage />);
+
+    await waitFor(() => expect(screen.getAllByRole("button", { name: "Reemitir" })).not.toHaveLength(0));
+    fireEvent.click(screen.getAllByRole("button", { name: "Reemitir" })[0]);
+    expect(screen.getByRole("dialog", { name: "Reemitir documento" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Alterar configuração do crachá/ }));
+    fireEvent.change(screen.getByLabelText("Modelo"), { target: { value: "Photographic" } });
+    fireEvent.change(screen.getByLabelText("Tamanho"), { target: { value: "Large" } });
+    fireEvent.click(screen.getByRole("button", { name: "Reemitir documento" }));
+
+    await waitFor(() => expect(screen.getByText("cracha-aurora-reemitido.pdf")).toBeTruthy());
+    const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
+    expect(postCall).toBeTruthy();
+    expect(String(postCall?.[0])).toContain("/api/birds/bird-a/documents/document-history-badge/reissue");
+    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({
+      modelId: "Photographic",
+      printSize: "Large",
+      selectedFields: ["Name", "RingNumber", "Species", "Sex"]
+    });
+    expect(screen.getByText("cracha-aurora.pdf")).toBeTruthy();
+    expect(screen.getByText(/versão original continua no histórico/)).toBeTruthy();
+  });
+
+  it("shows a recoverable permission error when the document history is forbidden", async () => {
+    window.history.pushState({}, "", "/documentos?view=history&birdId=bird-a");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Forbidden" }), { headers: { "content-type": "application/problem+json" }, status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DocumentsPage />);
+
+    await waitFor(() => expect(screen.getByText("Não foi possível consultar o histórico")).toBeTruthy());
+    expect(screen.getByText("Sua conta não tem permissão para consultar os documentos desta ave.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeTruthy();
   });
 });
