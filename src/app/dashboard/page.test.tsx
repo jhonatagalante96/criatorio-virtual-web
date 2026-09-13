@@ -3,12 +3,30 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 import DashboardPage from "./page";
 
+const browserDescriptors = {
+  credentials: Object.getOwnPropertyDescriptor(navigator, "credentials"),
+  isSecureContext: Object.getOwnPropertyDescriptor(window, "isSecureContext"),
+  publicKeyCredential: Object.getOwnPropertyDescriptor(window, "PublicKeyCredential")
+};
+
 afterEach(() => {
   cleanup();
+  if (browserDescriptors.credentials) Object.defineProperty(navigator, "credentials", browserDescriptors.credentials);
+  else delete (navigator as { credentials?: CredentialsContainer }).credentials;
+  if (browserDescriptors.isSecureContext) Object.defineProperty(window, "isSecureContext", browserDescriptors.isSecureContext);
+  else delete (window as { isSecureContext?: boolean }).isSecureContext;
+  if (browserDescriptors.publicKeyCredential) Object.defineProperty(window, "PublicKeyCredential", browserDescriptors.publicKeyCredential);
+  else delete (window as { PublicKeyCredential?: typeof PublicKeyCredential }).PublicKeyCredential;
   window.history.replaceState({}, "", "/dashboard");
   window.sessionStorage.clear();
   vi.unstubAllGlobals();
 });
+
+function setBrowserSupport() {
+  Object.defineProperty(window, "isSecureContext", { configurable: true, value: true });
+  Object.defineProperty(window, "PublicKeyCredential", { configurable: true, value: function PublicKeyCredentialMock() {} });
+  Object.defineProperty(navigator, "credentials", { configurable: true, value: { create: vi.fn(), get: vi.fn() } });
+}
 
 function authenticatedSession(): Response {
   return new Response(JSON.stringify({
@@ -171,6 +189,22 @@ describe("DashboardPage", () => {
     expect(screen.queryByLabelText("Notificações")).toBeNull();
     expect(screen.queryByText("Relatórios")).toBeNull();
     expect(String(fetchMock.mock.calls[2][0])).toContain("api/dashboard");
+  });
+
+  it("offers passkey activation after the authenticated dashboard confirms an empty account", async () => {
+    setBrowserSupport();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(dashboardResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ passkeys: [] }), { headers: { "content-type": "application/json" }, status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DashboardPage />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ativar login rápido" })).toBeTruthy());
+    expect(screen.getByRole("heading", { name: "Ative o login rápido" })).toBeTruthy();
+    expect(String(fetchMock.mock.calls[3][0])).toContain("api/auth/passkeys");
   });
 
   it("renders a useful empty state for a dashboard with no records", async () => {

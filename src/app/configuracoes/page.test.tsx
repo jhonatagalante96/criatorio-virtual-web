@@ -5,6 +5,12 @@ import SettingsPage from "./page";
 
 const routerReplace = vi.hoisted(() => vi.fn());
 
+const browserDescriptors = {
+  credentials: Object.getOwnPropertyDescriptor(navigator, "credentials"),
+  isSecureContext: Object.getOwnPropertyDescriptor(window, "isSecureContext"),
+  publicKeyCredential: Object.getOwnPropertyDescriptor(window, "PublicKeyCredential")
+};
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: routerReplace }),
   useSearchParams: () => new URLSearchParams(window.location.search)
@@ -12,11 +18,23 @@ vi.mock("next/navigation", () => ({
 
 afterEach(() => {
   cleanup();
+  if (browserDescriptors.credentials) Object.defineProperty(navigator, "credentials", browserDescriptors.credentials);
+  else delete (navigator as { credentials?: CredentialsContainer }).credentials;
+  if (browserDescriptors.isSecureContext) Object.defineProperty(window, "isSecureContext", browserDescriptors.isSecureContext);
+  else delete (window as { isSecureContext?: boolean }).isSecureContext;
+  if (browserDescriptors.publicKeyCredential) Object.defineProperty(window, "PublicKeyCredential", browserDescriptors.publicKeyCredential);
+  else delete (window as { PublicKeyCredential?: typeof PublicKeyCredential }).PublicKeyCredential;
   window.history.replaceState({}, "", "/configuracoes");
   window.sessionStorage.clear();
   routerReplace.mockReset();
   vi.unstubAllGlobals();
 });
+
+function setBrowserSupport() {
+  Object.defineProperty(window, "isSecureContext", { configurable: true, value: true });
+  Object.defineProperty(window, "PublicKeyCredential", { configurable: true, value: function PublicKeyCredentialMock() {} });
+  Object.defineProperty(navigator, "credentials", { configurable: true, value: { create: vi.fn(), get: vi.fn() } });
+}
 
 function authenticatedSession(): Response {
   return new Response(JSON.stringify({
@@ -66,6 +84,20 @@ describe("SettingsPage", () => {
     expect((screen.getByRole("button", { name: "Editar dados" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it("offers passkey activation inside account security settings", async () => {
+    openSecuritySettings();
+    setBrowserSupport();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ passkeys: [] }), { headers: { "content-type": "application/json" }, status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SettingsPage />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ativar login rápido" })).toBeTruthy());
+    expect(screen.getByRole("heading", { name: "Login rápido" })).toBeTruthy();
+    expect(String(fetchMock.mock.calls[1][0])).toContain("api/auth/passkeys");
+  });
+
   it("changes a local password with antiforgery protection and clears the form after success", async () => {
     openSecuritySettings();
     const fetchMock = vi.fn()
@@ -81,7 +113,7 @@ describe("SettingsPage", () => {
     fireEvent.change(screen.getByLabelText("Confirmar senha nova"), { target: { value: "Abcdef1!" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar nova senha" }));
 
-    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("Senha alterada com sucesso"));
+    await waitFor(() => expect(screen.getByText("Senha alterada com sucesso. Use a nova senha no próximo login.")).toBeTruthy());
     expect((screen.getByLabelText("Senha atual") as HTMLInputElement).value).toBe("");
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
@@ -155,9 +187,9 @@ describe("SettingsPage", () => {
     fireEvent.change(screen.getByLabelText("Confirmar senha nova"), { target: { value: "ChangedStrongPassword!123" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar nova senha" }));
 
-    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("Sua conta utiliza login com Google"));
+    await waitFor(() => expect(screen.getByText("Sua conta utiliza login com Google")).toBeTruthy());
     expect(screen.queryByLabelText("Senha atual")).toBeNull();
-    expect(screen.getByRole("status").textContent).toContain("Google");
+    expect(screen.getByText(/Continue usando o Google/)).toBeTruthy();
   });
 
   it("opens and cancels the session logout confirmation without logging out", async () => {

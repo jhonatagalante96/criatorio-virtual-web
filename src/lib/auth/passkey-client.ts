@@ -14,11 +14,26 @@ import {
 } from "./passkeys";
 
 export const passkeyEndpoints = {
+  list: "api/auth/passkeys",
   loginOptions: "api/auth/passkeys/login/options",
   loginVerify: "api/auth/passkeys/login/verify",
   registerOptions: "api/auth/passkeys/register/options",
   registerVerify: "api/auth/passkeys/register/verify"
 } as const;
+
+export interface AccountPasskeySummary {
+  credentialId: string;
+  createdAt: string;
+  isBackedUp: boolean;
+  isBackupEligible: boolean;
+  isUserVerified: boolean;
+  name: string | null;
+  transports: string[];
+}
+
+interface AccountPasskeyListResponse {
+  passkeys: AccountPasskeySummary[];
+}
 
 export interface PasskeyClientOptions {
   csrfToken?: string;
@@ -54,6 +69,11 @@ export class PasskeyClient {
     return detectPasskeySupport();
   }
 
+  async list(): Promise<AccountPasskeySummary[]> {
+    const response = await this.api.request<AccountPasskeyListResponse>(passkeyEndpoints.list);
+    return response.passkeys;
+  }
+
   async register({ signal }: PasskeyOperationOptions = {}): Promise<PublicKeyCredential> {
     return this.run("registration", async () => {
       const optionsJson = await this.requestOptions<PublicKeyCredentialCreationOptionsJSON>(passkeyEndpoints.registerOptions, signal);
@@ -62,6 +82,7 @@ export class PasskeyClient {
         signal
       }));
       await this.verify(passkeyEndpoints.registerVerify, serializePublicKeyCredential(credential), signal);
+      this.api.clearCache();
       return credential;
     });
   }
