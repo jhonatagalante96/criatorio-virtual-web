@@ -60,7 +60,7 @@ function eligibilityResponse(overrides: Record<string, unknown> = {}): Response 
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
-function genealogyResponse(): Response {
+function genealogyResponse(overrides: Record<string, unknown> = {}): Response {
   return new Response(JSON.stringify({
     edges: [{ childNodeKey: "bird:bird-a", parentNodeKey: "bird:father-a", position: "father" }],
     isTruncated: false,
@@ -69,7 +69,8 @@ function genealogyResponse(): Response {
       { birthDate: "2021-06-15", birdId: "bird-a", canNavigate: true, generation: 0, isAccessible: true, isSnapshot: false, name: "Aurora", nodeKey: "bird:bird-a", position: "root", ringNumber: "123456", sex: "Female", source: "Private", status: "Active" },
       { birthDate: "2018-04-10", birdId: "father-a", canNavigate: true, generation: 1, isAccessible: true, isSnapshot: false, name: "Pai Azul", nodeKey: "bird:father-a", position: "father", ringNumber: "111111", sex: "Male", source: "Private", status: "Active" }
     ],
-    rootBirdId: "bird-a"
+    rootBirdId: "bird-a",
+    ...overrides
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
@@ -132,6 +133,56 @@ describe("BirdDetailPage", () => {
     expect(String(detailRequest[0])).toContain("/api/birds/bird-a");
     const eligibilityRequest = fetchMock.mock.calls[3];
     expect(String(eligibilityRequest[0])).toContain("/api/birds/bird-a/eligibility");
+  });
+
+  it("renders the genealogy relationships and withholds private snapshot navigation", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(genealogyResponse({
+        edges: [
+          { childNodeKey: "bird:bird-a", parentNodeKey: "bird:father-a", position: "father" },
+          { childNodeKey: "bird:bird-a", parentNodeKey: "external:bird-a:mother", position: "mother" },
+          { childNodeKey: "bird:father-a", parentNodeKey: "snapshot:father-a:father", position: "father" }
+        ],
+        nodes: [
+          { birthDate: "2021-06-15", birdId: "bird-a", canNavigate: true, generation: 0, isAccessible: true, isSnapshot: false, name: "Aurora", nodeKey: "bird:bird-a", position: "root", ringNumber: "123456", sex: "Female", source: "Private", status: "Active" },
+          { birthDate: "2018-04-10", birdId: "father-a", canNavigate: true, generation: 1, isAccessible: true, isSnapshot: false, name: "Pai Azul", nodeKey: "bird:father-a", position: "father", ringNumber: "111111", sex: "Male", source: "Private", status: "Active" },
+          { birthDate: null, birdId: null, canNavigate: false, generation: 1, isAccessible: false, isSnapshot: true, name: "Mãe sem cadastro", nodeKey: "external:bird-a:mother", position: "mother", ringNumber: null, sex: "Female", source: "External", status: null },
+          { birthDate: "2015-01-01", birdId: null, canNavigate: false, generation: 2, isAccessible: false, isSnapshot: true, name: "Avô Azul", nodeKey: "snapshot:father-a:father", position: "father", ringNumber: "999999", sex: "Male", source: "Snapshot", status: "Archived" }
+        ]
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+
+    const tree = screen.getByLabelText("Árvore genealógica navegável");
+    expect(within(tree).getByRole("link", { name: /Pai Azul/ }).getAttribute("href")).toBe("/plantel/aves/father-a");
+    expect(within(tree).getByText("Ancestral externo · sem cadastro")).toBeTruthy();
+    expect(within(tree).getByText("Snapshot preservado · acesso restrito")).toBeTruthy();
+    expect(within(tree).queryByRole("link", { name: /Avô Azul/ })).toBeNull();
+    expect(within(tree).getByRole("list", { name: "Pais de Pai Azul" })).toBeTruthy();
+  });
+
+  it("changes the requested genealogy depth without reloading the bird detail", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(genealogyResponse())
+      .mockResolvedValueOnce(genealogyResponse({ isTruncated: true, maxGenerations: 5 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+    fireEvent.change(screen.getByLabelText("Gerações exibidas"), { target: { value: "5" } });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(screen.getByLabelText("Gerações exibidas")).toHaveProperty("value", "5"));
+    expect(String(fetchMock.mock.calls[5][0])).toContain("/api/birds/bird-a/genealogy?maxGenerations=5");
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith("/api/birds/bird-a")).length).toBe(1);
   });
 
   it("renders API eligibility and offers contextual identification action", async () => {
@@ -283,17 +334,14 @@ describe("BirdDetailPage", () => {
       .mockResolvedValueOnce(detailsResponse())
       .mockResolvedValueOnce(eligibilityResponse())
       .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Service unavailable" }), { headers: { "content-type": "application/problem+json" }, status: 503 }))
-      .mockResolvedValueOnce(selectedFarmResponse())
-      .mockResolvedValueOnce(detailsResponse())
-      .mockResolvedValueOnce(eligibilityResponse())
       .mockResolvedValueOnce(genealogyResponse());
     vi.stubGlobal("fetch", fetchMock);
 
     await openDetail(fetchMock);
 
-    expect(screen.getByRole("alert").textContent).toContain("Não foi possível carregar os demais ancestrais");
+    expect(screen.getByRole("alert").textContent).toContain("O serviço está indisponível no momento");
     fireEvent.click(within(screen.getByRole("alert")).getByRole("button", { name: "Tentar novamente" }));
-    await waitFor(() => expect(screen.getAllByText("Árvore consultada")).toHaveLength(1));
-    expect(fetchMock).toHaveBeenCalledTimes(9);
+    await waitFor(() => expect(screen.getByText("Ave cadastrada no criatório")).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 });
