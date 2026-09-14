@@ -1,7 +1,11 @@
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import DocumentsPage, { DocumentGenerationPage } from "./page";
+import DocumentsPage from "./page";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => window.location.pathname
+}));
 
 const refresh = vi.hoisted(() => vi.fn().mockResolvedValue({ ok: true }));
 
@@ -124,7 +128,7 @@ function generatedCertificateResponse(): Response {
     generatedAtUtc: "2026-09-13T12:00:00Z",
     heightMillimeters: 210,
     length: 4096,
-    modelId: null,
+    modelId: "Modern",
     pageCount: 1,
     printSize: null,
     selectedFields: [],
@@ -173,7 +177,7 @@ function documentHistoryResponse(items = [
     fileName: "certificado-aurora.pdf",
     generatedAtUtc: "2026-09-12T12:00:00Z",
     length: 4096,
-    modelId: null,
+    modelId: "Institutional",
     printSize: null,
     selectedFields: [],
     type: "GenealogyCertificate"
@@ -214,6 +218,25 @@ function reissuedDocumentResponse(): Response {
     selectedFields: ["Name", "RingNumber", "BirdPhoto"],
     type: "Badge",
     widthMillimeters: 125
+  }), { headers: { "content-type": "application/json" }, status: 201 });
+}
+
+function reissuedCertificateResponse(): Response {
+  return new Response(JSON.stringify({
+    birdId: "bird-a",
+    contentType: "application/pdf",
+    documentId: "document-history-certificate-reissued",
+    downloadUrl: "/api/birds/bird-a/documents/document-history-certificate-reissued/content",
+    fileName: "certificado-aurora-reemitido.pdf",
+    generatedAtUtc: "2026-09-13T13:00:00Z",
+    heightMillimeters: 210,
+    length: 3072,
+    modelId: "Modern",
+    pageCount: 1,
+    printSize: null,
+    selectedFields: [],
+    type: "GenealogyCertificate",
+    widthMillimeters: 297
   }), { headers: { "content-type": "application/json" }, status: 201 });
 }
 
@@ -284,7 +307,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(birdsResponse());
     vi.stubGlobal("fetch", generationFetchMock);
     window.history.replaceState({}, "", "/documentos/novo");
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
   });
 
@@ -297,7 +320,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(generatedDocumentResponse());
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -340,7 +363,7 @@ describe("DocumentsPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     window.history.pushState({}, "", "/documentos/novo?type=Badge");
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -362,7 +385,7 @@ describe("DocumentsPage", () => {
     expect(screen.getByText("O serviço está indisponível no momento. Tente novamente em instantes.")).toBeTruthy();
   });
 
-  it("completes the genealogy certificate flow with the fixed backend contract", async () => {
+  it("allows choosing one of the three genealogy certificate models", async () => {
     window.history.pushState({}, "", "/documentos/novo?type=GenealogyCertificate&birdId=bird-a");
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
@@ -374,7 +397,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(generatedCertificateResponse());
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Certificado de genealogia" }).getAttribute("aria-pressed")).toBe("true");
@@ -385,14 +408,17 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Valide a elegibilidade" })).toBeTruthy());
     await waitFor(() => expect(screen.getByText("Ave elegível para o certificado")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
-
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
+    expect(screen.getByText("Clássico Premium")).toBeTruthy();
+    expect(screen.getByText("Institucional Claro")).toBeTruthy();
+    expect(screen.getByText("Moderno")).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: /Moderno/ }));
     expect(screen.getByText("Estrutura genealógica")).toBeTruthy();
     expect(screen.getByText("Sol")).toBeTruthy();
     expect(screen.getByText("Lua externa")).toBeTruthy();
-    expect(screen.queryByText("Escolha o modelo")).toBeNull();
     expect(screen.queryByText("Escolha o tamanho")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    const modelStep = screen.getByRole("heading", { name: "Escolha o modelo" }).closest("section");
+    fireEvent.click(within(modelStep as HTMLElement).getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Revise e gere" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Gerar certificado" }));
@@ -400,7 +426,7 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Certificado gerado com sucesso" })).toBeTruthy());
     const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
     expect(postCall).toBeTruthy();
-    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({ type: "GenealogyCertificate" });
+    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({ type: "GenealogyCertificate", modelId: "Modern" });
     expect(screen.getByRole("link", { name: "Baixar certificado em PDF" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-certificate-a/content");
   });
@@ -417,7 +443,7 @@ describe("DocumentsPage", () => {
       }));
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -439,7 +465,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Forbidden" }), { headers: { "content-type": "application/problem+json" }, status: 403 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -464,7 +490,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(generatedProvenanceResponse());
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Documento de procedência" }).getAttribute("aria-pressed")).toBe("true");
@@ -508,7 +534,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(new Response(null, { status: 503 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -544,6 +570,7 @@ describe("DocumentsPage", () => {
     fireEvent.change(screen.getByLabelText("Filtrar por tipo"), { target: { value: "GenealogyCertificate" } });
 
     expect(screen.getByText("certificado-aurora.pdf")).toBeTruthy();
+    expect(screen.getByText(/Institucional Claro/)).toBeTruthy();
     expect(screen.queryByText("cracha-aurora.pdf")).toBeNull();
     expect(screen.getByRole("link", { name: "Baixar original" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-history-certificate/content");
@@ -613,6 +640,31 @@ describe("DocumentsPage", () => {
     });
     expect(screen.getByText("cracha-aurora.pdf")).toBeTruthy();
     expect(screen.getByText(/versão original continua no histórico/)).toBeTruthy();
+  });
+
+  it("reissues a genealogy certificate with a different model when requested", async () => {
+    window.history.pushState({}, "", "/documentos?view=history&birdId=bird-a");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse())
+      .mockResolvedValueOnce(documentHistoryResponse())
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 }))
+      .mockResolvedValueOnce(reissuedCertificateResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DocumentsPage />);
+
+    await waitFor(() => expect(screen.getAllByRole("button", { name: "Reemitir" })).toHaveLength(2));
+    fireEvent.click(screen.getAllByRole("button", { name: "Reemitir" })[1]);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Alterar modelo do certificado/ }));
+    fireEvent.change(screen.getByLabelText("Modelo"), { target: { value: "Modern" } });
+    fireEvent.click(screen.getByRole("button", { name: "Reemitir documento" }));
+
+    await waitFor(() => expect(screen.getByText("certificado-aurora-reemitido.pdf")).toBeTruthy());
+    const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
+    expect(postCall).toBeTruthy();
+    expect(String(postCall?.[0])).toContain("/api/birds/bird-a/documents/document-history-certificate/reissue");
+    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({ modelId: "Modern" });
   });
 
   it("shows a recoverable permission error when the document history is forbidden", async () => {

@@ -1,5 +1,5 @@
-import { DocumentGenerationPage } from "../page";
+import DocumentsPage from "../page";
 
 export default function NewDocumentPage() {
-  return <DocumentGenerationPage />;
+  return <DocumentsPage />;
 }
