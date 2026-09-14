@@ -221,7 +221,7 @@ export function PasskeyManagementPanel() {
 
   const isBusy = Boolean(actionState);
   const confirmingPasskey = passkeys.find((item) => item.credentialId === confirmingId);
-  const addLabel = passkeys.length > 0 ? "Adicionar outra Passkey" : "Adicionar Passkey";
+  const addLabel = passkeys.length > 0 ? "Adicionar outra chave" : "Adicionar chave de acesso";
 
   return (
     <section aria-labelledby={headingId} className="passkey-management-card">

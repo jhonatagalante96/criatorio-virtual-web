@@ -1042,7 +1042,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
             <section className="bird-form-aside-card bird-form-aside-card-soft">
               <p className="eyebrow">ATENÇÃO</p>
               <h2>Vínculos seguros</h2>
-              <p>A API valida sexo, duplicidade, ciclos e o criatório de cada ancestral. A situação da ave é alterada em um fluxo separado.</p>
+              <p>O sistema verifica sexo, duplicidade, ciclos e o criatório de cada ancestral. A situação da ave é alterada em um fluxo separado.</p>
             </section>
           </aside>
         </div>

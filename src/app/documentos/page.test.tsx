@@ -282,6 +282,7 @@ describe("DocumentsPage", () => {
     expect(screen.getAllByText(/Aurora/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Brisa/).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: "Emitir novo documento" }).getAttribute("href")).toBe("/documentos/novo");
+    expect(screen.queryByRole("link", { name: "Voltar para Aves" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Consultar emissões" })).toBeNull();
     expect(screen.queryByText("Documentos internos")).toBeNull();
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/birds/bird-a/documents"))).toBe(true);
@@ -309,6 +310,7 @@ describe("DocumentsPage", () => {
     window.history.replaceState({}, "", "/documentos/novo");
     render(<DocumentsPage />);
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
+    expect(screen.getByRole("link", { name: "Voltar para documentos" }).getAttribute("href")).toBe("/documentos");
   });
 
   it("completes the badge wizard and sends the backend contract", async () => {
@@ -326,6 +328,7 @@ describe("DocumentsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
     expect(screen.getByRole("option", { name: /Aurora/ }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("link", { name: "Voltar" }).getAttribute("href")).toBe("/documentos");
 
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o modelo" })).toBeTruthy());
@@ -335,7 +338,7 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Selecione os campos" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o tamanho" })).toBeTruthy());
-    fireEvent.click(screen.getByRole("radio", { name: /Large/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /Grande/ }));
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
@@ -562,7 +565,7 @@ describe("DocumentsPage", () => {
     render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Documentos" })).toBeTruthy());
-    await waitFor(() => expect(screen.getAllByText("Crachá/Badge").length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText("Crachá").length).toBeGreaterThan(0));
     expect(screen.getByText("certificado-aurora.pdf")).toBeTruthy();
     expect(screen.queryByText("internal-record.pdf")).toBeNull();
     expect(fetchMock.mock.calls[2]?.[0]).toContain("/api/birds/bird-a/documents");

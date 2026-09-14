@@ -161,7 +161,7 @@ describe("BirdDetailPage", () => {
     const tree = screen.getByLabelText("Árvore genealógica navegável");
     expect(within(tree).getByRole("link", { name: /Pai Azul/ }).getAttribute("href")).toBe("/plantel/aves/father-a");
     expect(within(tree).getByText("Ancestral externo · sem cadastro")).toBeTruthy();
-    expect(within(tree).getByText("Snapshot preservado · acesso restrito")).toBeTruthy();
+    expect(within(tree).getByText("Registro preservado · acesso restrito")).toBeTruthy();
     expect(within(tree).queryByRole("link", { name: /Avô Azul/ })).toBeNull();
     expect(within(tree).getByRole("list", { name: "Pais de Pai Azul" })).toBeTruthy();
   });

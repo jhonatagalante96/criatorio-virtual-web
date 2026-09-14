@@ -9,6 +9,7 @@ import { AppLoadingState } from "../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../components/brand";
 import { DashboardIcon } from "../components/dashboard-icons";
 import { PasskeyActivationPrompt } from "../components/passkey-activation-prompt";
+import { SessionRecovery } from "../components/session-recovery";
 import type { DashboardIconName } from "../components/dashboard-icons";
 
 interface BreedingFarmSummary {
@@ -559,7 +560,7 @@ function DashboardScreen() {
   }
   if (status === "error") return <AccessState heading="Não foi possível abrir o dashboard" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
   if (status === "forbidden") return <AccessState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar esta área."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
-  if (status === "unauthenticated") return <AccessState heading="Entre para consultar o dashboard" message="Faça login para acompanhar os indicadores do seu criatório." />;
+  if (status === "unauthenticated") return <SessionRecovery />;
 
   if (view.kind === "loading") {
     return <AppLoadingState activeNav="dashboard" email={session?.email} label="Carregando dashboard" message="Um instante enquanto preparamos seu espaço." />;

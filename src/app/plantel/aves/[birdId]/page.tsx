@@ -145,7 +145,7 @@ function eligibilityIssueTitle(code: string): string {
 function eligibilityIssueMessage(issue: BirdEligibilityIssue): string {
   if (issue.code === "MissingRingNumber") return "Informe uma anilha válida de seis dígitos para liberar as ações que exigem identificação.";
   if (issue.code === "InactiveStatus") return "A ave precisa estar ativa para esta ação.";
-  return issue.message.trim() || "A API não informou detalhes adicionais para esta pendência.";
+  return issue.message.trim() || "Não foram informados detalhes adicionais para esta pendência.";
 }
 
 function formatDate(value: string | null): string {
@@ -170,8 +170,8 @@ function genealogyPositionLabel(position: string): string {
 
 function genealogySourceLabel(node: BirdGenealogyNode): string {
   if (node.source === "External") return "Ancestral externo · sem cadastro";
-  if (!node.isAccessible) return "Snapshot preservado · acesso restrito";
-  if (node.isSnapshot) return "Snapshot preservado · navegável";
+  if (!node.isAccessible) return "Registro preservado · acesso restrito";
+  if (node.isSnapshot) return "Registro preservado · navegável";
   return "Ave cadastrada no criatório";
 }
 
@@ -434,7 +434,7 @@ function GenealogyNodes({ genealogy }: Readonly<{ genealogy: BirdGenealogyRespon
       {ancestors.length === 0 && <EmptySection message="Ainda não há outros ancestrais registrados para esta ave." />}
       <div aria-label="Legenda da árvore genealógica" className="bird-genealogy-legend">
         <span><i aria-hidden="true" className="is-link" />Ave acessível · abrir ficha</span>
-        <span><i aria-hidden="true" className="is-snapshot" />Snapshot ou ancestral externo · sem acesso privado</span>
+        <span><i aria-hidden="true" className="is-snapshot" />Registro preservado ou ancestral externo · sem acesso direto</span>
       </div>
       {genealogy.isTruncated && <p className="bird-detail-help">A árvore foi limitada a {genealogy.maxGenerations} gerações para manter a consulta rápida.</p>}
     </>
@@ -484,7 +484,7 @@ function BirdEligibilityPanel({
     <section aria-busy={state === "loading"} aria-label="Resultado da elegibilidade" aria-labelledby="titulo-elegibilidade-ave" aria-live="polite" className={`bird-eligibility-panel${state === "ready" && eligibility?.isEligible ? " is-eligible" : ""}`}>
       <div className="bird-eligibility-heading">
         <div>
-          <p className="eyebrow">Validação da API</p>
+          <p className="eyebrow">Verificação dos dados</p>
           <h2 id="titulo-elegibilidade-ave">Elegibilidade da ave</h2>
         </div>
         {state === "ready" && eligibility && <span className={`bird-eligibility-badge${eligibility.isEligible ? " is-eligible" : " is-pending"}`}>{eligibility.isEligible ? "Elegível" : "Requer atenção"}</span>}
@@ -513,7 +513,7 @@ function BirdEligibilityPanel({
           <span aria-hidden="true" className="bird-eligibility-mark">✓</span>
           <div>
             <strong>Nenhuma pendência encontrada</strong>
-            <p>A API não retornou motivos de inelegibilidade para esta ave.</p>
+            <p>Não foram encontrados motivos de inelegibilidade para esta ave.</p>
           </div>
         </div>
       )}
@@ -537,7 +537,7 @@ function BirdEligibilityPanel({
               ))}
             </ul>
           ) : (
-            <p className="bird-eligibility-feedback">A API informou que esta ave não está elegível, mas não retornou os motivos.</p>
+            <p className="bird-eligibility-feedback">Esta ave não está elegível, mas não foram informados os motivos.</p>
           )}
         </>
       )}

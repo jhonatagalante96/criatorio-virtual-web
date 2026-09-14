@@ -118,7 +118,7 @@ describe("PasskeyManagementPanel", () => {
     expect(screen.getByText(/Este dispositivo/)).toBeTruthy();
     expect(screen.getByText(/Sincronizada/)).toBeTruthy();
     expect(screen.queryByText("credential-id")).toBeNull();
-    expect(screen.getByRole("button", { name: "Adicionar outra Passkey" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Adicionar outra chave" })).toBeTruthy();
   });
 
   it("adds another passkey and refreshes the list", async () => {
@@ -133,8 +133,8 @@ describe("PasskeyManagementPanel", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<PasskeyManagementPanel />);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Adicionar Passkey" })).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar Passkey" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Adicionar chave de acesso" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar chave de acesso" }));
 
     await waitFor(() => expect(screen.getByText("Celular")).toBeTruthy());
     expect(screen.getByRole("status").textContent).toContain("adicionada");
