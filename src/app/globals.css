@@ -1691,7 +1691,7 @@ h1, h2 { line-height: 1.08; }
 .bird-edit-form .confirmation-feedback { background: #eef9f1; border: 1px solid #c8e8d0; border-radius: .45rem; margin: 0; padding: .65rem .75rem; }
 .bird-edit-actions { display: grid; gap: .65rem; }
 .bird-edit-actions .auth-secondary-action, .bird-edit-actions .submit-action { margin-top: 0; width: 100%; }
-.bird-registration-success { max-width: 35rem; text-align: center; width: 100%; }
+.bird-registration-success { margin-inline: auto; max-width: 35rem; text-align: center; width: 100%; }
 .bird-registration-success h1 { overflow-wrap: anywhere; }
 .bird-registration-success > .lede { color: #67808d; font-size: .82rem; margin: .55rem auto 1.4rem; max-width: 38ch; }
 .bird-registration-success .auth-primary-action { width: 100%; }

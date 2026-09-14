@@ -437,7 +437,7 @@ function RegistrationSuccess({ bird, onRegisterAnother }: Readonly<{ bird: Creat
         </div>
       )}
       <button className="auth-primary-action" onClick={onRegisterAnother} type="button">Cadastrar outra ave</button>
-      <Link className="text-action" href="/">Voltar para o início</Link>
+      <Link className="text-action" href="/plantel/aves">Voltar para o início</Link>
     </div>
   );
 }
