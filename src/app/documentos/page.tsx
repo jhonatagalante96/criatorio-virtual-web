@@ -2,6 +2,7 @@
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient, getApiUrl } from "../../lib/http/api-client";
 import { AppLoadingContent, AppLoadingState } from "../components/app-loading-state";
@@ -856,7 +857,6 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
   function selectDocumentType(type: DocumentType) {
     setDocumentType(type);
     setCertificateModelId("Institutional");
-    setDocumentView("generate");
     setIsDocumentTypeStep(true);
     setStep(0);
     setGenerated(undefined);
@@ -1078,8 +1078,6 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
             <Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link>
           </header>
 
-          <DocumentModeSwitcher onChange={changeDocumentView} view={documentView} />
-
             <DocumentWizardProgress activeStep={progressStep} className={isGenealogyCertificate ? "document-wizard-progress-genealogy" : "document-wizard-progress-certificate"} onSelect={(index) => { if (index === 0) { setIsDocumentTypeStep(true); setNotice(undefined); return; } if (index < progressStep) { setNotice(undefined); setIsDocumentTypeStep(false); setStep(Math.max(0, index - 1) as WizardStep); } }} steps={steps} />
 
           {notice && <p className={`document-wizard-notice document-wizard-notice-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.text}</p>}
@@ -1144,10 +1142,7 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
   );
 }
 
-export function DocumentGenerationPage() {
-  return <AuthProvider><DocumentsWizard initialView="generate" /></AuthProvider>;
-}
-
 export default function DocumentsPage() {
-  return <AuthProvider><DocumentsWizard initialView="history" /></AuthProvider>;
+  const pathname = usePathname();
+  return <AuthProvider><DocumentsWizard initialView={pathname === "/documentos/novo" ? "generate" : "history"} /></AuthProvider>;
 }

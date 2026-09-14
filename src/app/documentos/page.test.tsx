@@ -1,7 +1,11 @@
 import React from "react";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import DocumentsPage, { DocumentGenerationPage } from "./page";
+import DocumentsPage from "./page";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => window.location.pathname
+}));
 
 const refresh = vi.hoisted(() => vi.fn().mockResolvedValue({ ok: true }));
 
@@ -303,7 +307,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(birdsResponse());
     vi.stubGlobal("fetch", generationFetchMock);
     window.history.replaceState({}, "", "/documentos/novo");
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
   });
 
@@ -316,7 +320,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(generatedDocumentResponse());
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -359,7 +363,7 @@ describe("DocumentsPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     window.history.pushState({}, "", "/documentos/novo?type=Badge");
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -393,7 +397,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(generatedCertificateResponse());
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Certificado de genealogia" }).getAttribute("aria-pressed")).toBe("true");
@@ -439,7 +443,7 @@ describe("DocumentsPage", () => {
       }));
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -461,7 +465,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Forbidden" }), { headers: { "content-type": "application/problem+json" }, status: 403 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -486,7 +490,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(generatedProvenanceResponse());
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Documento de procedência" }).getAttribute("aria-pressed")).toBe("true");
@@ -530,7 +534,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(new Response(null, { status: 503 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentGenerationPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
