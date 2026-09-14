@@ -314,15 +314,6 @@ function FarmBlockedState({ email, farmName, message }: Readonly<{ email: string
   );
 }
 
-function DocumentModeSwitcher({ view, onChange }: Readonly<{ view: DocumentView; onChange: (view: DocumentView) => void }>) {
-  return (
-    <nav aria-label="Modo dos documentos" className="document-mode-switcher">
-      <button aria-pressed={view === "generate"} className={view === "generate" ? "is-selected" : ""} onClick={() => onChange("generate")} type="button">Emitir novo documento</button>
-      <button aria-pressed={view === "history"} className={view === "history" ? "is-selected" : ""} onClick={() => onChange("history")} type="button">Consultar emissões</button>
-    </nav>
-  );
-}
-
 function DocumentTypeStep({ documentType, onChange }: Readonly<{ documentType: DocumentType; onChange: (type: DocumentType) => void }>) {
   const options: Array<{ description: string; id: DocumentType; name: string }> = [
     { description: "Identificação visual personalizada da ave.", id: "Badge", name: "Crachá" },
@@ -591,7 +582,6 @@ function DocumentsHistory({
   client,
   csrfToken,
   farmName,
-  onChangeView,
   onSessionExpired,
   birdSearch,
   onBirdSearchChange,
@@ -601,7 +591,6 @@ function DocumentsHistory({
   client: ApiClient;
   csrfToken: React.MutableRefObject<string | undefined>;
   farmName: string;
-  onChangeView: (view: DocumentView) => void;
   onSessionExpired: () => Promise<unknown> | void;
   birdSearch: string;
   onBirdSearchChange: (value: string) => void;
@@ -685,8 +674,7 @@ function DocumentsHistory({
     <AuthenticatedShell activeNav="documents" email={session.email} farmName={farmName}>
       <main className="document-wizard-page">
         <nav aria-label="Navegação estrutural" className="document-wizard-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span><span aria-current="page">Documentos</span></nav>
-        <header className="document-wizard-header"><div><p className="eyebrow">Documentos internos</p><h1>Documentos</h1><p>Consulte o histórico de emissões do criatório e emita uma nova versão quando precisar.</p></div><Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link></header>
-        <DocumentModeSwitcher onChange={onChangeView} view="history" />
+        <header className="document-wizard-header"><div><h1>Documentos</h1><p>Consulte o histórico de emissões do criatório e emita uma nova versão quando precisar.</p></div><div className="document-wizard-header-actions"><Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link><Link className="auth-primary-action document-wizard-emit-link" href="/documentos/novo">Emitir novo documento</Link></div></header>
         <section aria-labelledby="titulo-historico-documentos" className="document-history-results document-wizard-card">
           <header className="document-history-results-heading"><div><p className="eyebrow">Histórico de emissões</p><h2 id="titulo-historico-documentos">Todos os documentos</h2><p>Emissões privadas de todas as aves ativas do criatório selecionado.</p></div><div className="document-history-controls"><label className="document-history-search" htmlFor="buscar-documento-historico"><span>Buscar por ave ou arquivo</span><input id="buscar-documento-historico" onChange={(event) => onBirdSearchChange(event.target.value)} placeholder="Ex.: Aurora ou crachá" value={birdSearch} /></label><label className="document-history-filter" htmlFor="filtro-tipo-documento"><span>Filtrar por tipo</span><select id="filtro-tipo-documento" onChange={(event) => setHistoryFilter(event.target.value as DocumentHistoryFilter)} value={historyFilter}><option value="All">Todos os tipos</option><option value="Badge">Crachá/Badge</option><option value="GenealogyCertificate">Certificado de genealogia</option><option value="ProvenanceDocument">Documento de procedência</option></select></label></div></header>
           {notice && <p className="document-wizard-notice document-wizard-notice-success" role="status">{notice.text}</p>}
@@ -702,12 +690,12 @@ function DocumentsHistory({
   );
 }
 
-function DocumentsWizard() {
+function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }>) {
   const { refresh, session } = useAuth();
+  const isHistoryView = initialView === "history";
   const client = useRef<ApiClient | null>(null);
   const csrfToken = useRef<string | undefined>(undefined);
   const [clientReady, setClientReady] = useState(false);
-  const [documentView, setDocumentView] = useState<DocumentView>("generate");
   const [documentType, setDocumentType] = useState<DocumentType>("Badge");
   const [isDocumentTypeStep, setIsDocumentTypeStep] = useState(true);
   const [farmError, setFarmError] = useState<string>();
@@ -740,12 +728,11 @@ function DocumentsWizard() {
     const queryBirdId = query.get("birdId")?.trim() ?? "";
     const queryType = query.get("type");
     const hasDocumentType = queryType !== null && isDocumentType(queryType);
-    setDocumentView(query.get("view") === "history" || (!hasDocumentType && !queryBirdId) ? "history" : "generate");
     setDocumentType(hasDocumentType ? queryType : "Badge");
-    setIsDocumentTypeStep(true);
+    setIsDocumentTypeStep(initialView === "generate");
     setRequestedBirdId(queryBirdId);
     setClientReady(true);
-  }, []);
+  }, [initialView]);
 
   const loadData = useCallback(async (recoverSession = true) => {
     setFarmState("loading");
@@ -759,8 +746,8 @@ function DocumentsWizard() {
         setFarmState("blocked");
         setBirdsState("empty");
         setFarmError(selection.breedingFarms.length > 0
-          ? "Escolha um criatório para consultar as aves disponíveis para os documentos."
-          : "Crie seu primeiro criatório antes de gerar um documento.");
+          ? isHistoryView ? "Escolha um criatório para consultar o histórico de documentos." : "Escolha um criatório para consultar as aves disponíveis para os documentos."
+          : isHistoryView ? "Crie seu primeiro criatório antes de consultar o histórico." : "Crie seu primeiro criatório antes de gerar um documento.");
         return;
       }
 
@@ -801,7 +788,7 @@ function DocumentsWizard() {
         ? "O serviço está indisponível no momento. Tente novamente em instantes."
         : "Verifique sua conexão e tente novamente.");
     }
-  }, [refresh, requestedBirdId]);
+  }, [isHistoryView, refresh, requestedBirdId]);
 
   useEffect(() => {
     if (clientReady) void loadData();
@@ -825,21 +812,8 @@ function DocumentsWizard() {
     setNotice(undefined);
   }
 
-  function changeDocumentView(view: DocumentView) {
-    setDocumentView(view);
-    setIsDocumentTypeStep(view === "generate");
-    setStep(0);
-    setGenerated(undefined);
-    setNotice(undefined);
-    const params = new URLSearchParams();
-    if (view === "generate") params.set("type", documentType);
-    else params.set("view", "history");
-    window.history.pushState({}, "", `/documentos?${params.toString()}`);
-  }
-
   function selectDocumentType(type: DocumentType) {
     setDocumentType(type);
-    setDocumentView("generate");
     setIsDocumentTypeStep(true);
     setStep(0);
     setGenerated(undefined);
@@ -852,7 +826,7 @@ function DocumentsWizard() {
     const params = new URLSearchParams();
     params.set("type", type);
     if (requestedBirdId) params.set("birdId", requestedBirdId);
-    window.history.pushState({}, "", `/documentos?${params.toString()}`);
+    window.history.pushState({}, "", `/documentos/novo?${params.toString()}`);
   }
 
   function toggleField(field: DocumentField) {
@@ -998,7 +972,7 @@ function DocumentsWizard() {
 
   if (!session) return null;
   if (!clientReady || farmState === "loading") {
-    return <AppLoadingState activeNav="documents" email={session.email} farmName={farmName} label={`Preparando geração de ${documentLabel}`} message="Consultando o criatório e as aves disponíveis." />;
+    return <AppLoadingState activeNav="documents" email={session.email} farmName={farmName} label={isHistoryView ? "Carregando documentos" : `Preparando geração de ${documentLabel}`} message={isHistoryView ? "Consultando o histórico do criatório selecionado." : "Consultando o criatório e as aves disponíveis."} />;
   }
   if (farmState === "blocked") return <FarmBlockedState email={session.email} farmName={farmName} message={farmError ?? "Selecione um criatório para continuar."} />;
   if (farmState === "error") {
@@ -1009,7 +983,7 @@ function DocumentsWizard() {
     );
   }
   if (birdsState === "loading") {
-    return <AuthenticatedShell activeNav="documents" email={session.email} farmName={farmName}><main className="document-wizard-page"><AppLoadingContent label="Carregando aves" message="Buscando aves ativas e identificadas." /></main></AuthenticatedShell>;
+    return <AuthenticatedShell activeNav="documents" email={session.email} farmName={farmName}><main className="document-wizard-page"><AppLoadingContent label={isHistoryView ? "Carregando documentos" : "Carregando aves"} message={isHistoryView ? "Buscando as emissões autorizadas do criatório." : "Buscando aves ativas e identificadas."} /></main></AuthenticatedShell>;
   }
   if (birdsState === "error") {
     return (
@@ -1019,7 +993,7 @@ function DocumentsWizard() {
     );
   }
 
-  if (documentView === "history") {
+  if (initialView === "history") {
     return (
       <DocumentsHistory
         birdSearch={birdSearch}
@@ -1028,7 +1002,6 @@ function DocumentsWizard() {
         csrfToken={csrfToken}
         farmName={farmName}
         onBirdSearchChange={setBirdSearch}
-        onChangeView={changeDocumentView}
         onSessionExpired={refresh}
         session={session}
       />
@@ -1055,11 +1028,9 @@ function DocumentsWizard() {
         <main className="document-wizard-page">
           <nav aria-label="Navegação estrutural" className="document-wizard-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span><span aria-current="page">Documentos</span></nav>
           <header className="document-wizard-header">
-            <div><p className="eyebrow">Documentos internos</p><h1>{documentTitle}</h1><p>{isGenealogyCertificate ? "Revise a genealogia disponível e gere um certificado interno em A4 paisagem." : "Confira a origem registrada e gere um documento interno de procedência em A4 paisagem."}</p></div>
+            <div><h1>{documentTitle}</h1><p>{isGenealogyCertificate ? "Revise a genealogia disponível e gere um certificado interno em A4 paisagem." : "Confira a origem registrada e gere um documento interno de procedência em A4 paisagem."}</p></div>
             <Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link>
           </header>
-
-          <DocumentModeSwitcher onChange={changeDocumentView} view={documentView} />
 
           <DocumentWizardProgress activeStep={progressStep} className="document-wizard-progress-certificate" onSelect={(index) => { if (index === 0) { setIsDocumentTypeStep(true); setNotice(undefined); return; } if (index < progressStep) { setNotice(undefined); setIsDocumentTypeStep(false); setStep(Math.max(0, index - 1) as WizardStep); } }} steps={fixedDocumentWizardSteps} />
 
@@ -1079,7 +1050,7 @@ function DocumentsWizard() {
 
             {step < 4 && <div className="document-wizard-actions"><button className="settings-cancel-action" disabled={step === 0 || generationState === "loading" || fixedDocumentState === "loading"} onClick={goBack} type="button">Anterior</button><span>Etapa {step + 2} de {steps.length}</span>{step < 3 ? <button className="auth-primary-action" disabled={fixedDocumentState === "loading" || (fixedDocumentState !== "error" && !canContinue())} type="submit">{step === 1 && fixedDocumentState === "error" ? "Tentar validação" : "Continuar"}</button> : <button className="auth-primary-action" disabled={generationState === "loading" || !canContinue()} type="submit">{generationState === "loading" ? "Gerando…" : isGenealogyCertificate ? "Gerar certificado" : "Gerar documento"}</button>}</div>}
             </>}
-            {isDocumentTypeStep && <div className="document-wizard-actions"><button className="settings-cancel-action" onClick={() => changeDocumentView("history")} type="button">Cancelar</button><span>Etapa 1 de {steps.length}</span><button className="auth-primary-action" onClick={goNext} type="button">Continuar</button></div>}
+            {isDocumentTypeStep && <div className="document-wizard-actions"><Link className="settings-cancel-action" href="/documentos">Cancelar</Link><span>Etapa 1 de {steps.length}</span><button className="auth-primary-action" onClick={goNext} type="button">Continuar</button></div>}
           </form>
         </main>
       </AuthenticatedShell>
@@ -1091,11 +1062,9 @@ function DocumentsWizard() {
       <main className="document-wizard-page">
         <nav aria-label="Navegação estrutural" className="document-wizard-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span><span aria-current="page">Documentos</span></nav>
         <header className="document-wizard-header">
-          <div><p className="eyebrow">Documentos internos</p><h1>{documentTitle}</h1><p>Monte um crachá privado da ave em poucos passos, com campos e tamanho adequados ao uso.</p></div>
+          <div><h1>{documentTitle}</h1><p>Monte um crachá privado da ave em poucos passos, com campos e tamanho adequados ao uso.</p></div>
           <Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link>
         </header>
-
-        <DocumentModeSwitcher onChange={changeDocumentView} view={documentView} />
 
           <DocumentWizardProgress activeStep={progressStep} className="document-wizard-progress-badge" onSelect={(index) => { if (index === 0) { setIsDocumentTypeStep(true); setNotice(undefined); return; } if (index < progressStep) { setNotice(undefined); setIsDocumentTypeStep(false); setStep(Math.max(0, index - 1) as WizardStep); } }} steps={steps} />
 
@@ -1119,13 +1088,17 @@ function DocumentsWizard() {
 
           {step < 6 && <div className="document-wizard-actions"><button className="settings-cancel-action" disabled={step === 0 || generationState === "loading"} onClick={goBack} type="button">Anterior</button><span>Etapa {step + 2} de {steps.length}</span>{step < 5 ? <button className="auth-primary-action" disabled={!canContinue()} type="submit">Continuar</button> : <button className="auth-primary-action" disabled={generationState === "loading" || !canContinue()} type="submit">{generationState === "loading" ? "Gerando…" : "Gerar crachá"}</button>}</div>}
           </>}
-          {isDocumentTypeStep && <div className="document-wizard-actions"><button className="settings-cancel-action" onClick={() => changeDocumentView("history")} type="button">Cancelar</button><span>Etapa 1 de {steps.length}</span><button className="auth-primary-action" onClick={goNext} type="button">Continuar</button></div>}
+          {isDocumentTypeStep && <div className="document-wizard-actions"><Link className="settings-cancel-action" href="/documentos">Cancelar</Link><span>Etapa 1 de {steps.length}</span><button className="auth-primary-action" onClick={goNext} type="button">Continuar</button></div>}
         </form>
       </main>
     </AuthenticatedShell>
   );
 }
 
+export function DocumentGenerationPage() {
+  return <AuthProvider><DocumentsWizard initialView="generate" /></AuthProvider>;
+}
+
 export default function DocumentsPage() {
-  return <AuthProvider><DocumentsWizard /></AuthProvider>;
+  return <AuthProvider><DocumentsWizard initialView="history" /></AuthProvider>;
 }

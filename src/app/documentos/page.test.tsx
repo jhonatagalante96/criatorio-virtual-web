@@ -1,7 +1,7 @@
 import React from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import DocumentsPage from "./page";
+import DocumentsPage, { DocumentGenerationPage } from "./page";
 
 const refresh = vi.hoisted(() => vi.fn().mockResolvedValue({ ok: true }));
 
@@ -258,12 +258,14 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Todos os documentos" })).toBeTruthy());
     expect(screen.getAllByText(/Aurora/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Brisa/).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Emitir novo documento" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("link", { name: "Emitir novo documento" }).getAttribute("href")).toBe("/documentos/novo");
+    expect(screen.queryByRole("button", { name: "Consultar emissões" })).toBeNull();
+    expect(screen.queryByText("Documentos internos")).toBeNull();
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/birds/bird-a/documents"))).toBe(true);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/birds/bird-b/documents"))).toBe(true);
   });
 
-  it("opens the new-document flow and changes document type without leaving the page", async () => {
+  it("links from the document history to the dedicated new-document flow", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(birdsResponse())
@@ -272,19 +274,22 @@ describe("DocumentsPage", () => {
 
     render(<DocumentsPage />);
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Emitir novo documento" })).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "Emitir novo documento" }));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "Certificado de genealogia" }));
+    await waitFor(() => expect(screen.getByRole("link", { name: "Emitir novo documento" })).toBeTruthy());
+    expect(screen.getByRole("link", { name: "Emitir novo documento" }).getAttribute("href")).toBe("/documentos/novo");
+    expect(screen.queryByRole("button", { name: "Emitir novo documento" })).toBeNull();
 
-    expect(screen.getByRole("button", { name: "Certificado de genealogia" }).getAttribute("aria-pressed")).toBe("true");
-    expect(window.location.search).toContain("type=GenealogyCertificate");
-    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
+    cleanup();
+    const generationFetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse());
+    vi.stubGlobal("fetch", generationFetchMock);
+    window.history.replaceState({}, "", "/documentos/novo");
+    render(<DocumentGenerationPage />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
   });
 
   it("completes the badge wizard and sends the backend contract", async () => {
-    window.history.pushState({}, "", "/documentos?birdId=bird-a");
+    window.history.pushState({}, "", "/documentos/novo?birdId=bird-a");
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(birdsResponse())
@@ -292,7 +297,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(generatedDocumentResponse());
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentsPage />);
+    render(<DocumentGenerationPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -334,8 +339,8 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(birdsResponse([bird({ ringNumber: null, identificationPending: true })]));
     vi.stubGlobal("fetch", fetchMock);
 
-    window.history.pushState({}, "", "/documentos?type=Badge");
-    render(<DocumentsPage />);
+    window.history.pushState({}, "", "/documentos/novo?type=Badge");
+    render(<DocumentGenerationPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -358,7 +363,7 @@ describe("DocumentsPage", () => {
   });
 
   it("completes the genealogy certificate flow with the fixed backend contract", async () => {
-    window.history.pushState({}, "", "/documentos?type=GenealogyCertificate&birdId=bird-a");
+    window.history.pushState({}, "", "/documentos/novo?type=GenealogyCertificate&birdId=bird-a");
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(birdsResponse())
@@ -369,7 +374,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(generatedCertificateResponse());
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentsPage />);
+    render(<DocumentGenerationPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Certificado de genealogia" }).getAttribute("aria-pressed")).toBe("true");
@@ -401,7 +406,7 @@ describe("DocumentsPage", () => {
   });
 
   it("shows the eligibility reason and edit path when the certificate is blocked", async () => {
-    window.history.pushState({}, "", "/documentos?type=GenealogyCertificate");
+    window.history.pushState({}, "", "/documentos/novo?type=GenealogyCertificate");
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(birdsResponse([bird({ ringNumber: null, identificationPending: true })]))
@@ -412,7 +417,7 @@ describe("DocumentsPage", () => {
       }));
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentsPage />);
+    render(<DocumentGenerationPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -427,14 +432,14 @@ describe("DocumentsPage", () => {
   });
 
   it("shows a recoverable permission error during certificate validation", async () => {
-    window.history.pushState({}, "", "/documentos?type=GenealogyCertificate");
+    window.history.pushState({}, "", "/documentos/novo?type=GenealogyCertificate");
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(birdsResponse())
       .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Forbidden" }), { headers: { "content-type": "application/problem+json" }, status: 403 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentsPage />);
+    render(<DocumentGenerationPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -448,7 +453,7 @@ describe("DocumentsPage", () => {
   });
 
   it("completes the provenance document flow with the fixed backend contract", async () => {
-    window.history.pushState({}, "", "/documentos?type=ProvenanceDocument&birdId=bird-a");
+    window.history.pushState({}, "", "/documentos/novo?type=ProvenanceDocument&birdId=bird-a");
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(birdsResponse())
@@ -459,7 +464,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(generatedProvenanceResponse());
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentsPage />);
+    render(<DocumentGenerationPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Documento de procedência" }).getAttribute("aria-pressed")).toBe("true");
@@ -492,7 +497,7 @@ describe("DocumentsPage", () => {
   });
 
   it("keeps the provenance review recoverable when private storage is unavailable", async () => {
-    window.history.pushState({}, "", "/documentos?type=ProvenanceDocument&birdId=bird-a");
+    window.history.pushState({}, "", "/documentos/novo?type=ProvenanceDocument&birdId=bird-a");
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(birdsResponse())
@@ -503,7 +508,7 @@ describe("DocumentsPage", () => {
       .mockResolvedValueOnce(new Response(null, { status: 503 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DocumentsPage />);
+    render(<DocumentGenerationPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o documento" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
@@ -531,7 +536,7 @@ describe("DocumentsPage", () => {
     render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Documentos" })).toBeTruthy());
-    await waitFor(() => expect(screen.getByText("Crachá/Badge")).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText("Crachá/Badge").length).toBeGreaterThan(0));
     expect(screen.getByText("certificado-aurora.pdf")).toBeTruthy();
     expect(screen.queryByText("internal-record.pdf")).toBeNull();
     expect(fetchMock.mock.calls[2]?.[0]).toContain("/api/birds/bird-a/documents");
