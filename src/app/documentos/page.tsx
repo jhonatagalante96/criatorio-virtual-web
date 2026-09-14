@@ -126,6 +126,7 @@ interface BreedingFarmSettingsResponse {
 
 const badgeWizardSteps = ["Documento", "Ave", "Modelo", "Campos", "Tamanho", "Prévia", "Revisão", "Gerar"] as const;
 const fixedDocumentWizardSteps = ["Documento", "Ave", "Elegibilidade", "Prévia", "Revisão", "Gerar"] as const;
+const DOCUMENT_HISTORY_PAGE_SIZE = 10;
 
 const modelOptions: Array<{ id: BadgeModelId; description: string; name: string }> = [
   { id: "Classic", description: "Identificação completa e atemporal.", name: "Clássico" },
@@ -642,6 +643,7 @@ function DocumentsHistory({
   const [historyError, setHistoryError] = useState<string>();
   const [historyDocuments, setHistoryDocuments] = useState<DocumentHistoryItem[]>([]);
   const [historyFilter, setHistoryFilter] = useState<DocumentHistoryFilter>("All");
+  const [historyVisibleCount, setHistoryVisibleCount] = useState(DOCUMENT_HISTORY_PAGE_SIZE);
   const [previewItem, setPreviewItem] = useState<DocumentHistoryItem>();
   const [reissueItem, setReissueItem] = useState<DocumentHistoryItem>();
   const [notice, setNotice] = useState<Notice>();
@@ -701,6 +703,13 @@ function DocumentsHistory({
     [historyDocuments, historyFilter, normalizedSearch]
   );
 
+  useEffect(() => {
+    setHistoryVisibleCount(DOCUMENT_HISTORY_PAGE_SIZE);
+  }, [historyFilter, normalizedSearch]);
+
+  const documentsToRender = visibleDocuments.slice(0, historyVisibleCount);
+  const hasMoreDocuments = documentsToRender.length < visibleDocuments.length;
+
   function handleReissued(document: BirdDocumentResponse) {
     setHistoryDocuments((current) => [{
       ...document,
@@ -723,7 +732,10 @@ function DocumentsHistory({
           {historyState === "loading" && <div className="document-history-state" role="status"><span className="document-preview-dialog-spinner" aria-hidden="true" /><strong>Consultando emissões…</strong><span>Buscando somente os documentos autorizados deste criatório.</span></div>}
           {historyState === "error" && <div className="document-history-state is-error" role="alert"><strong>Não foi possível consultar o histórico</strong><span>{historyError}</span><button className="auth-secondary-action" onClick={() => void loadHistory()} type="button">Tentar novamente</button></div>}
           {historyState === "ready" && visibleDocuments.length === 0 && <div className="document-history-state" role="status"><strong>{historyDocuments.length === 0 ? "Nenhuma emissão encontrada" : "Nenhum documento encontrado"}</strong><span>{historyDocuments.length === 0 ? "As emissões de crachá, certificado e procedência aparecerão aqui." : "Altere a busca ou o filtro para consultar outras emissões."}</span></div>}
-          {historyState === "ready" && visibleDocuments.length > 0 && <ul aria-label="Todos os documentos emitidos" className="document-history-list">{visibleDocuments.map((item) => <li key={item.documentId}><article className="document-history-item"><div className="document-history-item-icon" aria-hidden="true"><DashboardIcon name="document" /></div><div className="document-history-item-main"><div className="document-history-item-title"><strong>{documentTypeLabel(item.type)}</strong><span>{documentDateLabel(item.generatedAtUtc)}</span></div><p>{item.fileName.replace(/\.pdf$/i, "")}</p><small>{item.birdName} · {item.birdSpeciesPopularName}{item.birdRingNumber ? ` · Anilha ${item.birdRingNumber}` : ""}{item.modelId ? ` · ${documentModelLabel(item)}` : ""}{item.printSize ? ` · ${item.printSize}` : ""}</small></div><div className="document-history-item-actions"><button className="auth-secondary-action" onClick={() => setPreviewItem(item)} type="button">Visualizar documento</button><a className="auth-secondary-action" download={item.fileName} href={getApiUrl(item.downloadUrl)}>Baixar original</a><button className="auth-primary-action" onClick={() => setReissueItem(item)} type="button">Reemitir</button></div></article></li>)}</ul>}
+          {historyState === "ready" && visibleDocuments.length > 0 && <>
+            <ul aria-label="Todos os documentos emitidos" className="document-history-list">{documentsToRender.map((item) => <li key={item.documentId}><article className="document-history-item"><div className="document-history-item-icon" aria-hidden="true"><DashboardIcon name="document" /></div><div className="document-history-item-main"><div className="document-history-item-title"><strong>{documentTypeLabel(item.type)}</strong><span>{documentDateLabel(item.generatedAtUtc)}</span></div><p>{item.fileName.replace(/\.pdf$/i, "")}</p><small>{item.birdName} · {item.birdSpeciesPopularName}{item.birdRingNumber ? ` · Anilha ${item.birdRingNumber}` : ""}{item.modelId ? ` · ${documentModelLabel(item)}` : ""}{item.printSize ? ` · ${item.printSize}` : ""}</small></div><div className="document-history-item-actions"><button className="auth-secondary-action" onClick={() => setPreviewItem(item)} type="button">Visualizar documento</button><a className="auth-secondary-action" download={item.fileName} href={getApiUrl(item.downloadUrl)}>Baixar original</a><button className="auth-primary-action" onClick={() => setReissueItem(item)} type="button">Reemitir</button></div></article></li>)}</ul>
+            <div aria-live="polite" className="document-history-pagination" role="status"><span>Exibindo {documentsToRender.length} de {visibleDocuments.length} emissões</span>{hasMoreDocuments && <button className="auth-secondary-action" onClick={() => setHistoryVisibleCount((current) => current + DOCUMENT_HISTORY_PAGE_SIZE)} type="button">Carregar mais</button>}</div>
+          </>}
         </section>
         {previewItem && <DocumentPreviewDialog client={client} item={previewItem} onClose={() => setPreviewItem(undefined)} onSessionExpired={onSessionExpired} />}
         {reissueItem && <DocumentReissueDialog client={client} csrfToken={csrfToken} item={reissueItem} onClose={() => setReissueItem(undefined)} onReissued={handleReissued} onSessionExpired={onSessionExpired} />}
