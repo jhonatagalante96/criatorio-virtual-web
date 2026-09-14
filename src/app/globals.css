@@ -2216,6 +2216,8 @@ h1, h2 { line-height: 1.08; }
 .document-history-search input:focus { border-color: #4d9e86; box-shadow: 0 0 0 3px rgb(77 158 134 / 16%); outline: none; }
 .document-history-filter { min-width: min(100%, 14rem); }
 .document-history-list { display: grid; gap: .65rem; list-style: none; margin: 0; padding: clamp(1.1rem, 3vw, 1.55rem) clamp(1.1rem, 3vw, 2rem); }
+.document-history-pagination { align-items: center; border-top: 1px solid #e4eeee; color: #6a7b8d; display: flex; flex-wrap: wrap; font-size: .68rem; gap: .7rem; justify-content: center; padding: 0 clamp(1.1rem, 3vw, 2rem) clamp(1.1rem, 3vw, 1.55rem); }
+.document-history-pagination .auth-secondary-action { min-height: 2.25rem; padding: .45rem .7rem; }
 .document-history-list > li { min-width: 0; }
 .document-history-item { align-items: center; background: #fbfdfd; border: 1px solid #dce9ea; border-radius: .65rem; display: grid; gap: .8rem; grid-template-columns: 2.6rem minmax(0, 1fr) auto; padding: .85rem; }
 .document-history-item-icon { align-items: center; background: #e4f1f2; border-radius: .55rem; color: #236f87; display: inline-flex; height: 2.6rem; justify-content: center; width: 2.6rem; }
