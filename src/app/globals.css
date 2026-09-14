@@ -2067,6 +2067,7 @@ h1, h2 { line-height: 1.08; }
 .document-type-option.is-selected .document-type-option-check { background: #2d8364; border-color: #2d8364; }
 .document-wizard-progress { align-items: flex-start; display: grid; grid-template-columns: repeat(8, minmax(4.2rem, 1fr)); list-style: none; margin: 0 0 1rem; overflow-x: auto; padding: 0; }
 .document-wizard-progress-certificate { grid-template-columns: repeat(6, minmax(4.2rem, 1fr)); }
+.document-wizard-progress-genealogy { grid-template-columns: repeat(6, minmax(4.2rem, 1fr)); }
 .document-wizard-progress li { color: #8a98a8; font-size: .61rem; min-width: 4.2rem; position: relative; text-align: center; }
 .document-wizard-progress li::before { background: #d6e4e5; content: ""; height: 2px; left: 0; position: absolute; right: 0; top: .82rem; z-index: 0; }
 .document-wizard-progress li:first-child::before { left: 50%; }
@@ -2122,6 +2123,33 @@ h1, h2 { line-height: 1.08; }
 .document-wizard-choice-card > span:last-child, .document-wizard-size-choice > span:last-child, .document-wizard-field-choice > span:last-child { display: grid; gap: .15rem; min-width: 0; }
 .document-wizard-choice-card strong, .document-wizard-size-choice strong, .document-wizard-field-choice strong { color: var(--ink); font-size: .72rem; }
 .document-wizard-choice-card small, .document-wizard-size-choice small, .document-wizard-field-choice small { color: #718196; font-size: .61rem; line-height: 1.35; }
+.document-wizard-card-model-step > .document-wizard-actions:not(.document-wizard-model-actions) { display: none; }
+.document-wizard-certificate-model-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.document-wizard-certificate-model-choice { align-items: flex-start; flex-direction: column; min-height: 12rem; }
+.document-wizard-certificate-model-choice > span:last-child { margin-top: auto; }
+.document-wizard-certificate-model-preview { background: #fff; border: 1px solid #c4d3d0; border-radius: .35rem; display: block; height: 5.7rem; overflow: hidden; position: relative; width: 100%; }
+.document-wizard-certificate-model-preview::before { content: "CERTIFICADO DE GENEALOGIA"; display: block; font-family: Georgia, serif; font-size: .42rem; font-weight: 700; letter-spacing: .03em; padding: .48rem .4rem; text-align: center; }
+.document-wizard-certificate-model-preview::after { border-radius: .12rem; content: ""; height: .62rem; left: 11%; position: absolute; right: 11%; top: 1.4rem; }
+.document-wizard-certificate-model-preview i, .document-wizard-certificate-model-preview b, .document-wizard-certificate-model-preview small { border-radius: .1rem; display: block; position: absolute; }
+.document-wizard-certificate-model-preview i { bottom: .45rem; height: 2.2rem; left: 9%; right: 61%; }
+.document-wizard-certificate-model-preview b { bottom: .45rem; height: 2.2rem; left: 42%; right: 9%; }
+.document-wizard-certificate-model-preview small { bottom: .8rem; height: .22rem; left: 48%; right: 14%; }
+.document-wizard-certificate-model-preview-classicpremium { background: linear-gradient(135deg, #071d18, #123e30); border-color: #cda94d; color: #f5e2a5; }
+.document-wizard-certificate-model-preview-classicpremium::after { background: #cda94d; }
+.document-wizard-certificate-model-preview-classicpremium i { background: #174b39; border: 1px solid #d6b45a; }
+.document-wizard-certificate-model-preview-classicpremium b { background: linear-gradient(90deg, #e7f1df 0 48%, #f5cdd0 48%); }
+.document-wizard-certificate-model-preview-classicpremium small { background: #d5b459; }
+.document-wizard-certificate-model-preview-institutional { background: linear-gradient(135deg, #fff, #f1f5f0); color: #16493e; }
+.document-wizard-certificate-model-preview-institutional::after { background: #e4c36f; }
+.document-wizard-certificate-model-preview-institutional i { background: #fff; border: 1px solid #d8c17c; }
+.document-wizard-certificate-model-preview-institutional b { background: linear-gradient(90deg, #e4f0dc 0 48%, #f9dfe0 48%); }
+.document-wizard-certificate-model-preview-institutional small { background: #2d765d; }
+.document-wizard-certificate-model-preview-modern { background: #fff; color: #123b4a; }
+.document-wizard-certificate-model-preview-modern::after { background: #e6edf0; }
+.document-wizard-certificate-model-preview-modern i { background: #cfe8fb; border: 1px solid #4a9ef0; }
+.document-wizard-certificate-model-preview-modern b { background: linear-gradient(90deg, #cfe8fb 0 48%, #ffdce3 48%); border: 1px solid #ed7d9c; }
+.document-wizard-certificate-model-preview-modern small { background: #3f8b70; }
+.document-wizard-certificate-model-choice .document-wizard-choice-check { align-self: flex-end; margin-bottom: -1.35rem; position: relative; z-index: 1; }
 .document-wizard-choice-check { align-items: center; background: #fff; border: 1px solid #bcd4d5; border-radius: 50%; color: #238059; display: inline-flex; flex: 0 0 auto; font-size: .65rem; height: 1.2rem; justify-content: center; width: 1.2rem; }
 .document-wizard-mini-badge { align-items: flex-start; border: 1px solid #b5c8cb; border-radius: .3rem; color: #1f3e4b; display: flex; flex: 0 0 auto; flex-direction: column; height: 3.25rem; justify-content: center; padding: .3rem; width: 4.8rem; }
 .document-wizard-mini-badge strong { color: inherit; font-size: .46rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2309,7 +2337,7 @@ h1, h2 { line-height: 1.08; }
   .document-history-search, .document-history-filter { min-width: 0; width: 100%; }
   .document-wizard-progress { margin-inline: -.25rem; }
   .document-wizard-card { border-radius: .65rem; min-height: 0; }
-  .document-wizard-option-grid, .document-wizard-field-grid, .document-wizard-size-grid { grid-template-columns: 1fr; }
+  .document-wizard-option-grid, .document-wizard-field-grid, .document-wizard-size-grid, .document-wizard-certificate-model-grid { grid-template-columns: 1fr; }
   .document-wizard-choice-card { min-height: 5.3rem; }
   .document-wizard-size-choice { min-height: 0; }
   .document-wizard-size-preview { height: 2.9rem; }

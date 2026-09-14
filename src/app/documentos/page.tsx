@@ -12,6 +12,8 @@ type BirdSex = "Female" | "Male" | "Unknown";
 type WizardStep = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type DocumentType = "Badge" | "GenealogyCertificate" | "ProvenanceDocument";
 type BadgeModelId = "Classic" | "Minimalist" | "Competition" | "Photographic";
+type GenealogyCertificateModelId = "ClassicPremium" | "Institutional" | "Modern";
+type DocumentModelId = BadgeModelId | GenealogyCertificateModelId;
 type BadgePrintSize = "Small" | "Medium" | "Large";
 type DocumentField = "Name" | "RingNumber" | "Sex" | "Species" | "BirthDate" | "BirdPhoto" | "BreedingFarmName" | "GenealogyTree";
 type DocumentView = "generate" | "history";
@@ -56,7 +58,7 @@ interface BirdDocumentResponse {
   fileName: string;
   generatedAtUtc: string;
   length: number;
-  modelId: BadgeModelId | null;
+  modelId: DocumentModelId | null;
   pageCount?: number;
   printSize: BadgePrintSize | null;
   selectedFields: DocumentField[];
@@ -131,6 +133,12 @@ const modelOptions: Array<{ id: BadgeModelId; description: string; name: string 
   { id: "Photographic", description: "Mais espaço para a foto principal da ave.", name: "Fotográfico" }
 ];
 
+const genealogyModelOptions: Array<{ id: GenealogyCertificateModelId; description: string; name: string }> = [
+  { id: "ClassicPremium", description: "Acabamento escuro, sofisticado e tradicional.", name: "Clássico Premium" },
+  { id: "Institutional", description: "Leitura clara para uso institucional do criatório.", name: "Institucional Claro" },
+  { id: "Modern", description: "Composição leve, atual e objetiva.", name: "Moderno" }
+];
+
 const fieldOptions: Array<{ id: DocumentField; description: string; name: string }> = [
   { id: "Name", description: "Nome registrado da ave.", name: "Nome" },
   { id: "RingNumber", description: "Anilha de seis dígitos.", name: "Anilha" },
@@ -162,8 +170,27 @@ function sexLabel(value: BirdSex | null): string {
   return "Não identificado";
 }
 
-function modelLabel(id: BadgeModelId): string {
-  return modelOptions.find((option) => option.id === id)?.name ?? id;
+function modelLabel(id: DocumentModelId): string {
+  return modelOptions.find((option) => option.id === id)?.name ?? genealogyModelOptions.find((option) => option.id === id)?.name ?? id;
+}
+
+function genealogyModelLabel(id: GenealogyCertificateModelId): string {
+  return genealogyModelOptions.find((option) => option.id === id)?.name ?? id;
+}
+
+function isGenealogyModelId(value: DocumentModelId | null | undefined): value is GenealogyCertificateModelId {
+  return value === "ClassicPremium" || value === "Institutional" || value === "Modern";
+}
+
+function isBadgeModelId(value: DocumentModelId | null | undefined): value is BadgeModelId {
+  return value === "Classic" || value === "Minimalist" || value === "Competition" || value === "Photographic";
+}
+
+function documentModelLabel(item: Pick<BirdDocumentResponse, "modelId" | "type">): string {
+  if (!item.modelId) return "";
+  if (item.type === "GenealogyCertificate" && isGenealogyModelId(item.modelId)) return genealogyModelLabel(item.modelId);
+  if (item.type === "Badge" && isBadgeModelId(item.modelId)) return modelLabel(item.modelId);
+  return item.modelId;
 }
 
 function fieldLabel(id: DocumentField): string {
@@ -273,7 +300,7 @@ function documentContentError(error: unknown): string {
 }
 
 function reissueError(error: unknown): string {
-  if (error instanceof ApiError && error.status === 400) return "A configuração do crachá não foi aceita. Revise os campos escolhidos.";
+  if (error instanceof ApiError && error.status === 400) return "A configuração do documento não foi aceita. Revise os dados escolhidos.";
   if (error instanceof ApiError && error.status === 401) return "Sua sessão expirou. Entre novamente para reemitir o documento.";
   if (error instanceof ApiError && error.status === 403) return "Sua conta não tem permissão para reemitir este documento.";
   if (error instanceof ApiError && error.status === 404) return "A ave ou o documento original não está disponível.";
@@ -481,7 +508,9 @@ function DocumentReissueDialog({
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [useCustomBadge, setUseCustomBadge] = useState(false);
-  const [modelId, setModelId] = useState<BadgeModelId>(item.modelId ?? "Classic");
+  const [useCustomCertificate, setUseCustomCertificate] = useState(false);
+  const [modelId, setModelId] = useState<BadgeModelId>(isBadgeModelId(item.modelId) ? item.modelId : "Classic");
+  const [certificateModelId, setCertificateModelId] = useState<GenealogyCertificateModelId>(isGenealogyModelId(item.modelId) ? item.modelId : "Institutional");
   const [printSize, setPrintSize] = useState<BadgePrintSize>(item.printSize ?? "Medium");
   const [selectedFields, setSelectedFields] = useState<DocumentField[]>(item.selectedFields.length > 0 ? item.selectedFields : defaultFields);
   const [state, setState] = useState<"idle" | "loading">("idle");
@@ -489,7 +518,9 @@ function DocumentReissueDialog({
 
   useEffect(() => {
     setUseCustomBadge(false);
-    setModelId(item.modelId ?? "Classic");
+    setUseCustomCertificate(false);
+    setModelId(isBadgeModelId(item.modelId) ? item.modelId : "Classic");
+    setCertificateModelId(isGenealogyModelId(item.modelId) ? item.modelId : "Institutional");
     setPrintSize(item.printSize ?? "Medium");
     setSelectedFields(item.selectedFields.length > 0 ? item.selectedFields : defaultFields);
     setState("idle");
@@ -519,7 +550,11 @@ function DocumentReissueDialog({
     setError(undefined);
     try {
       if (!csrfToken.current) csrfToken.current = await client.fetchAntiforgeryToken();
-      const body = item.type === "Badge" && useCustomBadge ? { modelId, printSize, selectedFields } : {};
+      const body = item.type === "Badge" && useCustomBadge
+        ? { modelId, printSize, selectedFields }
+        : item.type === "GenealogyCertificate" && useCustomCertificate
+          ? { modelId: certificateModelId }
+          : {};
       const result = await client.request<BirdDocumentResponse>(`api/birds/${encodeURIComponent(item.birdId)}/documents/${encodeURIComponent(item.documentId)}/reissue`, {
         body: JSON.stringify(body),
         headers: { "content-type": "application/json" },
@@ -567,6 +602,11 @@ function DocumentReissueDialog({
               <label><span>Modelo</span><select onChange={(event) => setModelId(event.target.value as BadgeModelId)} value={modelId}>{modelOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>
               <label><span>Tamanho</span><select onChange={(event) => setPrintSize(event.target.value as BadgePrintSize)} value={printSize}>{sizeOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>
               <fieldset><legend>Campos permitidos</legend><div>{fieldOptions.map((field) => <label key={field.id}><input checked={selectedFields.includes(field.id)} onChange={() => toggleField(field.id)} type="checkbox" />{field.name}</label>)}</div></fieldset>
+            </div>}
+          </> : item.type === "GenealogyCertificate" ? <>
+            <label className="document-reissue-dialog-toggle"><input checked={useCustomCertificate} onChange={(event) => setUseCustomCertificate(event.target.checked)} type="checkbox" /><span><strong>Alterar modelo do certificado</strong><small>Sem marcar, o modelo atual é preservado.</small></span></label>
+            {useCustomCertificate && <div className="document-reissue-dialog-options">
+              <label><span>Modelo</span><select onChange={(event) => setCertificateModelId(event.target.value as GenealogyCertificateModelId)} value={certificateModelId}>{genealogyModelOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>
             </div>}
           </> : <p className="document-reissue-dialog-fixed">Este tipo usa um template fixo. Apenas os dados atuais da ave e do criatório serão considerados na nova emissão.</p>}
           {error && <p className="document-reissue-dialog-error" role="alert">{error}</p>}
@@ -681,7 +721,7 @@ function DocumentsHistory({
           {historyState === "loading" && <div className="document-history-state" role="status"><span className="document-preview-dialog-spinner" aria-hidden="true" /><strong>Consultando emissões…</strong><span>Buscando somente os documentos autorizados deste criatório.</span></div>}
           {historyState === "error" && <div className="document-history-state is-error" role="alert"><strong>Não foi possível consultar o histórico</strong><span>{historyError}</span><button className="auth-secondary-action" onClick={() => void loadHistory()} type="button">Tentar novamente</button></div>}
           {historyState === "ready" && visibleDocuments.length === 0 && <div className="document-history-state" role="status"><strong>{historyDocuments.length === 0 ? "Nenhuma emissão encontrada" : "Nenhum documento encontrado"}</strong><span>{historyDocuments.length === 0 ? "As emissões de crachá, certificado e procedência aparecerão aqui." : "Altere a busca ou o filtro para consultar outras emissões."}</span></div>}
-          {historyState === "ready" && visibleDocuments.length > 0 && <ul aria-label="Todos os documentos emitidos" className="document-history-list">{visibleDocuments.map((item) => <li key={item.documentId}><article className="document-history-item"><div className="document-history-item-icon" aria-hidden="true"><DashboardIcon name="document" /></div><div className="document-history-item-main"><div className="document-history-item-title"><strong>{documentTypeLabel(item.type)}</strong><span>{documentDateLabel(item.generatedAtUtc)}</span></div><p>{item.fileName}</p><small>{item.birdName} · {item.birdSpeciesPopularName}{item.birdRingNumber ? ` · Anilha ${item.birdRingNumber}` : ""}{item.modelId ? ` · ${modelLabel(item.modelId)}` : ""}{item.printSize ? ` · ${item.printSize}` : ""}</small></div><div className="document-history-item-actions"><button className="auth-secondary-action" onClick={() => setPreviewItem(item)} type="button">Visualizar PDF</button><a className="auth-secondary-action" download={item.fileName} href={getApiUrl(item.downloadUrl)}>Baixar original</a><button className="auth-primary-action" onClick={() => setReissueItem(item)} type="button">Reemitir</button></div></article></li>)}</ul>}
+          {historyState === "ready" && visibleDocuments.length > 0 && <ul aria-label="Todos os documentos emitidos" className="document-history-list">{visibleDocuments.map((item) => <li key={item.documentId}><article className="document-history-item"><div className="document-history-item-icon" aria-hidden="true"><DashboardIcon name="document" /></div><div className="document-history-item-main"><div className="document-history-item-title"><strong>{documentTypeLabel(item.type)}</strong><span>{documentDateLabel(item.generatedAtUtc)}</span></div><p>{item.fileName}</p><small>{item.birdName} · {item.birdSpeciesPopularName}{item.birdRingNumber ? ` · Anilha ${item.birdRingNumber}` : ""}{item.modelId ? ` · ${documentModelLabel(item)}` : ""}{item.printSize ? ` · ${item.printSize}` : ""}</small></div><div className="document-history-item-actions"><button className="auth-secondary-action" onClick={() => setPreviewItem(item)} type="button">Visualizar PDF</button><a className="auth-secondary-action" download={item.fileName} href={getApiUrl(item.downloadUrl)}>Baixar original</a><button className="auth-primary-action" onClick={() => setReissueItem(item)} type="button">Reemitir</button></div></article></li>)}</ul>}
         </section>
         {previewItem && <DocumentPreviewDialog client={client} item={previewItem} onClose={() => setPreviewItem(undefined)} onSessionExpired={onSessionExpired} />}
         {reissueItem && <DocumentReissueDialog client={client} csrfToken={csrfToken} item={reissueItem} onClose={() => setReissueItem(undefined)} onReissued={handleReissued} onSessionExpired={onSessionExpired} />}
@@ -710,6 +750,7 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
   const [requestedBirdId, setRequestedBirdId] = useState("");
   const [step, setStep] = useState<WizardStep>(0);
   const [modelId, setModelId] = useState<BadgeModelId>("Classic");
+  const [certificateModelId, setCertificateModelId] = useState<GenealogyCertificateModelId>("Institutional");
   const [selectedFields, setSelectedFields] = useState<DocumentField[]>(defaultFields);
   const [printSize, setPrintSize] = useState<BadgePrintSize>("Medium");
   const [fixedDocumentState, setFixedDocumentState] = useState<FixedDocumentState>("idle");
@@ -814,6 +855,8 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
 
   function selectDocumentType(type: DocumentType) {
     setDocumentType(type);
+    setCertificateModelId("Institutional");
+    setDocumentView("generate");
     setIsDocumentTypeStep(true);
     setStep(0);
     setGenerated(undefined);
@@ -882,6 +925,7 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
   function resetWizard() {
     setGenerated(undefined);
     setNotice(undefined);
+    setCertificateModelId("Institutional");
     setIsDocumentTypeStep(true);
     setFixedDocumentState("idle");
     setFixedDocumentError(undefined);
@@ -936,7 +980,9 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
       if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
       const body = documentType === "Badge"
         ? { type: "Badge", modelId, printSize, selectedFields }
-        : { type: documentType };
+        : documentType === "GenealogyCertificate"
+          ? { type: "GenealogyCertificate", modelId: certificateModelId }
+          : { type: documentType };
       const result = await client.current!.request<BirdDocumentResponse>(`api/birds/${encodeURIComponent(selectedBird.birdId)}/documents`, {
         body: JSON.stringify(body),
         headers: { "content-type": "application/json" },
@@ -1028,16 +1074,19 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
         <main className="document-wizard-page">
           <nav aria-label="Navegação estrutural" className="document-wizard-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span><span aria-current="page">Documentos</span></nav>
           <header className="document-wizard-header">
-            <div><h1>{documentTitle}</h1><p>{isGenealogyCertificate ? "Revise a genealogia disponível e gere um certificado interno em A4 paisagem." : "Confira a origem registrada e gere um documento interno de procedência em A4 paisagem."}</p></div>
+            <div><p className="eyebrow">Documentos internos</p><h1>{documentTitle}</h1><p>{isGenealogyCertificate ? "Revise a genealogia disponível, escolha um dos três modelos e gere um certificado interno em A4 paisagem." : "Confira a origem registrada e gere um documento interno de procedência em A4 paisagem."}</p></div>
             <Link className="document-wizard-back-link" href="/plantel/aves">Voltar para Aves</Link>
           </header>
 
-          <DocumentWizardProgress activeStep={progressStep} className="document-wizard-progress-certificate" onSelect={(index) => { if (index === 0) { setIsDocumentTypeStep(true); setNotice(undefined); return; } if (index < progressStep) { setNotice(undefined); setIsDocumentTypeStep(false); setStep(Math.max(0, index - 1) as WizardStep); } }} steps={fixedDocumentWizardSteps} />
+          <DocumentModeSwitcher onChange={changeDocumentView} view={documentView} />
+
+            <DocumentWizardProgress activeStep={progressStep} className={isGenealogyCertificate ? "document-wizard-progress-genealogy" : "document-wizard-progress-certificate"} onSelect={(index) => { if (index === 0) { setIsDocumentTypeStep(true); setNotice(undefined); return; } if (index < progressStep) { setNotice(undefined); setIsDocumentTypeStep(false); setStep(Math.max(0, index - 1) as WizardStep); } }} steps={steps} />
 
           {notice && <p className={`document-wizard-notice document-wizard-notice-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.text}</p>}
 
-          <form className="document-wizard-card" onSubmit={handleSubmit}>
+          <form className={`document-wizard-card${isGenealogyCertificate && step === 2 ? " document-wizard-card-model-step" : ""}`} onSubmit={handleSubmit}>
             {isDocumentTypeStep ? <DocumentTypeStep documentType={documentType} onChange={selectDocumentType} /> : <>
+            {isGenealogyCertificate && step === 2 && <section aria-labelledby="titulo-etapa-documento-modelo"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 4 de {steps.length}</p><h2 id="titulo-etapa-documento-modelo">Escolha o modelo</h2><p>Selecione o acabamento visual do certificado conforme os mockups de referência. O conteúdo genealógico permanece o mesmo.</p></div></div><div aria-label="Modelos do certificado de genealogia" className="document-wizard-option-grid document-wizard-certificate-model-grid" role="radiogroup">{genealogyModelOptions.map((option) => <label className={`document-wizard-choice-card document-wizard-certificate-model-choice${certificateModelId === option.id ? " is-selected" : ""}`} key={option.id}><input checked={certificateModelId === option.id} name="genealogy-certificate-model" onChange={() => setCertificateModelId(option.id)} type="radio" value={option.id} /><span className="document-wizard-choice-check" aria-hidden="true">{certificateModelId === option.id ? "✓" : ""}</span><span className={`document-wizard-certificate-model-preview document-wizard-certificate-model-preview-${option.id.toLowerCase()}`} aria-hidden="true"><i /><b /><small /></span><span><strong>{option.name}</strong><small>{option.description}</small></span></label>)}</div><div className="document-wizard-actions document-wizard-model-actions"><button className="settings-cancel-action" onClick={goBack} type="button">Anterior</button><span>Etapa 4 de {steps.length}</span><button className="auth-primary-action" type="submit">Continuar</button></div></section>}
             {step === 0 && <section aria-labelledby="titulo-etapa-documento-ave"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 2 de 6</p><h2 id="titulo-etapa-documento-ave">Escolha a ave</h2><p>Selecione uma ave para consultar a elegibilidade, os pais e os dados devolvidos pela API.</p></div></div><label className="document-wizard-search" htmlFor="buscar-ave-documento"><span>Buscar por nome, anilha ou espécie</span><input id="buscar-ave-documento" onChange={(event) => setBirdSearch(event.target.value)} placeholder="Ex.: Canário ou 123456" value={birdSearch} /></label><ul aria-label="Aves ativas disponíveis" className="document-wizard-bird-list" role="listbox">{filteredBirds.map((bird) => <li key={bird.birdId}><button aria-selected={selectedBirdId === bird.birdId} className={selectedBirdId === bird.birdId ? "is-selected" : ""} onClick={() => selectBird(bird)} role="option" type="button"><span className="document-wizard-bird-icon" aria-hidden="true"><DashboardIcon name="bird" /></span><span className="document-wizard-bird-copy"><strong>{bird.name}</strong><span>{bird.speciesPopularName} · {sexLabel(bird.sex)}</span><span>{bird.ringNumber ? `Anilha ${bird.ringNumber} · ${formatDate(bird.birthDate)}` : "Identificação pendente · anilha necessária"}</span></span><span aria-hidden="true" className="document-wizard-selection-mark">{selectedBirdId === bird.birdId ? "✓" : bird.ringNumber ? "＋" : "!"}</span></button></li>)}</ul>{filteredBirds.length === 0 && <p className="document-wizard-inline-empty" role="status">Nenhuma ave corresponde à busca.</p>}</section>}
 
             {step === 1 && <section aria-labelledby="titulo-etapa-documento-elegibilidade"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 3 de 6</p><h2 id="titulo-etapa-documento-elegibilidade">Valide a elegibilidade</h2><p>A API verifica se a ave pode receber este documento antes de carregar a prévia.</p></div></div>{fixedDocumentState === "loading" && <div className="document-wizard-inline-state" role="status"><strong>Consultando dados da ave…</strong><span>Validando elegibilidade, genealogia e dados disponíveis do criatório.</span></div>}{fixedDocumentState === "error" && <div className="document-wizard-inline-state is-error" role="alert"><h3>Não foi possível validar a ave</h3><span>{fixedDocumentError}</span><button className="auth-secondary-action" onClick={() => void validateFixedDocument()} type="button">Tentar novamente</button></div>}{fixedDocumentState === "blocked" && <div className="document-wizard-inline-state is-error" role="alert"><h3>{isGenealogyCertificate ? "Certificado" : "Documento de procedência"} bloqueado para esta ave</h3><span>Corrija as pendências abaixo para liberar a emissão.</span><ul className="document-wizard-issue-list">{fixedDocumentEligibility?.issues.map((issue) => <li key={issue.code}>{eligibilityIssueMessage(issue)}</li>)}</ul>{fixedDocumentEligibility?.issues.some((issue) => issue.code === "MissingRingNumber") && selectedBird && <Link className="auth-secondary-action" href={`/plantel/aves/${selectedBird.birdId}/editar`}>Editar dados da ave</Link>}</div>}{fixedDocumentState === "ready" && <div className="document-wizard-inline-state is-ready" role="status"><strong>{isGenealogyCertificate ? "Ave elegível para o certificado" : "Ave elegível para o documento de procedência"}</strong><span>{selectedBird?.name} pode seguir para a prévia. Os dados abaixo serão apresentados sem completar informações ausentes.</span></div>}</section>}
