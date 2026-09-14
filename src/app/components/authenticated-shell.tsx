@@ -23,7 +23,7 @@ interface NavigationItem {
 }
 
 const primaryNavigation: NavigationItem[] = [
-  { href: "/dashboard", icon: "home", id: "dashboard", label: "Dashboard" },
+  { href: "/dashboard", icon: "home", id: "dashboard", label: "Painel" },
   { href: "/plantel/aves", icon: "bird", id: "birds", label: "Aves" },
   { icon: "heart", id: "reproduction", label: "Reprodução" },
   { icon: "transfer", id: "transfers", label: "Transferências" },
@@ -129,7 +129,7 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
       <a className="skip-link" href="#conteudo-autenticado">Pular para o conteúdo</a>
       <div className="authenticated-shell">
         <aside aria-label="Navegação principal" className="authenticated-sidebar">
-          <Link aria-label="Ir para o dashboard" className="authenticated-brand" href="/dashboard">
+          <Link aria-label="Ir para o painel" className="authenticated-brand" href="/dashboard">
             <BrandLockup />
           </Link>
           <nav aria-label="Módulos disponíveis" className="authenticated-desktop-nav">
@@ -180,7 +180,7 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
                 </div>
               </div>
             </details>
-            <Link aria-label="Ir para o dashboard" className="authenticated-brand" href="/dashboard">
+            <Link aria-label="Ir para o painel" className="authenticated-brand" href="/dashboard">
               <BrandLockup />
             </Link>
             <div className="authenticated-mobile-account-control">

@@ -221,7 +221,7 @@ export function PasskeyManagementPanel() {
 
   const isBusy = Boolean(actionState);
   const confirmingPasskey = passkeys.find((item) => item.credentialId === confirmingId);
-  const addLabel = passkeys.length > 0 ? "Adicionar outra Passkey" : "Adicionar Passkey";
+  const addLabel = passkeys.length > 0 ? "Adicionar outra chave" : "Adicionar chave de acesso";
 
   return (
     <section aria-labelledby={headingId} className="passkey-management-card">
@@ -237,7 +237,7 @@ export function PasskeyManagementPanel() {
 
       {notice && <p className={`passkey-management-notice passkey-management-notice-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.text}</p>}
 
-      {listState === "loading" && <div className="passkey-management-state" role="status"><strong>Carregando chaves de acesso…</strong><span>Estamos consultando apenas os metadados seguros da sua conta.</span></div>}
+      {listState === "loading" && <div className="passkey-management-state" role="status"><strong>Carregando chaves de acesso…</strong><span>Estamos consultando apenas as informações de segurança da sua conta.</span></div>}
       {listState === "error" && <div className="passkey-management-state"><strong>Não foi possível carregar as chaves de acesso.</strong><button className="auth-secondary-action" onClick={() => setRetryVersion((version) => version + 1)} type="button">Tentar novamente</button></div>}
       {listState === "unsupported" && <div className="passkey-management-state"><strong>Este navegador não oferece suporte a chaves de acesso.</strong><span>Seu login por senha ou Google continua disponível.</span></div>}
       {listState === "ready" && passkeys.length === 0 && <div className="passkey-management-empty"><strong>Nenhuma chave de acesso cadastrada</strong><span>Adicione uma chave para entrar usando a biometria ou o bloqueio do aparelho.</span><button className="auth-primary-action" disabled={isBusy} onClick={() => void handleRegister()} type="button">{actionState === "registering" ? "Adicionando…" : addLabel}</button></div>}
@@ -251,7 +251,7 @@ export function PasskeyManagementPanel() {
               <li className="passkey-management-item" key={item.credentialId}>
                 {isEditing ? (
                   <form className="passkey-rename-form" noValidate onSubmit={(event) => { event.preventDefault(); void handleRename(item); }}>
-                    <label htmlFor={`passkey-name-${item.credentialId}`}>Nome da Passkey</label>
+                    <label htmlFor={`passkey-name-${item.credentialId}`}>Nome da chave de acesso</label>
                     <input aria-describedby={nameError ? `passkey-name-error-${item.credentialId}` : undefined} aria-invalid={Boolean(nameError)} autoFocus id={`passkey-name-${item.credentialId}`} maxLength={100} onChange={(event) => { setEditingName(event.target.value); setNameError(undefined); }} value={editingName} />
                     {nameError && <p className="field-error" id={`passkey-name-error-${item.credentialId}`}>{nameError}</p>}
                     <div className="passkey-management-actions"><button className="auth-primary-action" disabled={actionState === "renaming"} type="submit">{actionState === "renaming" ? "Salvando…" : "Salvar nome"}</button><button className="settings-cancel-action" disabled={actionState === "renaming"} onClick={cancelRename} type="button">Cancelar</button></div>

@@ -3,6 +3,10 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 import DashboardPage from "./page";
 
+const routerReplace = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: routerReplace }) }));
+
 const browserDescriptors = {
   credentials: Object.getOwnPropertyDescriptor(navigator, "credentials"),
   isSecureContext: Object.getOwnPropertyDescriptor(window, "isSecureContext"),
@@ -20,6 +24,7 @@ afterEach(() => {
   window.history.replaceState({}, "", "/dashboard");
   window.sessionStorage.clear();
   vi.unstubAllGlobals();
+  routerReplace.mockReset();
 });
 
 function setBrowserSupport() {
@@ -86,6 +91,30 @@ function responseWithStatus(status: number): Response {
   return new Response(null, { status });
 }
 
+function passkeyCredential(): PublicKeyCredential {
+  return {
+    authenticatorAttachment: "platform",
+    getClientExtensionResults: () => ({}),
+    id: "credential-id",
+    rawId: new Uint8Array([1]).buffer,
+    response: {
+      authenticatorData: new Uint8Array([2]).buffer,
+      clientDataJSON: new Uint8Array([3]).buffer,
+      signature: new Uint8Array([4]).buffer,
+      userHandle: null
+    },
+    toJSON: () => ({
+      authenticatorAttachment: "platform",
+      clientExtensionResults: {},
+      id: "credential-id",
+      rawId: "AQ",
+      response: { authenticatorData: "Ag", clientDataJSON: "Aw", signature: "BA", userHandle: null },
+      type: "public-key"
+    }),
+    type: "public-key"
+  } as unknown as PublicKeyCredential;
+}
+
 describe("DashboardPage", () => {
   it("does not show the session recovery screen while the dashboard is initializing", () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
@@ -94,7 +123,7 @@ describe("DashboardPage", () => {
 
     expect(screen.queryByRole("heading", { name: "Restaurando sua sessão" })).toBeNull();
     expect(screen.getByRole("complementary", { name: "Navegação principal" })).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toContain("Carregando dashboard");
+    expect(screen.getByRole("status").textContent).toContain("Carregando painel");
     expect(screen.getByRole("status").textContent).not.toContain("Restaurando sua sessão");
   });
 
@@ -104,9 +133,31 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Entre para consultar o dashboard" })).toBeTruthy());
-    expect(screen.queryByRole("heading", { name: "Dashboard" })).toBeNull();
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/login"));
+    expect(screen.queryByRole("heading", { name: "Entre para consultar o painel" })).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("restores an expired session with the device biometric before loading the dashboard", async () => {
+    setBrowserSupport();
+    const credential = passkeyCredential();
+    const credentials = navigator.credentials as CredentialsContainer;
+    vi.spyOn(credentials, "get").mockResolvedValue(credential);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(responseWithStatus(401))
+      .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ challenge: "AQ", userVerification: "required" }), { headers: { "content-type": "application/json" }, status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(dashboardResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DashboardPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
+    expect(credentials.get).toHaveBeenCalledOnce();
+    expect(routerReplace).not.toHaveBeenCalled();
   });
 
   it("asks for a farm before loading dashboard data", async () => {
@@ -147,7 +198,7 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
     expect(screen.getByText("Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.")).toBeTruthy();
 
     const activeBirdMetric = screen.getByText("Aves cadastradas").closest("article");
@@ -180,7 +231,7 @@ describe("DashboardPage", () => {
     expect(screen.getAllByRole("link", { name: "Configurações" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
     expect(screen.getAllByRole("link", { name: "Gerenciar sessão" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
 
-    expect(screen.getAllByRole("link", { name: /^Dashboard$/ })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /^Painel$/ })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: /^Aves$/ })).toHaveLength(2);
     expect(screen.getAllByText("Reprodução")).toHaveLength(2);
     expect(screen.getAllByText("Transferências").filter((element) => element.closest(".authenticated-nav-link"))).toHaveLength(2);
@@ -255,11 +306,11 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível carregar o dashboard" })).toBeTruthy());
-    expect(screen.getByText(/dashboard está indisponível/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível carregar o painel" })).toBeTruthy());
+    expect(screen.getByText(/painel está indisponível/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
@@ -274,7 +325,7 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
@@ -301,7 +352,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Acesso bloqueado" })).toBeTruthy());
-    expect(screen.getByText(/não tem permissão para consultar este dashboard/)).toBeTruthy();
+    expect(screen.getByText(/não tem permissão para consultar este painel/)).toBeTruthy();
     expect(screen.queryByText("Indicadores principais")).toBeNull();
   });
 
@@ -316,8 +367,8 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
-    expect(screen.queryByRole("heading", { name: "Não foi possível carregar o dashboard" })).toBeNull();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
+    expect(screen.queryByRole("heading", { name: "Não foi possível carregar o painel" })).toBeNull();
   });
 
   it("does not render a payload that belongs to another farm", async () => {
@@ -331,7 +382,7 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível carregar o dashboard" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível carregar o painel" })).toBeTruthy());
     expect(screen.getByText(/criatório selecionado mudou/)).toBeTruthy();
     expect(screen.queryByText("Indicadores principais")).toBeNull();
   });

@@ -13,7 +13,7 @@ interface LoadingCopy {
 
 function loadingCopyForPathname(pathname: string): LoadingCopy {
   if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
-    return { activeNav: "dashboard", label: "Carregando dashboard", message: "Um instante enquanto preparamos seu espaço." };
+    return { activeNav: "dashboard", label: "Carregando painel", message: "Um instante enquanto preparamos seu espaço." };
   }
 
   if (pathname.startsWith("/plantel/aves/novo")) {

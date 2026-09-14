@@ -722,7 +722,7 @@ function BirdsReportDialog({
         </header>
 
         <p className="bird-report-dialog-intro" id="bird-report-dialog-description">
-          Gere uma prévia temporária em PDF com os dados autorizados de <strong>{farmName}</strong>. O arquivo não é salvo no navegador.
+          Gere uma prévia temporária com os dados autorizados de <strong>{farmName}</strong>. O arquivo não é salvo no navegador.
         </p>
 
         <dl className="bird-report-dialog-filters">
@@ -741,10 +741,10 @@ function BirdsReportDialog({
           <div className="bird-report-dialog-empty" role="status">
             <span aria-hidden="true" className="bird-report-dialog-mark"><DashboardIcon name="document" /></span>
             <div>
-              <h3>Resumo em PDF</h3>
-              <p>O documento reúne Matrizes, Filhotes, grupos por sexo e totais calculados pelo backend.</p>
+              <h3>Resumo do plantel</h3>
+              <p>O documento reúne Matrizes, Filhotes, grupos por sexo e totais calculados pelo sistema.</p>
             </div>
-            <button className="auth-primary-action" onClick={() => void generatePreview()} type="button">Gerar prévia do PDF</button>
+            <button className="auth-primary-action" onClick={() => void generatePreview()} type="button">Gerar prévia do relatório</button>
           </div>
         )}
 
@@ -768,7 +768,7 @@ function BirdsReportDialog({
           <div className="bird-report-dialog-preview">
             <iframe title="Prévia do relatório de aves cadastradas" src={previewUrl} />
             <div className="bird-report-dialog-actions">
-              <a className="auth-primary-action" download="relatorio-aves-cadastradas.pdf" href={previewUrl}>Baixar relatório em PDF</a>
+              <a className="auth-primary-action" download="relatorio-aves-cadastradas.pdf" href={previewUrl}>Baixar relatório</a>
               <button className="auth-secondary-action" onClick={() => void generatePreview()} type="button">Gerar novamente</button>
             </div>
           </div>
@@ -1031,7 +1031,7 @@ function BirdListPage() {
   return (
     <BirdListLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
       <nav aria-label="Navegação estrutural" className="bird-list-breadcrumb">
-        <Link href="/dashboard">Dashboard</Link>
+        <Link href="/dashboard">Painel</Link>
         <span aria-hidden="true">›</span>
         <span aria-current="page">Aves</span>
       </nav>

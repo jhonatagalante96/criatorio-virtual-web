@@ -395,12 +395,12 @@ describe("BirdListPage", () => {
       fireEvent.click(screen.getByRole("button", { name: "Gerar relatório" }));
       expect(screen.getByRole("dialog", { name: "Prévia do relatório de aves" })).toBeTruthy();
       expect(screen.getByText("Falecidas")).toBeTruthy();
-      fireEvent.click(screen.getByRole("button", { name: "Gerar prévia do PDF" }));
+      fireEvent.click(screen.getByRole("button", { name: "Gerar prévia do relatório" }));
 
       await waitFor(() => expect(screen.getByTitle("Prévia do relatório de aves cadastradas")).toBeTruthy());
       expect(listUrl(fetchMock, 4)).toContain("/api/reports/birds/pdf?status=Deceased");
-      expect(screen.getByRole("link", { name: "Baixar relatório em PDF" }).getAttribute("href")).toBe("blob:birds-report");
-      expect(screen.getByRole("link", { name: "Baixar relatório em PDF" }).getAttribute("download")).toBe("relatorio-aves-cadastradas.pdf");
+      expect(screen.getByRole("link", { name: "Baixar relatório" }).getAttribute("href")).toBe("blob:birds-report");
+      expect(screen.getByRole("link", { name: "Baixar relatório" }).getAttribute("download")).toBe("relatorio-aves-cadastradas.pdf");
 
       fireEvent.click(screen.getByRole("button", { name: "Fechar prévia" }));
       expect(screen.queryByRole("dialog", { name: "Prévia do relatório de aves" })).toBeNull();
@@ -429,7 +429,7 @@ describe("BirdListPage", () => {
 
     await openList(fetchMock);
     fireEvent.click(screen.getByRole("button", { name: "Gerar relatório" }));
-    fireEvent.click(screen.getByRole("button", { name: "Gerar prévia do PDF" }));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar prévia do relatório" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain("não tem permissão");
     expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeTruthy();

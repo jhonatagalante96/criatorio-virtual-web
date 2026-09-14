@@ -279,7 +279,7 @@ export function BirdStatusAction({
               </div>
             ) : (
               <form aria-label={`Alterar situação de ${birdName}`} className="bird-status-dialog-form" noValidate onSubmit={handleSubmit}>
-                <p className="bird-status-dialog-intro">Escolha o novo estado de <strong>{birdName}</strong>. Essa alteração é registrada pelo servidor e não pode ser desfeita neste fluxo.</p>
+                <p className="bird-status-dialog-intro">Escolha a nova situação de <strong>{birdName}</strong>. Essa alteração fica registrada no sistema e não pode ser desfeita neste fluxo.</p>
                 {formError && <div className="form-error" role="alert">{formError}</div>}
 
                 <fieldset aria-describedby={firstFieldError(errors, "status") ? "bird-status-error" : undefined} className="bird-status-options">

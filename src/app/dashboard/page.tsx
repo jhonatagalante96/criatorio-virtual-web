@@ -9,6 +9,7 @@ import { AppLoadingState } from "../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../components/brand";
 import { DashboardIcon } from "../components/dashboard-icons";
 import { PasskeyActivationPrompt } from "../components/passkey-activation-prompt";
+import { SessionRecovery } from "../components/session-recovery";
 import type { DashboardIconName } from "../components/dashboard-icons";
 
 interface BreedingFarmSummary {
@@ -429,7 +430,7 @@ function DashboardContent({
     <AuthenticatedShell activeNav="dashboard" email={sessionEmail} farmName={farm.name}>
       <header className="dashboard-page-header">
         <div>
-          <h1>Dashboard</h1>
+          <h1>Painel</h1>
           <p className="dashboard-lede">Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.</p>
         </div>
         <div className="dashboard-page-context">
@@ -521,7 +522,7 @@ function DashboardScreen() {
       }
 
       if (requestError instanceof ApiError && requestError.status === 403) {
-        setView({ kind: "blocked", message: "Sua conta não tem permissão para consultar este dashboard." });
+        setView({ kind: "blocked", message: "Sua conta não tem permissão para consultar este painel." });
         return;
       }
 
@@ -538,9 +539,9 @@ function DashboardScreen() {
       setView({
         kind: "error",
         message: requestError instanceof ApiError && requestError.status >= 500
-          ? "O dashboard está indisponível no momento. Tente novamente em instantes."
+          ? "O painel está indisponível no momento. Tente novamente em instantes."
           : requestError instanceof StaleTenantResponseError
-            ? "O criatório selecionado mudou em outra janela. Atualize o dashboard para continuar."
+            ? "O criatório selecionado mudou em outra janela. Atualize o painel para continuar."
             : "Verifique sua conexão e tente novamente."
       });
     }
@@ -555,18 +556,18 @@ function DashboardScreen() {
   }, [loadDashboard, status]);
 
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
-    return <AppLoadingState activeNav="dashboard" email={session?.email} label="Carregando dashboard" message="Um instante enquanto preparamos seu espaço." />;
+    return <AppLoadingState activeNav="dashboard" email={session?.email} label="Carregando painel" message="Um instante enquanto preparamos seu espaço." />;
   }
-  if (status === "error") return <AccessState heading="Não foi possível abrir o dashboard" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
+  if (status === "error") return <AccessState heading="Não foi possível abrir o painel" message={error ?? "Tente novamente para continuar."} onRetry={() => void refresh()} />;
   if (status === "forbidden") return <AccessState heading="Acesso bloqueado" message={error ?? "Sua conta não tem permissão para acessar esta área."} onRetry={() => void refresh()} retryLabel="Verificar novamente" />;
-  if (status === "unauthenticated") return <AccessState heading="Entre para consultar o dashboard" message="Faça login para acompanhar os indicadores do seu criatório." />;
+  if (status === "unauthenticated") return <SessionRecovery />;
 
   if (view.kind === "loading") {
-    return <AppLoadingState activeNav="dashboard" email={session?.email} label="Carregando dashboard" message="Um instante enquanto preparamos seu espaço." />;
+    return <AppLoadingState activeNav="dashboard" email={session?.email} label="Carregando painel" message="Um instante enquanto preparamos seu espaço." />;
   }
-  if (view.kind === "error") return <AccessState heading="Não foi possível carregar o dashboard" message={view.message} onRetry={() => void loadDashboard()} />;
+  if (view.kind === "error") return <AccessState heading="Não foi possível carregar o painel" message={view.message} onRetry={() => void loadDashboard()} />;
   if (view.kind === "blocked") return <AccessState heading="Acesso bloqueado" message={view.message} onRetry={() => void loadDashboard()} retryLabel="Verificar novamente" />;
-  if (view.kind === "empty") return <AccessState actionHref="/onboarding/criatorio" actionLabel="Criar meu criatório" heading="Crie seu primeiro criatório" message="Ainda não existe um criatório vinculado a esta conta. Crie um agora para liberar seu dashboard." />;
+  if (view.kind === "empty") return <AccessState actionHref="/onboarding/criatorio" actionLabel="Criar meu criatório" heading="Crie seu primeiro criatório" message="Ainda não existe um criatório vinculado a esta conta. Crie um agora para liberar seu painel." />;
   if (view.kind === "unselected") return <AccessState actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar criatório" heading="Selecione um criatório" message="Escolha um criatório para consultar seus indicadores e atividades." />;
   if (view.kind === "missing") return <AccessState actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar outro criatório" heading="Criatório indisponível" message="Não foi possível localizar o criatório selecionado. Escolha outro para continuar." onRetry={() => void loadDashboard()} />;
   if (!session) return null;

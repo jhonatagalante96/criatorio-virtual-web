@@ -901,7 +901,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
   return (
     <AuthenticatedShell activeNav="birds" email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"}>
       <div className="bird-form-view" id="conteudo-edicao-ave">
-        <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">/</span><Link href="/plantel/aves">Aves</Link><span aria-hidden="true">/</span><Link href={`/plantel/aves/${encodeURIComponent(birdId)}`}>{bird.name}</Link><span aria-hidden="true">/</span><span aria-current="page">Editar</span></nav>
+        <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><Link href="/dashboard">Painel</Link><span aria-hidden="true">/</span><Link href="/plantel/aves">Aves</Link><span aria-hidden="true">/</span><Link href={`/plantel/aves/${encodeURIComponent(birdId)}`}>{bird.name}</Link><span aria-hidden="true">/</span><span aria-current="page">Editar</span></nav>
         <div className="bird-form-page-header">
           <p className="eyebrow">Ficha privada{farmName ? ` · ${farmName}` : ""}</p>
           <h1 id="titulo-edicao-ave">Editar dados da ave</h1>
@@ -1042,7 +1042,7 @@ function BirdEditForm({ birdId }: Readonly<{ birdId: string }>) {
             <section className="bird-form-aside-card bird-form-aside-card-soft">
               <p className="eyebrow">ATENÇÃO</p>
               <h2>Vínculos seguros</h2>
-              <p>A API valida sexo, duplicidade, ciclos e o criatório de cada ancestral. A situação da ave é alterada em um fluxo separado.</p>
+              <p>O sistema verifica sexo, duplicidade, ciclos e o criatório de cada ancestral. A situação da ave é alterada em um fluxo separado.</p>
             </section>
           </aside>
         </div>

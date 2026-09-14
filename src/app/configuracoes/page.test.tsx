@@ -93,7 +93,7 @@ describe("SettingsPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<SettingsPage />);
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Adicionar Passkey" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Adicionar chave de acesso" })).toBeTruthy());
     expect(screen.getByRole("heading", { name: "Chaves de acesso" })).toBeTruthy();
     expect(String(fetchMock.mock.calls[1][0])).toContain("api/auth/passkeys");
   });
