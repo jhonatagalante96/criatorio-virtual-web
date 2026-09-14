@@ -147,6 +147,7 @@ describe("BirdRegistrationPage", () => {
       speciesId: "species-a"
     });
     expect(screen.queryByText("Identificação pendente")).toBeNull();
+    expect(screen.getByRole("link", { name: "Voltar para o início" }).getAttribute("href")).toBe("/plantel/aves");
 
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar outra ave" }));
     expect(screen.getByRole("heading", { name: "Cadastrar ave" })).toBeTruthy();
