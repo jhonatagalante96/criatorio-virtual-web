@@ -304,7 +304,6 @@ function SpeciesFilter({
     <div className="bird-species-filter" ref={filterRef}>
       <span className="bird-filter-label" id="bird-species-filter-label">Espécie</span>
       <span aria-hidden="true" className="bird-filter-mobile-icon bird-filter-mobile-icon-leaf"><DashboardIcon name="leaf" /></span>
-      <span aria-hidden="true" className="bird-filter-mobile-label">Espécie</span>
       {selection ? (
         <div className="bird-species-filter-selected" role="status">
           <span>
@@ -376,7 +375,6 @@ function BirdFilterSelect({
   id,
   label,
   mobileIcon,
-  mobileLabel,
   onChange,
   options,
   value
@@ -386,16 +384,14 @@ function BirdFilterSelect({
   id: string;
   label: string;
   mobileIcon?: DashboardIconName;
-  mobileLabel?: string;
   onChange: (value: string) => void;
   options: Array<{ label: string; value: string }>;
   value: string;
 }>) {
   return (
     <label className={`bird-filter-select${className ? ` ${className}` : ""}`} htmlFor={id}>
-      <span>{label}</span>
+      <span className="bird-filter-label">{label}</span>
       {mobileIcon && <span aria-hidden="true" className={`bird-filter-mobile-icon bird-filter-mobile-icon-${mobileIcon}`}><DashboardIcon name={mobileIcon} /></span>}
-      <span aria-hidden="true" className="bird-filter-mobile-label">{mobileLabel ?? label}</span>
       <select disabled={disabled} id={id} onChange={(event) => onChange(event.target.value)} value={value}>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -1117,7 +1113,6 @@ function BirdListPage() {
               disabled={listState === "loading"}
               id="bird-status-filter"
               label="Situação"
-              mobileLabel="Status"
               onChange={(value) => changeFilter("status", value)}
               options={[{ label: "Todas as situações", value: "" }, ...birdStatuses]}
               value={filters.status}
@@ -1127,7 +1122,6 @@ function BirdListPage() {
               id="bird-identification-filter"
               label="Identificação"
               mobileIcon="tag"
-              mobileLabel="Anilha"
               onChange={(value) => changeFilter("identificationPending", value)}
               options={[{ label: "Todas", value: "" }, { label: "Com anilha", value: "false" }, { label: "Pendente", value: "true" }]}
               value={filters.identificationPending}

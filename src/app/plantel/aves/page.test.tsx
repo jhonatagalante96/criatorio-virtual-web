@@ -173,6 +173,23 @@ describe("BirdListPage", () => {
     expect(birdRow.querySelector(".bird-row-actions")?.hasAttribute("open")).toBe(false);
   });
 
+  it("keeps listing actions together and renders each filter name once", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([bird()]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openList(fetchMock);
+
+    const actionGroup = document.querySelector(".bird-list-header-side");
+    expect(actionGroup?.children).toHaveLength(2);
+    expect(actionGroup?.firstElementChild?.classList.contains("bird-list-report-action")).toBe(true);
+    expect(actionGroup?.lastElementChild?.classList.contains("bird-list-register-action")).toBe(true);
+    expect(document.querySelectorAll(".bird-filter-mobile-label")).toHaveLength(0);
+    expect(document.querySelectorAll(".bird-filter-select > .bird-filter-label")).toHaveLength(5);
+  });
+
   it("submits a search and keeps the query represented in the URL and API request", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
