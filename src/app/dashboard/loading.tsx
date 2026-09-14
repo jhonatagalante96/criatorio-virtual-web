@@ -5,7 +5,7 @@ export default function DashboardLoading() {
   return (
     <AppLoadingState
       activeNav="dashboard"
-      label="Carregando dashboard"
+      label="Carregando painel"
       message="Um instante enquanto preparamos seu espaço."
     />
   );

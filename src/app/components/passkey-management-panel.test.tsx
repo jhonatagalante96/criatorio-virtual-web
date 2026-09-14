@@ -154,7 +154,7 @@ describe("PasskeyManagementPanel", () => {
     render(<PasskeyManagementPanel />);
     await waitFor(() => expect(screen.getByText("Notebook")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Renomear Notebook" }));
-    fireEvent.change(screen.getByLabelText("Nome da Passkey"), { target: { value: "Celular" } });
+    fireEvent.change(screen.getByLabelText("Nome da chave de acesso"), { target: { value: "Celular" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar nome" }));
 
     await waitFor(() => expect(screen.getByText("Celular")).toBeTruthy());

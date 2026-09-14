@@ -355,7 +355,7 @@ describe("DocumentsPage", () => {
       printSize: "Large",
       selectedFields: ["Name", "RingNumber", "Species", "Sex"]
     });
-    expect(screen.getByRole("link", { name: "Baixar crachá em PDF" }).getAttribute("href"))
+    expect(screen.getByRole("link", { name: "Baixar crachá" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-a/content");
   });
 
@@ -430,7 +430,7 @@ describe("DocumentsPage", () => {
     const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
     expect(postCall).toBeTruthy();
     expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({ type: "GenealogyCertificate", modelId: "Modern" });
-    expect(screen.getByRole("link", { name: "Baixar certificado em PDF" }).getAttribute("href"))
+    expect(screen.getByRole("link", { name: "Baixar certificado" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-certificate-a/content");
   });
 
@@ -521,7 +521,7 @@ describe("DocumentsPage", () => {
     const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
     expect(postCall).toBeTruthy();
     expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({ type: "ProvenanceDocument" });
-    expect(screen.getByRole("link", { name: "Baixar documento de procedência em PDF" }).getAttribute("href"))
+    expect(screen.getByRole("link", { name: "Baixar documento de procedência" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-provenance-a/content");
   });
 
@@ -566,15 +566,15 @@ describe("DocumentsPage", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Documentos" })).toBeTruthy());
     await waitFor(() => expect(screen.getAllByText("Crachá").length).toBeGreaterThan(0));
-    expect(screen.getByText("certificado-aurora.pdf")).toBeTruthy();
-    expect(screen.queryByText("internal-record.pdf")).toBeNull();
+    expect(screen.getByText("certificado-aurora")).toBeTruthy();
+    expect(screen.queryByText("internal-record")).toBeNull();
     expect(fetchMock.mock.calls[2]?.[0]).toContain("/api/birds/bird-a/documents");
 
     fireEvent.change(screen.getByLabelText("Filtrar por tipo"), { target: { value: "GenealogyCertificate" } });
 
-    expect(screen.getByText("certificado-aurora.pdf")).toBeTruthy();
+    expect(screen.getByText("certificado-aurora")).toBeTruthy();
     expect(screen.getByText(/Institucional Claro/)).toBeTruthy();
-    expect(screen.queryByText("cracha-aurora.pdf")).toBeNull();
+    expect(screen.queryByText("cracha-aurora")).toBeNull();
     expect(screen.getByRole("link", { name: "Baixar original" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-history-certificate/content");
   });
@@ -597,14 +597,14 @@ describe("DocumentsPage", () => {
 
     try {
       render(<DocumentsPage />);
-      await waitFor(() => expect(screen.getAllByRole("button", { name: "Visualizar PDF" })).not.toHaveLength(0));
-      fireEvent.click(screen.getAllByRole("button", { name: "Visualizar PDF" })[0]);
+      await waitFor(() => expect(screen.getAllByRole("button", { name: "Visualizar documento" })).not.toHaveLength(0));
+      fireEvent.click(screen.getAllByRole("button", { name: "Visualizar documento" })[0]);
 
-      await waitFor(() => expect(screen.getByTitle("Prévia de cracha-aurora.pdf")).toBeTruthy());
+      await waitFor(() => expect(screen.getByTitle("Prévia de cracha-aurora")).toBeTruthy());
       expect(fetchMock.mock.calls[3]?.[0]).toContain("/api/birds/bird-a/documents/document-history-badge/content");
-      expect(screen.getByRole("link", { name: "Baixar PDF original" }).getAttribute("href")).toBe("blob:document-preview");
-      fireEvent.click(screen.getByRole("button", { name: "Fechar prévia do PDF" }));
-      expect(screen.queryByRole("dialog", { name: "Prévia do PDF" })).toBeNull();
+      expect(screen.getByRole("link", { name: "Baixar documento original" }).getAttribute("href")).toBe("blob:document-preview");
+      fireEvent.click(screen.getByRole("button", { name: "Fechar prévia do documento" }));
+      expect(screen.queryByRole("dialog", { name: "Prévia do documento" })).toBeNull();
       expect(revokeObjectURL).toHaveBeenCalledWith("blob:document-preview");
     } finally {
       Object.defineProperty(URL, "createObjectURL", { configurable: true, value: originalCreateObjectURL, writable: true });
@@ -632,7 +632,7 @@ describe("DocumentsPage", () => {
     fireEvent.change(screen.getByLabelText("Tamanho"), { target: { value: "Large" } });
     fireEvent.click(screen.getByRole("button", { name: "Reemitir documento" }));
 
-    await waitFor(() => expect(screen.getByText("cracha-aurora-reemitido.pdf")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("cracha-aurora-reemitido")).toBeTruthy());
     const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
     expect(postCall).toBeTruthy();
     expect(String(postCall?.[0])).toContain("/api/birds/bird-a/documents/document-history-badge/reissue");
@@ -641,7 +641,7 @@ describe("DocumentsPage", () => {
       printSize: "Large",
       selectedFields: ["Name", "RingNumber", "Species", "Sex"]
     });
-    expect(screen.getByText("cracha-aurora.pdf")).toBeTruthy();
+    expect(screen.getByText("cracha-aurora")).toBeTruthy();
     expect(screen.getByText(/versão original continua no histórico/)).toBeTruthy();
   });
 
@@ -663,7 +663,7 @@ describe("DocumentsPage", () => {
     fireEvent.change(screen.getByLabelText("Modelo"), { target: { value: "Modern" } });
     fireEvent.click(screen.getByRole("button", { name: "Reemitir documento" }));
 
-    await waitFor(() => expect(screen.getByText("certificado-aurora-reemitido.pdf")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("certificado-aurora-reemitido")).toBeTruthy());
     const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
     expect(postCall).toBeTruthy();
     expect(String(postCall?.[0])).toContain("/api/birds/bird-a/documents/document-history-certificate/reissue");

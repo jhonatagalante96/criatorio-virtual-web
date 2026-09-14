@@ -13,7 +13,7 @@ describe("DashboardLoading", () => {
     render(<DashboardLoading />);
 
     expect(screen.getByRole("complementary", { name: "Navegação principal" })).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toContain("Carregando dashboard");
+    expect(screen.getByRole("status").textContent).toContain("Carregando painel");
     expect(document.querySelector(".app-loading-page")).toBeNull();
   });
 });

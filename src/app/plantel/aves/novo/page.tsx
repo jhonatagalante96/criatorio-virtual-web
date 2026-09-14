@@ -618,7 +618,7 @@ function BirdRegistrationForm() {
 
   return (
     <BirdRegistrationLayout email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"}>
-      <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">/</span><Link href="/plantel/aves">Aves</Link><span aria-hidden="true">/</span><span aria-current="page">Cadastrar ave</span></nav>
+      <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><Link href="/dashboard">Painel</Link><span aria-hidden="true">/</span><Link href="/plantel/aves">Aves</Link><span aria-hidden="true">/</span><span aria-current="page">Cadastrar ave</span></nav>
       <div className="bird-form-page-header">
         <p className="eyebrow">Plantel{farmName ? ` · ${farmName}` : ""}</p>
         <h1 id="titulo-cadastro-ave">Cadastrar ave</h1>

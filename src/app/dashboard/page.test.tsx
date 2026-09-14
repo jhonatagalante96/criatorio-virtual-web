@@ -123,7 +123,7 @@ describe("DashboardPage", () => {
 
     expect(screen.queryByRole("heading", { name: "Restaurando sua sessão" })).toBeNull();
     expect(screen.getByRole("complementary", { name: "Navegação principal" })).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toContain("Carregando dashboard");
+    expect(screen.getByRole("status").textContent).toContain("Carregando painel");
     expect(screen.getByRole("status").textContent).not.toContain("Restaurando sua sessão");
   });
 
@@ -134,7 +134,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/login"));
-    expect(screen.queryByRole("heading", { name: "Entre para consultar o dashboard" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Entre para consultar o painel" })).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -155,7 +155,7 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
     expect(credentials.get).toHaveBeenCalledOnce();
     expect(routerReplace).not.toHaveBeenCalled();
   });
@@ -198,7 +198,7 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
     expect(screen.getByText("Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.")).toBeTruthy();
 
     const activeBirdMetric = screen.getByText("Aves cadastradas").closest("article");
@@ -231,7 +231,7 @@ describe("DashboardPage", () => {
     expect(screen.getAllByRole("link", { name: "Configurações" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
     expect(screen.getAllByRole("link", { name: "Gerenciar sessão" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
 
-    expect(screen.getAllByRole("link", { name: /^Dashboard$/ })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /^Painel$/ })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: /^Aves$/ })).toHaveLength(2);
     expect(screen.getAllByText("Reprodução")).toHaveLength(2);
     expect(screen.getAllByText("Transferências").filter((element) => element.closest(".authenticated-nav-link"))).toHaveLength(2);
@@ -306,11 +306,11 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível carregar o dashboard" })).toBeTruthy());
-    expect(screen.getByText(/dashboard está indisponível/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível carregar o painel" })).toBeTruthy());
+    expect(screen.getByText(/painel está indisponível/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
@@ -325,7 +325,7 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
@@ -352,7 +352,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Acesso bloqueado" })).toBeTruthy());
-    expect(screen.getByText(/não tem permissão para consultar este dashboard/)).toBeTruthy();
+    expect(screen.getByText(/não tem permissão para consultar este painel/)).toBeTruthy();
     expect(screen.queryByText("Indicadores principais")).toBeNull();
   });
 
@@ -367,8 +367,8 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
-    expect(screen.queryByRole("heading", { name: "Não foi possível carregar o dashboard" })).toBeNull();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
+    expect(screen.queryByRole("heading", { name: "Não foi possível carregar o painel" })).toBeNull();
   });
 
   it("does not render a payload that belongs to another farm", async () => {
@@ -382,7 +382,7 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível carregar o dashboard" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível carregar o painel" })).toBeTruthy());
     expect(screen.getByText(/criatório selecionado mudou/)).toBeTruthy();
     expect(screen.queryByText("Indicadores principais")).toBeNull();
   });

@@ -135,6 +135,41 @@ describe("BirdDetailPage", () => {
     expect(String(eligibilityRequest[0])).toContain("/api/birds/bird-a/eligibility");
   });
 
+  it("scrolls to genealogy without reloading the bird detail", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+
+    const genealogySection = document.getElementById("genealogia");
+    expect(genealogySection).not.toBeNull();
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(genealogySection, "scrollIntoView", { configurable: true, value: scrollIntoView });
+
+    fireEvent.click(screen.getByRole("link", { name: "Genealogia" }));
+
+    expect(window.location.hash).toBe("#genealogia");
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(screen.getByRole("heading", { name: "Linhagem (Genealogia)" })).toBeTruthy();
+
+    const completeTreeSection = document.getElementById("arvore-genealogica");
+    expect(completeTreeSection).not.toBeNull();
+    const completeTreeScrollIntoView = vi.fn();
+    Object.defineProperty(completeTreeSection, "scrollIntoView", { configurable: true, value: completeTreeScrollIntoView });
+
+    fireEvent.click(screen.getByRole("link", { name: "Ver árvore completa" }));
+
+    expect(window.location.hash).toBe("#arvore-genealogica");
+    expect(completeTreeScrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
   it("renders the genealogy relationships and withholds private snapshot navigation", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
@@ -158,7 +193,7 @@ describe("BirdDetailPage", () => {
 
     await openDetail(fetchMock);
 
-    const tree = screen.getByLabelText("Árvore genealógica navegável");
+    const tree = screen.getByLabelText("Árvore genealógica");
     expect(within(tree).getByRole("link", { name: /Pai Azul/ }).getAttribute("href")).toBe("/plantel/aves/father-a");
     expect(within(tree).getByText("Ancestral externo · sem cadastro")).toBeTruthy();
     expect(within(tree).getByText("Registro preservado · acesso restrito")).toBeTruthy();
@@ -264,7 +299,7 @@ describe("BirdDetailPage", () => {
     expect(screen.getByText("Nenhuma observação registrada.")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Fotos" })).toBeTruthy();
     expect(screen.getByText("Nenhuma foto cadastrada.")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "QR Code da ave" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Código de identificação da ave" })).toBeTruthy();
     expect(screen.getByText(/geração de documentos for liberada/)).toBeTruthy();
   });
 

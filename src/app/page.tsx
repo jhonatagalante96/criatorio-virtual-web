@@ -67,7 +67,7 @@ function DashboardPreview() {
           <span className="dashboard-sidebar-foot" />
         </aside>
         <section className="dashboard-content">
-          <div className="dashboard-inner-nav"><span>Dashboard</span><span>Sobre</span></div>
+          <div className="dashboard-inner-nav"><span>Painel</span><span>Sobre</span></div>
           <div className="dashboard-welcome">
             <p>Olá, Criador!</p>
             <span>Seu criatório em boas mãos.</span>

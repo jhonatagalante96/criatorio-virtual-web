@@ -171,7 +171,7 @@ function genealogyPositionLabel(position: string): string {
 function genealogySourceLabel(node: BirdGenealogyNode): string {
   if (node.source === "External") return "Ancestral externo · sem cadastro";
   if (!node.isAccessible) return "Registro preservado · acesso restrito";
-  if (node.isSnapshot) return "Registro preservado · navegável";
+  if (node.isSnapshot) return "Registro preservado · disponível para consulta";
   return "Ave cadastrada no criatório";
 }
 
@@ -426,7 +426,7 @@ function GenealogyNodes({ genealogy }: Readonly<{ genealogy: BirdGenealogyRespon
 
   return (
     <>
-      <div aria-label="Árvore genealógica navegável" className="bird-genealogy-graph" role="region">
+      <div aria-label="Árvore genealógica" className="bird-genealogy-graph" role="region">
         <ul className="bird-genealogy-root">
           <GenealogyBranch nodeKey={root.nodeKey} nodesByKey={nodesByKey} parentsByChild={parentsByChild} visited={new Set()} />
         </ul>
@@ -439,6 +439,15 @@ function GenealogyNodes({ genealogy }: Readonly<{ genealogy: BirdGenealogyRespon
       {genealogy.isTruncated && <p className="bird-detail-help">A árvore foi limitada a {genealogy.maxGenerations} gerações para manter a consulta rápida.</p>}
     </>
   );
+}
+
+function scrollToDetailSection(event: React.MouseEvent<HTMLAnchorElement>, sectionId: string) {
+  event.preventDefault();
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+
+  section.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${sectionId}`);
 }
 
 function BirdDetailTabs() {
@@ -458,7 +467,7 @@ function BirdDetailTabs() {
         {tabs.map((tab, index) => (
           <li key={tab.label}>
             {tab.href
-              ? <a aria-current={index === 0 ? "page" : undefined} href={tab.href}>{tab.label}</a>
+              ? <a aria-current={index === 0 ? "page" : undefined} href={tab.href} onClick={(event) => scrollToDetailSection(event, tab.href!.slice(1))}>{tab.label}</a>
               : <span aria-disabled="true" title="Seção em desenvolvimento">{tab.label}</span>}
           </li>
         ))}
@@ -591,7 +600,7 @@ function BirdDetailActionMenu({
         )}
         <button disabled title="Módulo em desenvolvimento" type="button">Iniciar transferência</button>
         <button disabled title="Módulo em desenvolvimento" type="button">Registrar competição</button>
-        <button disabled title="Módulo em desenvolvimento" type="button">Baixar ficha (PDF)</button>
+        <button disabled title="Módulo em desenvolvimento" type="button">Baixar ficha</button>
       </div>
     </details>
   );
@@ -624,13 +633,13 @@ function BirdDetailMedia({ bird }: Readonly<{ bird: BirdDetailsResponse }>) {
 
       <section aria-labelledby="titulo-qr-ave" className="bird-detail-section bird-detail-qr-card">
         <div className="bird-detail-section-heading">
-          <div><p className="eyebrow">Identificação</p><h2 id="titulo-qr-ave">QR Code da ave</h2></div>
+          <div><p className="eyebrow">Identificação</p><h2 id="titulo-qr-ave">Código de identificação da ave</h2></div>
         </div>
         <div className="bird-detail-qr-content">
-          <div aria-label={`QR Code de ${bird.name} indisponível`} className="bird-detail-qr-placeholder">QR</div>
+          <div aria-label={`Código de identificação de ${bird.name} indisponível`} className="bird-detail-qr-placeholder">QR</div>
           <div>
-            <p>O QR Code estará disponível quando a geração de documentos for liberada.</p>
-            <button disabled type="button">Baixar QR Code</button>
+            <p>O código de identificação estará disponível quando a geração de documentos for liberada.</p>
+            <button disabled type="button">Baixar código de identificação</button>
           </div>
         </div>
       </section>
@@ -643,7 +652,7 @@ function BirdQuickActions() {
     { icon: "heart" as const, label: "Registrar reprodução" },
     { icon: "transfer" as const, label: "Iniciar transferência" },
     { icon: "trophy" as const, label: "Registrar competição" },
-    { icon: "document" as const, label: "Baixar ficha (PDF)" }
+    { icon: "document" as const, label: "Baixar ficha" }
   ];
 
   return (
@@ -893,7 +902,7 @@ function BirdDetailPage() {
 
   return (
     <DetailLayout email={session.email} farmName={farmName ?? "Criatório selecionado"}>
-      <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span><Link href="/plantel/aves">Aves</Link><span aria-hidden="true">›</span><span aria-current="page">{bird.name}</span></nav>
+      <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><Link href="/dashboard">Painel</Link><span aria-hidden="true">›</span><Link href="/plantel/aves">Aves</Link><span aria-hidden="true">›</span><span aria-current="page">{bird.name}</span></nav>
 
       <section aria-labelledby="titulo-ficha-ave" className="bird-detail-profile">
         <BirdDetailPhoto status={bird.status} />
@@ -955,7 +964,7 @@ function BirdDetailPage() {
           </section>
 
           <section aria-labelledby="titulo-ancestrais-ave" className="bird-detail-section" id="genealogia">
-            <div className="bird-detail-section-heading"><div><p className="eyebrow">Origem</p><h2 id="titulo-ancestrais-ave">Linhagem (Genealogia)</h2></div><a className="bird-detail-section-action" href="#arvore-genealogica">Ver árvore completa</a></div>
+            <div className="bird-detail-section-heading"><div><p className="eyebrow">Origem</p><h2 id="titulo-ancestrais-ave">Linhagem (Genealogia)</h2></div><a className="bird-detail-section-action" href="#arvore-genealogica" onClick={(event) => scrollToDetailSection(event, "arvore-genealogica")}>Ver árvore completa</a></div>
             <div className="bird-parent-grid">
               <ParentCard externalName={bird.externalFatherName} externalSex={bird.externalFatherSex} label="Pai" parent={bird.father} />
               <ParentCard externalName={bird.externalMotherName} externalSex={bird.externalMotherSex} label="Mãe" parent={bird.mother} />

@@ -191,7 +191,7 @@ function FarmState({ email, farmName = "Criatório selecionado", heading, messag
 }
 
 function FarmBreadcrumb({ current, farmName }: Readonly<{ current: string; farmName?: string }>) {
-  return <nav aria-label="Navegação estrutural" className="farm-breadcrumb"><Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span>{farmName && <><Link href="/configuracoes/criatorio">Meu Criatório</Link><span aria-hidden="true">›</span></>}<span aria-current="page">{current}</span></nav>;
+  return <nav aria-label="Navegação estrutural" className="farm-breadcrumb"><Link href="/dashboard">Painel</Link><span aria-hidden="true">›</span>{farmName && <><Link href="/configuracoes/criatorio">Meu Criatório</Link><span aria-hidden="true">›</span></>}<span aria-current="page">{current}</span></nav>;
 }
 
 function DetailList({ items }: Readonly<{ items: Array<[string, string]> }>) {

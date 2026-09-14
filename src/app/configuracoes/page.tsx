@@ -61,7 +61,7 @@ function SettingsState({ heading, message, onRetry, retryLabel = "Tentar novamen
 function SettingsBreadcrumb({ current }: Readonly<{ current?: string }>) {
   return (
     <nav aria-label="Navegação estrutural" className="settings-breadcrumb">
-      <Link href="/dashboard">Dashboard</Link><span aria-hidden="true">›</span>
+      <Link href="/dashboard">Painel</Link><span aria-hidden="true">›</span>
       {current ? <><Link href="/configuracoes">Configurações</Link><span aria-hidden="true">›</span><span aria-current="page">{current}</span></> : <span aria-current="page">Configurações</span>}
     </nav>
   );
