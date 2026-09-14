@@ -289,6 +289,40 @@ describe("DocumentsPage", () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/birds/bird-b/documents"))).toBe(true);
   });
 
+  it("reveals document history ten items at a time", async () => {
+    const historyItems = Array.from({ length: 12 }, (_, index) => ({
+      birdId: "bird-a",
+      contentType: "application/pdf",
+      documentId: `document-history-${index}`,
+      downloadUrl: `/api/birds/bird-a/documents/document-history-${index}/content`,
+      fileName: `cracha-aurora-${index}.pdf`,
+      generatedAtUtc: `2026-09-${String(12 - index).padStart(2, "0")}T12:00:00Z`,
+      length: 2048,
+      modelId: "Classic" as const,
+      printSize: "Medium" as const,
+      selectedFields: ["Name" as const],
+      type: "Badge" as const
+    }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(birdsResponse())
+      .mockResolvedValueOnce(documentHistoryResponse(historyItems));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DocumentsPage />);
+
+    await waitFor(() => expect(document.querySelectorAll(".document-history-item")).toHaveLength(10));
+    expect(screen.getByRole("status").textContent).toContain("Exibindo 10 de 12 emissões");
+    expect(screen.getByRole("button", { name: "Carregar mais" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Carregar mais" }));
+
+    expect(document.querySelectorAll(".document-history-item")).toHaveLength(12);
+    expect(screen.getByRole("status").textContent).toContain("Exibindo 12 de 12 emissões");
+    expect(screen.queryByRole("button", { name: "Carregar mais" })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it("links from the document history to the dedicated new-document flow", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
