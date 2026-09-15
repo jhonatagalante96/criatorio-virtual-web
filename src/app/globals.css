@@ -2298,13 +2298,16 @@ h1, h2 { line-height: 1.08; }
 .document-wizard-certificate-preview > header small { font-size: .58rem; }
 .document-wizard-certificate-preview > header > strong { font-family: Georgia, serif; font-size: .82rem; font-weight: 500; letter-spacing: .02em; }
 .document-wizard-certificate-preview > header > em { border: 1px solid rgb(255 255 255 / 35%); border-radius: 999px; font-size: .53rem; font-style: normal; padding: .28rem .45rem; white-space: nowrap; }
-.document-photo-focus-editor { align-items: stretch; background: #f3f8f4; border-bottom: 1px solid #dce9e3; display: grid; gap: 1rem; grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr); padding: 1rem 1.15rem; }
-.document-photo-focus-editor > div:first-child { min-width: 0; }
-.document-photo-focus-editor h3 { color: #24584f; font-size: .82rem; margin: 0 0 .65rem; }
+.document-photo-focus-editor { margin: 0 auto; max-width: 58rem; position: relative; }
+.document-photo-focus-model-preview { min-width: 0; position: relative; }
+.document-photo-focus-model-preview > .document-wizard-preview, .document-photo-focus-model-preview > .document-wizard-certificate-preview { width: 100%; }
+.document-photo-focus-controls h3 { color: #24584f; font-size: .82rem; margin: 0 0 .65rem; }
 .document-photo-focus-frame { aspect-ratio: 4 / 5; background: #dfece3; border: 1px solid #b9d0c4; border-radius: .4rem; cursor: grab; max-height: 15rem; overflow: hidden; position: relative; touch-action: none; user-select: none; width: 100%; }
 .document-photo-focus-frame.is-dragging { cursor: grabbing; }
 .document-photo-focus-frame img { display: block; height: 100%; object-fit: cover; pointer-events: none; transform-origin: center; width: 100%; }
-.document-photo-focus-controls { align-content: center; display: grid; gap: .7rem; min-width: 0; }
+.document-photo-focus-frame.document-wizard-preview-photo { aspect-ratio: auto; height: 5rem; max-height: none; width: 5rem; }
+.document-photo-focus-frame.document-wizard-certificate-photo { aspect-ratio: 4 / 5; flex: 0 0 auto; height: 9rem; max-height: none; width: 7.2rem; }
+.document-photo-focus-controls { align-content: initial; background: rgb(255 255 255 / 94%); border: 1px solid #b9d0c4; border-radius: .55rem; box-shadow: 0 .8rem 1.8rem rgb(21 73 56 / 18%); display: grid; gap: .7rem; max-width: 18rem; padding: .85rem; position: absolute; right: 1rem; top: 1rem; width: calc(100% - 2rem); z-index: 3; }
 .document-photo-focus-controls > p { color: #5b7770; font-size: .65rem; line-height: 1.45; margin: 0; max-width: 48ch; }
 .document-photo-focus-control { display: grid; gap: .25rem; }
 .document-photo-focus-control > span { color: #55756d; display: flex; font-size: .62rem; font-weight: 800; justify-content: space-between; }
@@ -2314,6 +2317,7 @@ h1, h2 { line-height: 1.08; }
 .document-photo-focus-reset:hover { background: #e3f0e8; border-color: #27765e; }
 .document-wizard-certificate-identity, .document-wizard-certificate-farm, .document-wizard-certificate-genealogy { margin: 0 1.15rem; padding: 1rem 0; }
 .document-wizard-certificate-identity { align-items: flex-end; border-bottom: 1px solid #dce9e3; display: flex; gap: 1rem; justify-content: space-between; }
+.document-wizard-certificate-identity-main { align-items: center; display: flex; gap: 1rem; min-width: 0; }
 .document-wizard-certificate-identity h3 { color: #174a40; font-family: Georgia, serif; font-size: clamp(1.45rem, 4vw, 2.1rem); letter-spacing: -.035em; margin: 0; }
 .document-wizard-certificate-identity p:not(.eyebrow) { color: #5b7770; font-size: .7rem; margin: .25rem 0 0; }
 .document-wizard-certificate-identity dl, .document-wizard-certificate-farm dl { display: grid; gap: .45rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; min-width: min(18rem, 45%); }
@@ -2371,9 +2375,11 @@ h1, h2 { line-height: 1.08; }
   .document-wizard-certificate-preview > header { align-items: flex-start; grid-template-columns: 1fr auto; }
   .document-wizard-certificate-preview > header > strong { grid-column: 1 / -1; grid-row: 2; }
   .document-wizard-certificate-preview > header > em { grid-column: 2; grid-row: 1; }
-  .document-photo-focus-editor { grid-template-columns: 1fr; padding: .85rem; }
+  .document-photo-focus-controls { max-width: none; position: static; width: auto; }
   .document-photo-focus-frame { max-height: none; max-width: 12rem; }
+  .document-photo-focus-frame.document-wizard-certificate-photo { height: 8rem; width: 6.4rem; }
   .document-wizard-certificate-identity { align-items: flex-start; flex-direction: column; }
+  .document-wizard-certificate-identity-main { align-items: flex-start; }
   .document-wizard-certificate-identity dl, .document-wizard-certificate-farm dl { min-width: 0; width: 100%; }
   .document-wizard-genealogy-list li { align-items: flex-start; flex-direction: column; gap: .25rem; }
   .document-wizard-genealogy-list small { max-width: none; text-align: left; }
