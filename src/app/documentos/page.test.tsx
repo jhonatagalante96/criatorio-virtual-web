@@ -393,7 +393,8 @@ describe("DocumentsPage", () => {
       type: "Badge",
       modelId: "Photographic",
       printSize: "Large",
-      selectedFields: ["Name", "RingNumber", "Species", "Sex", "BreedingFarmAddress"]
+      selectedFields: ["Name", "RingNumber", "Species", "Sex", "BreedingFarmAddress"],
+      photoFocus: { x: 50, y: 50, zoom: 1 }
     });
     expect(screen.getByRole("link", { name: "Baixar crachá" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-a/content");
@@ -574,6 +575,7 @@ describe("DocumentsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
+    expect(screen.getByRole("group", { name: "Arraste para posicionar a foto de Aurora" })).toBeTruthy();
     expect(screen.getByText("Pais e ancestrais registrados")).toBeTruthy();
     expect(screen.getByText("Data de emissão")).toBeTruthy();
     expect(screen.getByText("Assinatura do responsável")).toBeTruthy();
@@ -588,7 +590,10 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Documento de procedência gerado com sucesso" })).toBeTruthy());
     const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
     expect(postCall).toBeTruthy();
-    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({ type: "ProvenanceDocument" });
+    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({
+      type: "ProvenanceDocument",
+      photoFocus: { x: 50, y: 50, zoom: 1 }
+    });
     expect(screen.getByRole("link", { name: "Baixar documento de procedência" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-provenance-a/content");
   });
