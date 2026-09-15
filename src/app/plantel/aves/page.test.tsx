@@ -36,6 +36,8 @@ function bird(overrides: Partial<Record<string, unknown>> = {}): Record<string, 
     birthDate: "2021-06-15",
     birdId: "bird-a",
     identificationPending: false,
+    imageUrl: "/species-images/0001.jpg",
+    isDefaultImage: true,
     name: "Aurora",
     ringNumber: "123456",
     sex: "Female",
@@ -159,7 +161,7 @@ describe("BirdListPage", () => {
     const birdRow = screen.getByRole("article", { name: "Ave Aurora" });
     expect(birdRow.querySelector(".bird-list-card-name a")?.getAttribute("href")).toBe("/plantel/aves/bird-a");
     expect(birdRow.querySelector(".bird-list-card-arrow")?.getAttribute("href")).toBe("/plantel/aves/bird-a");
-    expect(birdRow.querySelector(".bird-list-card-photo img")?.getAttribute("src")).toBe("/assets/imagery/birds/great-tit-header-hd.webp");
+    expect(birdRow.querySelector(".bird-list-card-photo img")?.getAttribute("src")).toBe("https://localhost:58016/species-images/0001.jpg");
     expect(birdRow.querySelector(".bird-list-card-sex")?.getAttribute("aria-label")).toBe("Sexo: Fêmea");
     fireEvent.click(within(birdRow).getByRole("button", { name: "Abrir ações de Aurora" }));
     const actionMenu = birdRow.querySelector(".bird-row-actions-menu");
@@ -171,6 +173,22 @@ describe("BirdListPage", () => {
     expect(within(actionMenu).getByRole("button", { name: "Inativar" }).hasAttribute("disabled")).toBe(false);
     fireEvent.pointerDown(document.body);
     expect(birdRow.querySelector(".bird-row-actions")?.hasAttribute("open")).toBe(false);
+  });
+
+  it("prefers the bird primary photo when the API does not mark the image as default", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([bird({
+        imageUrl: "/api/birds/bird-a/attachments/photo-a/content",
+        isDefaultImage: false
+      })]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openList(fetchMock);
+
+    const image = screen.getByRole("article", { name: "Ave Aurora" }).querySelector(".bird-list-card-photo img");
+    expect(image?.getAttribute("src")).toBe("https://localhost:58016/api/birds/bird-a/attachments/photo-a/content");
   });
 
   it("keeps listing actions together and renders each filter name once", async () => {
