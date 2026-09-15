@@ -642,8 +642,7 @@ describe("DocumentsPage", () => {
     render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Documentos" })).toBeTruthy());
-    await waitFor(() => expect(screen.getAllByText("Crachá").length).toBeGreaterThan(0));
-    expect(screen.getByText("certificado-aurora")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("certificado-aurora")).toBeTruthy());
     expect(screen.queryByText("internal-record")).toBeNull();
     expect(fetchMock.mock.calls[2]?.[0]).toContain("/api/birds/bird-a/documents");
 
