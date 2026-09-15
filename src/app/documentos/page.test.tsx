@@ -44,6 +44,8 @@ function bird(overrides: Partial<{
   birthDate: string | null;
   birdId: string;
   identificationPending: boolean;
+  imageUrl: string | null;
+  isDefaultImage: boolean;
   name: string;
   ringNumber: string | null;
   sex: "Female" | "Male" | "Unknown";
@@ -53,6 +55,8 @@ function bird(overrides: Partial<{
     birthDate: "2024-02-14",
     birdId: "bird-a",
     identificationPending: false,
+    imageUrl: "/api/birds/bird-a/attachments/primary-a/content",
+    isDefaultImage: false,
     name: "Aurora",
     ringNumber: "123456",
     sex: "Female" as const,
@@ -378,6 +382,10 @@ describe("DocumentsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
+    expect(screen.getByRole("group", { name: "Arraste para posicionar a foto de Aurora" })).toBeTruthy();
+    fireEvent.change(screen.getByRole("slider", { name: "Posição horizontal da foto" }), { target: { value: "25" } });
+    expect(screen.getByText("25%")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Centralizar imagem" }));
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Revise e gere" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Gerar crachá" }));
@@ -389,7 +397,8 @@ describe("DocumentsPage", () => {
       type: "Badge",
       modelId: "Photographic",
       printSize: "Large",
-      selectedFields: ["Name", "RingNumber", "Species", "Sex", "BreedingFarmAddress"]
+      selectedFields: ["Name", "RingNumber", "Species", "Sex", "BreedingFarmAddress"],
+      photoFocus: { x: 50, y: 50, zoom: 1 }
     });
     expect(screen.getByRole("link", { name: "Baixar crachá" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-a/content");
@@ -448,6 +457,30 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByText("Ave elegível para o certificado")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
+    const photo = screen.getByRole("img", { name: "Prévia da foto de Aurora" });
+    expect(photo.getAttribute("src")).toContain("/api/birds/bird-a/attachments/primary-a/content");
+    const photoFrame = screen.getByRole("group", { name: "Arraste para posicionar a foto de Aurora" });
+    vi.spyOn(photoFrame, "getBoundingClientRect").mockReturnValue({
+      bottom: 200,
+      height: 200,
+      left: 0,
+      right: 200,
+      top: 0,
+      width: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({})
+    } as DOMRect);
+    fireEvent(photoFrame, new MouseEvent("pointerdown", { bubbles: true, button: 0, clientX: 100, clientY: 100 }));
+    fireEvent(photoFrame, new MouseEvent("pointermove", { bubbles: true, clientX: 140, clientY: 80 }));
+    expect((photo as HTMLImageElement).style.objectPosition).toBe("30% 60%");
+    fireEvent(photoFrame, new MouseEvent("pointerup", { bubbles: true, clientX: 140, clientY: 80 }));
+    fireEvent.click(screen.getByRole("button", { name: "Centralizar imagem" }));
+    expect((photo as HTMLImageElement).style.objectPosition).toBe("50% 50%");
+    fireEvent.change(screen.getByRole("slider", { name: "Zoom da foto" }), { target: { value: "1.5" } });
+    fireEvent.change(screen.getByRole("slider", { name: "Posição horizontal da foto" }), { target: { value: "72" } });
+    fireEvent.change(screen.getByRole("slider", { name: "Posição vertical da foto" }), { target: { value: "38" } });
+    expect(screen.getByText("72%")).toBeTruthy();
     expect(screen.getByText("Clássico Premium")).toBeTruthy();
     expect(screen.getByText("Institucional Claro")).toBeTruthy();
     expect(screen.getByText("Moderno")).toBeTruthy();
@@ -465,7 +498,11 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Certificado gerado com sucesso" })).toBeTruthy());
     const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
     expect(postCall).toBeTruthy();
-    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({ type: "GenealogyCertificate", modelId: "Modern" });
+    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({
+      type: "GenealogyCertificate",
+      modelId: "Modern",
+      photoFocus: { x: 72, y: 38, zoom: 1.5 }
+    });
     expect(screen.getByRole("link", { name: "Baixar certificado" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-certificate-a/content");
   });
@@ -542,6 +579,7 @@ describe("DocumentsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
+    expect(screen.getByRole("group", { name: "Arraste para posicionar a foto de Aurora" })).toBeTruthy();
     expect(screen.getByText("Pais e ancestrais registrados")).toBeTruthy();
     expect(screen.getByText("Data de emissão")).toBeTruthy();
     expect(screen.getByText("Assinatura do responsável")).toBeTruthy();
@@ -556,7 +594,10 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Documento de procedência gerado com sucesso" })).toBeTruthy());
     const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
     expect(postCall).toBeTruthy();
-    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({ type: "ProvenanceDocument" });
+    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({
+      type: "ProvenanceDocument",
+      photoFocus: { x: 50, y: 50, zoom: 1 }
+    });
     expect(screen.getByRole("link", { name: "Baixar documento de procedência" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-provenance-a/content");
   });
@@ -601,8 +642,7 @@ describe("DocumentsPage", () => {
     render(<DocumentsPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Documentos" })).toBeTruthy());
-    await waitFor(() => expect(screen.getAllByText("Crachá").length).toBeGreaterThan(0));
-    expect(screen.getByText("certificado-aurora")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("certificado-aurora")).toBeTruthy());
     expect(screen.queryByText("internal-record")).toBeNull();
     expect(fetchMock.mock.calls[2]?.[0]).toContain("/api/birds/bird-a/documents");
 

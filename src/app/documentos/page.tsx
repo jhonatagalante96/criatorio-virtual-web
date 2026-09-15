@@ -8,6 +8,7 @@ import { ApiClient, ApiError, StaleTenantResponseError, createApiClient, getApiU
 import { AppLoadingContent, AppLoadingState } from "../components/app-loading-state";
 import { AuthenticatedShell } from "../components/authenticated-shell";
 import { DashboardIcon } from "../components/dashboard-icons";
+import { resolveBirdImageUrl } from "../plantel/aves/bird-image";
 
 type BirdSex = "Female" | "Male" | "Unknown";
 type WizardStep = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -23,6 +24,7 @@ type FarmState = "blocked" | "error" | "loading" | "ready";
 type BirdsState = "empty" | "error" | "loading" | "ready";
 type FixedDocumentState = "blocked" | "error" | "idle" | "loading" | "ready";
 type Notice = { kind: "error" | "info" | "success"; text: string };
+type PhotoFocus = { x: number; y: number; zoom: number };
 
 interface BreedingFarmSummary {
   breedingFarmId: string;
@@ -40,6 +42,8 @@ interface BirdListItem {
   birthDate: string | null;
   birdId: string;
   identificationPending: boolean;
+  imageUrl?: string | null;
+  isDefaultImage?: boolean;
   name: string;
   ringNumber: string | null;
   sex: BirdSex;
@@ -341,6 +345,119 @@ function FarmBlockedState({ email, farmName, message }: Readonly<{ email: string
         </section>
       </main>
     </AuthenticatedShell>
+  );
+}
+
+function DocumentPhotoFocusEditor({
+  birdName,
+  focus,
+  imageUrl,
+  onChange,
+  onReset
+}: Readonly<{
+  birdName: string;
+  focus: PhotoFocus;
+  imageUrl?: string | null;
+  onChange: (focus: PhotoFocus) => void;
+  onReset: () => void;
+}>) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ clientX: number; clientY: number; pointerId: number; x: number; y: number } | undefined>(undefined);
+  const [isDragging, setIsDragging] = useState(false);
+
+  function clampPosition(value: number): number {
+    return Math.min(100, Math.max(0, value));
+  }
+
+  function updateFocus(key: keyof PhotoFocus, value: string) {
+    const nextValue = Number(value);
+    onChange({
+      ...focus,
+      [key]: key === "zoom" ? Number(nextValue.toFixed(2)) : clampPosition(nextValue)
+    });
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    dragRef.current = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pointerId: event.pointerId,
+      x: focus.x,
+      y: focus.y
+    };
+    if (typeof event.currentTarget.setPointerCapture === "function") {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    setIsDragging(true);
+    event.preventDefault();
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    const frame = frameRef.current;
+    if (!drag || !frame || drag.pointerId !== event.pointerId) return;
+
+    const bounds = frame.getBoundingClientRect();
+    if (bounds.width === 0 || bounds.height === 0 || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return;
+
+    onChange({
+      ...focus,
+      x: clampPosition(drag.x - ((event.clientX - drag.clientX) / bounds.width) * 100),
+      y: clampPosition(drag.y - ((event.clientY - drag.clientY) / bounds.height) * 100)
+    });
+  }
+
+  function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    if (typeof event.currentTarget.releasePointerCapture === "function" && typeof event.currentTarget.hasPointerCapture === "function" && event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current = undefined;
+    setIsDragging(false);
+  }
+
+  return (
+    <section aria-labelledby="titulo-ajuste-foto-documento" className="document-photo-focus-editor">
+      <div>
+        <p className="eyebrow">Enquadramento da foto</p>
+        <h3 id="titulo-ajuste-foto-documento">Ajuste a ave no quadro</h3>
+        <div
+          aria-describedby="instrucoes-ajuste-foto-documento"
+          aria-label={`Arraste para posicionar a foto de ${birdName}`}
+          className={`document-photo-focus-frame${isDragging ? " is-dragging" : ""}`}
+          onPointerCancel={handlePointerUp}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          ref={frameRef}
+          role="group"
+        >
+          <img
+            alt={`Prévia da foto de ${birdName}`}
+            draggable={false}
+            src={resolveBirdImageUrl(imageUrl)}
+            style={{ objectPosition: `${focus.x}% ${focus.y}%`, transform: `scale(${focus.zoom})` }}
+          />
+        </div>
+      </div>
+      <div className="document-photo-focus-controls">
+        <p id="instrucoes-ajuste-foto-documento">Arraste a foto para posicionar a ave. Se preferir, use os controles; o mesmo enquadramento será aplicado ao documento.</p>
+        <label className="document-photo-focus-control" htmlFor="foto-documento-zoom">
+          <span><span>Zoom</span><output>{focus.zoom.toFixed(2)}×</output></span>
+          <input aria-label="Zoom da foto" id="foto-documento-zoom" max="3" min="1" onChange={(event) => updateFocus("zoom", event.target.value)} step="0.05" type="range" value={focus.zoom} />
+        </label>
+        <label className="document-photo-focus-control" htmlFor="foto-documento-horizontal">
+          <span><span>Posição horizontal</span><output>{focus.x}%</output></span>
+          <input aria-label="Posição horizontal da foto" id="foto-documento-horizontal" max="100" min="0" onChange={(event) => updateFocus("x", event.target.value)} step="1" type="range" value={focus.x} />
+        </label>
+        <label className="document-photo-focus-control" htmlFor="foto-documento-vertical">
+          <span><span>Posição vertical</span><output>{focus.y}%</output></span>
+          <input aria-label="Posição vertical da foto" id="foto-documento-vertical" max="100" min="0" onChange={(event) => updateFocus("y", event.target.value)} step="1" type="range" value={focus.y} />
+        </label>
+        <button className="document-photo-focus-reset" onClick={onReset} type="button">Centralizar imagem</button>
+      </div>
+    </section>
   );
 }
 
@@ -768,6 +885,7 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
   const [certificateModelId, setCertificateModelId] = useState<GenealogyCertificateModelId>("Institutional");
   const [selectedFields, setSelectedFields] = useState<DocumentField[]>(defaultFields);
   const [printSize, setPrintSize] = useState<BadgePrintSize>("Medium");
+  const [photoFocus, setPhotoFocus] = useState<PhotoFocus>({ x: 50, y: 50, zoom: 1 });
   const [fixedDocumentState, setFixedDocumentState] = useState<FixedDocumentState>("idle");
   const [fixedDocumentError, setFixedDocumentError] = useState<string>();
   const [fixedDocumentEligibility, setFixedDocumentEligibility] = useState<BirdEligibilityResponse>();
@@ -859,6 +977,7 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
 
   function selectBird(bird: BirdListItem) {
     setSelectedBirdId(bird.birdId);
+    setPhotoFocus({ x: 50, y: 50, zoom: 1 });
     setFixedDocumentState("idle");
     setFixedDocumentError(undefined);
     setFixedDocumentEligibility(undefined);
@@ -870,6 +989,7 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
 
   function selectDocumentType(type: DocumentType) {
     setDocumentType(type);
+    setPhotoFocus({ x: 50, y: 50, zoom: 1 });
     setCertificateModelId("Institutional");
     setIsDocumentTypeStep(true);
     setStep(0);
@@ -940,6 +1060,7 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
     setGenerated(undefined);
     setNotice(undefined);
     setCertificateModelId("Institutional");
+    setPhotoFocus({ x: 50, y: 50, zoom: 1 });
     setIsDocumentTypeStep(true);
     setFixedDocumentState("idle");
     setFixedDocumentError(undefined);
@@ -993,10 +1114,10 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
     try {
       if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
       const body = documentType === "Badge"
-        ? { type: "Badge", modelId, printSize, selectedFields }
+        ? { type: "Badge", modelId, printSize, selectedFields, photoFocus }
         : documentType === "GenealogyCertificate"
-          ? { type: "GenealogyCertificate", modelId: certificateModelId }
-          : { type: documentType };
+          ? { type: "GenealogyCertificate", modelId: certificateModelId, photoFocus }
+          : { type: documentType, photoFocus };
       const result = await client.current!.request<BirdDocumentResponse>(`api/birds/${encodeURIComponent(selectedBird.birdId)}/documents`, {
         body: JSON.stringify(body),
         headers: { "content-type": "application/json" },
@@ -1103,7 +1224,7 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
 
             {step === 1 && <section aria-labelledby="titulo-etapa-documento-elegibilidade"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 3 de 6</p><h2 id="titulo-etapa-documento-elegibilidade">Valide a elegibilidade</h2><p>Verificamos se a ave pode receber este documento antes de carregar a prévia.</p></div></div>{fixedDocumentState === "loading" && <div className="document-wizard-inline-state" role="status"><strong>Consultando dados da ave…</strong><span>Validando elegibilidade, genealogia e dados disponíveis do criatório.</span></div>}{fixedDocumentState === "error" && <div className="document-wizard-inline-state is-error" role="alert"><h3>Não foi possível validar a ave</h3><span>{fixedDocumentError}</span><button className="auth-secondary-action" onClick={() => void validateFixedDocument()} type="button">Tentar novamente</button></div>}{fixedDocumentState === "blocked" && <div className="document-wizard-inline-state is-error" role="alert"><h3>{isGenealogyCertificate ? "Certificado" : "Documento de procedência"} bloqueado para esta ave</h3><span>Corrija as pendências abaixo para liberar a emissão.</span><ul className="document-wizard-issue-list">{fixedDocumentEligibility?.issues.map((issue) => <li key={issue.code}>{eligibilityIssueMessage(issue)}</li>)}</ul>{fixedDocumentEligibility?.issues.some((issue) => issue.code === "MissingRingNumber") && selectedBird && <Link className="auth-secondary-action" href={`/plantel/aves/${selectedBird.birdId}/editar`}>Editar dados da ave</Link>}</div>}{fixedDocumentState === "ready" && <div className="document-wizard-inline-state is-ready" role="status"><strong>{isGenealogyCertificate ? "Ave elegível para o certificado" : "Ave elegível para o documento de procedência"}</strong><span>{selectedBird?.name} pode seguir para a prévia. Os dados abaixo serão apresentados sem completar informações ausentes.</span></div>}</section>}
 
-            {step === 2 && <section aria-labelledby="titulo-etapa-documento-previa"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 4 de 6</p><h2 id="titulo-etapa-documento-previa">Confira a prévia</h2><p>Esta composição é fixa em formato horizontal e representa apenas os dados disponíveis no criatório.</p></div></div><div aria-label={`Prévia do ${fixedDocumentName} ${selectedBird?.name ?? ""}`} className={`document-wizard-certificate-preview${isProvenanceDocument ? " document-wizard-provenance-preview" : ""}`}><header><div><span aria-hidden="true">CV</span><small>Criatório Virtual</small></div><strong>{isGenealogyCertificate ? "Certificado de genealogia" : "Documento de procedência"}</strong><em>Documento interno</em></header><div className="document-wizard-certificate-identity"><div><p className="eyebrow">Ave selecionada</p><h3>{selectedBird?.name}</h3><p>{selectedBird?.speciesPopularName} · {selectedBird ? sexLabel(selectedBird.sex) : "Não informado"}</p></div><dl><div><dt>Anilha</dt><dd>{optionalValue(selectedBird?.ringNumber)}</dd></div><div><dt>Nascimento</dt><dd>{selectedBird?.birthDate ? formatDate(selectedBird.birthDate) : "Não informado"}</dd></div></dl></div><div className="document-wizard-certificate-farm"><h3>Dados do criatório</h3><dl><div><dt>Nome</dt><dd>{optionalValue(fixedDocumentFarm?.name ?? farmName)}</dd></div><div><dt>Responsável</dt><dd>{optionalValue(fixedDocumentFarm?.responsibleName)}</dd></div><div><dt>E-mail</dt><dd>{optionalValue(fixedDocumentFarm?.contactEmail)}</dd></div><div><dt>Telefone</dt><dd>{optionalValue(fixedDocumentFarm?.contactPhone)}</dd></div><div><dt>Registro oficial</dt><dd>{optionalValue(fixedDocumentFarm?.officialRegistrationNumber)}</dd></div></dl></div><div className="document-wizard-certificate-genealogy"><div className="document-wizard-section-heading"><div><h3>{isGenealogyCertificate ? "Estrutura genealógica" : "Pais e ancestrais registrados"}</h3><p>Somente dados disponíveis no criatório são apresentados.</p></div><span className="document-wizard-count">{fixedDocumentAncestors.length} ancestral{fixedDocumentAncestors.length === 1 ? "" : "es"}</span></div>{fixedDocumentAncestors.length > 0 ? <ol aria-label="Ancestrais disponíveis" className="document-wizard-genealogy-list">{fixedDocumentAncestors.map((node) => <li key={node.nodeKey}><div><strong>{optionalValue(node.name)}</strong><span>{genealogyPositionLabel(node.position)} · geração {node.generation}</span></div><small>{node.ringNumber ? `Anilha ${node.ringNumber} · ` : ""}{sexLabel(node.sex)} · {genealogySourceLabel(node)}</small></li>)}</ol> : <p className="document-wizard-inline-empty">{isGenealogyCertificate ? "Nenhum ancestral foi informado para esta ave." : "Nenhum pai ou ancestral foi informado para esta ave."}</p>}{fixedDocumentGenealogy?.isTruncated && <p className="document-wizard-genealogy-note" role="status">A árvore foi limitada a {fixedDocumentGenealogy.maxGenerations} gerações.</p>}</div>{isProvenanceDocument && <div className="document-wizard-provenance-details"><div><span>Data de emissão</span><strong>{formatIssueDate()}</strong></div><div className="document-wizard-provenance-signature"><span>Assinatura do responsável</span><strong>Espaço reservado para assinatura manual</strong></div></div>}<footer>{fixedDocumentNotice}</footer></div></section>}
+            {step === 2 && <section aria-labelledby="titulo-etapa-documento-previa"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 4 de 6</p><h2 id="titulo-etapa-documento-previa">Confira a prévia</h2><p>Esta composição é fixa em formato horizontal e representa apenas os dados disponíveis no criatório.</p></div></div><div aria-label={`Prévia do ${fixedDocumentName} ${selectedBird?.name ?? ""}`} className={`document-wizard-certificate-preview${isProvenanceDocument ? " document-wizard-provenance-preview" : ""}`}><header><div><span aria-hidden="true">CV</span><small>Criatório Virtual</small></div><strong>{isGenealogyCertificate ? "Certificado de genealogia" : "Documento de procedência"}</strong><em>Documento interno</em></header>{(isGenealogyCertificate || isProvenanceDocument) && selectedBird && <DocumentPhotoFocusEditor birdName={selectedBird.name} focus={photoFocus} imageUrl={selectedBird.imageUrl} onChange={setPhotoFocus} onReset={() => setPhotoFocus({ x: 50, y: 50, zoom: 1 })} />}<div className="document-wizard-certificate-identity"><div><p className="eyebrow">Ave selecionada</p><h3>{selectedBird?.name}</h3><p>{selectedBird?.speciesPopularName} · {selectedBird ? sexLabel(selectedBird.sex) : "Não informado"}</p></div><dl><div><dt>Anilha</dt><dd>{optionalValue(selectedBird?.ringNumber)}</dd></div><div><dt>Nascimento</dt><dd>{selectedBird?.birthDate ? formatDate(selectedBird.birthDate) : "Não informado"}</dd></div></dl></div><div className="document-wizard-certificate-farm"><h3>Dados do criatório</h3><dl><div><dt>Nome</dt><dd>{optionalValue(fixedDocumentFarm?.name ?? farmName)}</dd></div><div><dt>Responsável</dt><dd>{optionalValue(fixedDocumentFarm?.responsibleName)}</dd></div><div><dt>E-mail</dt><dd>{optionalValue(fixedDocumentFarm?.contactEmail)}</dd></div><div><dt>Telefone</dt><dd>{optionalValue(fixedDocumentFarm?.contactPhone)}</dd></div><div><dt>Registro oficial</dt><dd>{optionalValue(fixedDocumentFarm?.officialRegistrationNumber)}</dd></div></dl></div><div className="document-wizard-certificate-genealogy"><div className="document-wizard-section-heading"><div><h3>{isGenealogyCertificate ? "Estrutura genealógica" : "Pais e ancestrais registrados"}</h3><p>Somente dados disponíveis no criatório são apresentados.</p></div><span className="document-wizard-count">{fixedDocumentAncestors.length} ancestral{fixedDocumentAncestors.length === 1 ? "" : "es"}</span></div>{fixedDocumentAncestors.length > 0 ? <ol aria-label="Ancestrais disponíveis" className="document-wizard-genealogy-list">{fixedDocumentAncestors.map((node) => <li key={node.nodeKey}><div><strong>{optionalValue(node.name)}</strong><span>{genealogyPositionLabel(node.position)} · geração {node.generation}</span></div><small>{node.ringNumber ? `Anilha ${node.ringNumber} · ` : ""}{sexLabel(node.sex)} · {genealogySourceLabel(node)}</small></li>)}</ol> : <p className="document-wizard-inline-empty">{isGenealogyCertificate ? "Nenhum ancestral foi informado para esta ave." : "Nenhum pai ou ancestral foi informado para esta ave."}</p>}{fixedDocumentGenealogy?.isTruncated && <p className="document-wizard-genealogy-note" role="status">A árvore foi limitada a {fixedDocumentGenealogy.maxGenerations} gerações.</p>}</div>{isProvenanceDocument && <div className="document-wizard-provenance-details"><div><span>Data de emissão</span><strong>{formatIssueDate()}</strong></div><div className="document-wizard-provenance-signature"><span>Assinatura do responsável</span><strong>Espaço reservado para assinatura manual</strong></div></div>}<footer>{fixedDocumentNotice}</footer></div></section>}
 
             {step === 3 && <section aria-labelledby="titulo-etapa-documento-revisao"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 5 de 6</p><h2 id="titulo-etapa-documento-revisao">Revise e gere</h2><p>O documento será armazenado de forma privada no criatório selecionado.</p></div></div><dl className="document-wizard-review"><div><dt>Ave</dt><dd>{selectedBird?.name}<small>{selectedBird?.speciesPopularName} · Anilha {optionalValue(selectedBird?.ringNumber)}</small><button onClick={() => setStep(0)} type="button">Alterar</button></dd></div><div><dt>Criatório</dt><dd>{optionalValue(fixedDocumentFarm?.name ?? farmName)}<small>Responsável: {optionalValue(fixedDocumentFarm?.responsibleName)}</small><button onClick={() => setStep(2)} type="button">Ver prévia</button></dd></div><div><dt>Formato</dt><dd>Formato horizontal<small>{isGenealogyCertificate ? "Certificado de genealogia" : "Documento de procedência"} · {fixedDocumentAncestors.length} ancestral{fixedDocumentAncestors.length === 1 ? "" : "es"}</small></dd></div></dl><p className="document-wizard-privacy-note"><span aria-hidden="true">✓</span> {isGenealogyCertificate ? "Documento interno, sem código genérico, e que não substitui registro oficial." : "Documento interno, sem código genérico, e que não substitui registro SISPASS/IBAMA."}</p></section>}
 
@@ -1141,7 +1262,7 @@ function DocumentsWizard({ initialView }: Readonly<{ initialView: DocumentView }
 
           {step === 3 && <section aria-labelledby="titulo-etapa-tamanho"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 5 de {steps.length}</p><h2 id="titulo-etapa-tamanho">Escolha o tamanho</h2><p>Todos os tamanhos são horizontais e seguem o padrão do crachá.</p></div></div><div aria-label="Tamanhos do crachá" className="document-wizard-size-grid" role="radiogroup">{sizeOptions.map((option) => <label className={`document-wizard-size-choice${printSize === option.id ? " is-selected" : ""}`} key={option.id}><input checked={printSize === option.id} name="badge-size" onChange={() => setPrintSize(option.id)} type="radio" value={option.id} /><span className={`document-wizard-size-preview document-wizard-size-${option.id.toLowerCase()}`} aria-hidden="true" /><span><strong>{option.name}</strong><small>{option.dimensions}</small><small>{option.description}</small></span></label>)}</div></section>}
 
-          {step === 4 && <section aria-labelledby="titulo-etapa-previa"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 6 de {steps.length}</p><h2 id="titulo-etapa-previa">Confira a prévia</h2><p>Veja a hierarquia dos dados antes de revisar e gerar o arquivo.</p></div></div><div aria-label={`Prévia do crachá ${selectedBird?.name ?? ""}`} className={`document-wizard-preview document-wizard-preview-${printSize.toLowerCase()}`}><div className="document-wizard-preview-brand"><span aria-hidden="true">CV</span><small>Criatório Virtual</small></div><div className="document-wizard-preview-body"><div className="document-wizard-preview-photo" aria-hidden="true"><DashboardIcon name="bird" /></div><div><h3>{selectedBird?.name}</h3><p>{selectedBird?.speciesPopularName} · {selectedBird ? sexLabel(selectedBird.sex) : ""}</p><div className="document-wizard-preview-fields">{selectedFields.map((field) => <span key={field}>{fieldLabel(field)}{field === "RingNumber" && selectedBird?.ringNumber ? ` · ${selectedBird.ringNumber}` : ""}</span>)}</div></div></div><div className="document-wizard-preview-footer"><span>{modelLabel(modelId)}</span><span>{sizeLabel(printSize)}</span></div></div></section>}
+            {step === 4 && <section aria-labelledby="titulo-etapa-previa"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 6 de {steps.length}</p><h2 id="titulo-etapa-previa">Confira a prévia</h2><p>Veja a hierarquia dos dados antes de revisar e gerar o arquivo.</p></div></div>{selectedBird && <DocumentPhotoFocusEditor birdName={selectedBird.name} focus={photoFocus} imageUrl={selectedBird.imageUrl} onChange={setPhotoFocus} onReset={() => setPhotoFocus({ x: 50, y: 50, zoom: 1 })} />}<div aria-label={`Prévia do crachá ${selectedBird?.name ?? ""}`} className={`document-wizard-preview document-wizard-preview-${printSize.toLowerCase()}`}><div className="document-wizard-preview-brand"><span aria-hidden="true">CV</span><small>Criatório Virtual</small></div><div className="document-wizard-preview-body"><div className="document-wizard-preview-photo"><img alt={`Prévia da foto de ${selectedBird?.name ?? "ave"}`} src={resolveBirdImageUrl(selectedBird?.imageUrl)} style={{ objectPosition: `${photoFocus.x}% ${photoFocus.y}%`, transform: `scale(${photoFocus.zoom})` }} /></div><div><h3>{selectedBird?.name}</h3><p>{selectedBird?.speciesPopularName} · {selectedBird ? sexLabel(selectedBird.sex) : ""}</p><div className="document-wizard-preview-fields">{selectedFields.map((field) => <span key={field}>{fieldLabel(field)}{field === "RingNumber" && selectedBird?.ringNumber ? ` · ${selectedBird.ringNumber}` : ""}</span>)}</div></div></div><div className="document-wizard-preview-footer"><span>{modelLabel(modelId)}</span><span>{sizeLabel(printSize)}</span></div></div></section>}
 
           {step === 5 && <section aria-labelledby="titulo-etapa-revisao"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 7 de {steps.length}</p><h2 id="titulo-etapa-revisao">Revise e gere</h2><p>O documento será armazenado de forma privada no criatório selecionado.</p></div></div><dl className="document-wizard-review"><div><dt>Ave</dt><dd>{selectedBird?.name}<small>{selectedBird?.speciesPopularName} · Anilha {selectedBird?.ringNumber}</small><button onClick={() => setStep(0)} type="button">Alterar</button></dd></div><div><dt>Modelo</dt><dd>{modelLabel(modelId)}<button onClick={() => setStep(1)} type="button">Alterar</button></dd></div><div><dt>Campos</dt><dd>{selectedFields.map(fieldLabel).join(", ")}<button onClick={() => setStep(2)} type="button">Alterar</button></dd></div><div><dt>Tamanho</dt><dd>{sizeLabel(printSize)}<button onClick={() => setStep(3)} type="button">Alterar</button></dd></div></dl><p className="document-wizard-privacy-note"><span aria-hidden="true">✓</span> O crachá não cria um código genérico e não substitui registros oficiais.</p></section>}
 
