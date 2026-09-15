@@ -1079,6 +1079,11 @@ h1, h2 { line-height: 1.08; }
 .bird-report-dialog-error .auth-secondary-action { justify-self: start; margin-top: .35rem; min-height: 2.25rem; padding: .45rem .7rem; }
 .bird-report-dialog-preview { margin-top: 1rem; }
 .bird-report-dialog-preview iframe { background: #f4f6f7; border: 1px solid #d6e3e2; border-radius: .55rem; display: block; height: min(65svh, 36rem); width: 100%; }
+.bird-report-dialog-mobile-preview { align-items: center; background: #f4f6f7; border: 1px solid #d6e3e2; border-radius: .55rem; display: grid; gap: .45rem; min-height: min(65svh, 36rem); padding: 2rem 1rem; text-align: center; }
+.bird-report-dialog-mobile-preview-mark { align-items: center; background: #dce1e3; border-radius: .35rem; color: #fff; display: inline-flex; font-size: 1.1rem; font-weight: 800; height: 3.5rem; justify-content: center; justify-self: center; width: 3.5rem; }
+.bird-report-dialog-mobile-preview strong { color: var(--ink); font-size: .85rem; }
+.bird-report-dialog-mobile-preview > span:not(.bird-report-dialog-mobile-preview-mark) { color: #5f7188; font-size: .68rem; line-height: 1.45; max-width: 34ch; }
+.bird-report-dialog-mobile-preview .auth-primary-action { justify-self: center; margin-top: .45rem; min-height: 2.5rem; padding: .55rem .85rem; }
 .bird-report-dialog-actions { display: flex; flex-wrap: wrap; gap: .55rem; justify-content: flex-end; margin-top: .7rem; }
 .bird-report-dialog-actions .auth-primary-action, .bird-report-dialog-actions .auth-secondary-action { min-height: 2.35rem; padding: .5rem .75rem; }
 .bird-report-dialog-footer { align-items: center; border-top: 1px solid #edf1f3; display: flex; flex-wrap: wrap; gap: .75rem; justify-content: space-between; margin-top: 1rem; padding-top: .9rem; }

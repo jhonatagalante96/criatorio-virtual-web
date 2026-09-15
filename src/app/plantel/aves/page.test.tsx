@@ -437,6 +437,56 @@ describe("BirdListPage", () => {
     }
   });
 
+  it("opens the PDF preview in a new tab on mobile browsers", async () => {
+    const mediaQuery = {
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn()
+    } as unknown as MediaQueryList;
+    vi.stubGlobal("matchMedia", vi.fn(() => mediaQuery));
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([bird()]))
+      .mockResolvedValueOnce(pdfResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = vi.fn(() => "blob:birds-report-mobile");
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL, writable: true });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revokeObjectURL, writable: true });
+
+    try {
+      await openList(fetchMock);
+      fireEvent.click(screen.getByRole("button", { name: "Gerar relatório" }));
+      fireEvent.click(screen.getByRole("button", { name: "Gerar prévia do relatório" }));
+
+      await waitFor(() => expect(screen.getByRole("link", { name: "Abrir prévia do PDF" })).toBeTruthy());
+      expect(screen.queryByTitle("Prévia do relatório de aves cadastradas")).toBeNull();
+      const previewLink = screen.getByRole("link", { name: "Abrir prévia do PDF" });
+      expect(previewLink.getAttribute("href")).toBe("blob:birds-report-mobile");
+      expect(previewLink.getAttribute("target")).toBe("_blank");
+      expect(previewLink.getAttribute("rel")).toContain("noreferrer");
+      expect(screen.getByRole("link", { name: "Baixar relatório" }).getAttribute("href")).toBe("blob:birds-report-mobile");
+      fireEvent.click(screen.getByRole("button", { name: "Fechar prévia" }));
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:birds-report-mobile");
+    } finally {
+      if (originalCreateObjectURL) {
+        Object.defineProperty(URL, "createObjectURL", { configurable: true, value: originalCreateObjectURL, writable: true });
+      } else {
+        Reflect.deleteProperty(URL, "createObjectURL");
+      }
+      if (originalRevokeObjectURL) {
+        Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: originalRevokeObjectURL, writable: true });
+      } else {
+        Reflect.deleteProperty(URL, "revokeObjectURL");
+      }
+    }
+  });
+
   it("shows a permission error when the report PDF is forbidden", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())

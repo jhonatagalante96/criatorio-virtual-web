@@ -601,6 +601,7 @@ function BirdsReportDialog({
   client,
   farmName,
   filters,
+  isMobileViewport,
   onClearFilters,
   onClose,
   onSessionExpired
@@ -608,6 +609,7 @@ function BirdsReportDialog({
   client: ApiClient;
   farmName: string;
   filters: BirdFilters;
+  isMobileViewport: boolean;
   onClearFilters: () => void;
   onClose: () => void;
   onSessionExpired: () => Promise<unknown> | void;
@@ -768,7 +770,16 @@ function BirdsReportDialog({
 
         {previewState === "ready" && previewUrl && (
           <div className="bird-report-dialog-preview">
-            <iframe title="Prévia do relatório de aves cadastradas" src={previewUrl} />
+            {isMobileViewport ? (
+              <div className="bird-report-dialog-mobile-preview" role="status">
+                <span aria-hidden="true" className="bird-report-dialog-mobile-preview-mark">PDF</span>
+                <strong>Prévia do relatório pronta</strong>
+                <span>Abra o PDF em uma nova aba para visualizar o documento no celular.</span>
+                <a className="auth-primary-action" href={previewUrl} rel="noopener noreferrer" target="_blank">Abrir prévia do PDF</a>
+              </div>
+            ) : (
+              <iframe title="Prévia do relatório de aves cadastradas" src={previewUrl} />
+            )}
             <div className="bird-report-dialog-actions">
               <a className="auth-primary-action" download="relatorio-aves-cadastradas.pdf" href={previewUrl}>Baixar relatório</a>
               <button className="auth-secondary-action" onClick={() => void generatePreview()} type="button">Gerar novamente</button>
@@ -1199,6 +1210,7 @@ function BirdListPage() {
           client={client.current!}
           farmName={farmName ?? "Criatório selecionado"}
           filters={filters}
+          isMobileViewport={isMobileViewport}
           onClearFilters={clearFilters}
           onClose={() => setIsReportOpen(false)}
           onSessionExpired={handleSessionExpired}
