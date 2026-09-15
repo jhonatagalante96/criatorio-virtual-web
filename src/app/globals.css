@@ -2410,16 +2410,12 @@ h1, h2 { line-height: 1.08; }
 .dashboard-section-heading h2 { color: var(--ink); font-size: 1.05rem; letter-spacing: -.035em; margin: 0; }
 .dashboard-section-count { color: #78919a; font-size: .63rem; white-space: nowrap; }
 .dashboard-metrics-grid { display: grid; gap: .85rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.dashboard-metric { align-items: flex-start; background: #f8fcfb; border: 1px solid #dcebed; border-radius: .7rem; display: flex; gap: .75rem; min-height: 8.8rem; min-width: 0; padding: 1.05rem; position: relative; }
+.dashboard-metric { align-items: flex-start; background: #f8fcfb; border: 1px solid #dcebed; border-radius: .7rem; display: flex; gap: .75rem; min-height: 6.4rem; min-width: 0; padding: 1.05rem; position: relative; }
 .dashboard-metric-icon { align-items: center; background: #c4eccf; border-radius: 50%; color: var(--green-dark); display: inline-flex; flex: 0 0 auto; height: 2.65rem; justify-content: center; width: 2.65rem; }
 .dashboard-metric-icon .dashboard-icon { height: 1.45rem; width: 1.45rem; }
 .dashboard-metric-main { display: grid; gap: .1rem; min-width: 0; }
 .dashboard-metric-label { color: #68818f; font-size: .65rem; font-weight: 800; line-height: 1.25; }
 .dashboard-metric strong { color: var(--ink); font-size: 1.7rem; letter-spacing: -.05em; line-height: 1; }
-.dashboard-metric-trend { align-items: center; bottom: .72rem; color: #657389; display: flex; gap: .55rem; left: 1.05rem; position: absolute; right: 1.05rem; }
-.dashboard-metric-trend > span { color: #5d6d80; font-size: 1rem; font-weight: 800; line-height: 1; }
-.dashboard-metric-trend small { color: #657389; font-size: .59rem; line-height: 1.25; }
-.dashboard-metric::after { border-top: 1px solid rgb(122 145 154 / 14%); bottom: 2.45rem; content: ""; left: 1rem; position: absolute; right: 1rem; }
 .dashboard-metric-link { border-radius: .7rem; color: inherit; display: block; text-decoration: none; }
 .dashboard-metric-link:hover .dashboard-metric { border-color: #72b98d; box-shadow: 0 .45rem 1.2rem rgb(6 58 86 / 9%); }
 .dashboard-metric-link:focus-visible { outline: 3px solid rgb(23 105 160 / 24%); outline-offset: 3px; }
