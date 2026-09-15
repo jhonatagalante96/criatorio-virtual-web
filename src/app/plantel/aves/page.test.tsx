@@ -248,10 +248,15 @@ describe("BirdListPage", () => {
     await openList(fetchMock);
     const birdRow = screen.getByRole("article", { name: "Ave Aurora" });
     fireEvent.click(within(birdRow).getByRole("button", { name: "Abrir ações de Aurora" }));
-    fireEvent.click(within(birdRow).getByRole("button", { name: "Inativar" }));
+    const inactivateButton = within(birdRow).getByRole("button", { name: "Inativar" });
+    expect((inactivateButton as HTMLButtonElement).disabled).toBe(false);
+    expect(inactivateButton.className).toContain("is-danger");
+    fireEvent.click(inactivateButton);
     fireEvent.click(screen.getByRole("radio", { name: "Registrar falecimento" }));
     fireEvent.click(screen.getByRole("checkbox"));
-    expect((screen.getByRole("button", { name: "Confirmar alteração" }) as HTMLButtonElement).disabled).toBe(true);
+    const confirmButton = screen.getByRole("button", { name: "Confirmar alteração" });
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(true);
+    expect(confirmButton.className).toContain("is-disabled");
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
@@ -270,11 +275,14 @@ describe("BirdListPage", () => {
     fireEvent.click(within(birdRow).getByRole("button", { name: "Abrir ações de Aurora" }));
     fireEvent.click(within(birdRow).getByRole("button", { name: "Inativar" }));
     fireEvent.click(screen.getByRole("radio", { name: "Registrar falecimento" }));
-    expect((screen.getByRole("button", { name: "Confirmar alteração" }) as HTMLButtonElement).disabled).toBe(true);
+    const confirmButton = screen.getByRole("button", { name: "Confirmar alteração" });
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(true);
+    expect(confirmButton.className).toContain("is-disabled");
     fireEvent.change(screen.getByLabelText("Data do falecimento (obrigatória)"), { target: { value: "2025-02-01" } });
     fireEvent.click(screen.getByRole("checkbox"));
-    expect((screen.getByRole("button", { name: "Confirmar alteração" }) as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar alteração" }));
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
+    expect(confirmButton.className).toContain("is-ready");
+    fireEvent.click(confirmButton);
 
     expect(await screen.findByText("Alteração concluída")).toBeTruthy();
     await waitFor(() => expect(screen.getByRole("article", { name: "Ave Aurora" }).textContent).toContain("Falecida"));
