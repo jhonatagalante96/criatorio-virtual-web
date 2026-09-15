@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ApiClient, ApiError, createApiClient } from "../../lib/http/api-client";
 
 export interface SpeciesSummary {
+  defaultImageUrl?: string | null;
   popularName: string;
   scientificName: string;
   speciesId: string;

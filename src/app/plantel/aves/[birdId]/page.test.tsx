@@ -135,6 +135,38 @@ describe("BirdDetailPage", () => {
     expect(String(eligibilityRequest[0])).toContain("/api/birds/bird-a/eligibility");
   });
 
+  it("renders the species default image when the bird has no primary photo", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse({ imageUrl: "/species-images/0001.jpg", isDefaultImage: true }))
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+
+    const photo = screen.getByRole("img", { name: "Imagem padrão da espécie: Sabiá-laranjeira" });
+    expect(photo.querySelector("img")?.getAttribute("src")).toBe("https://localhost:58016/species-images/0001.jpg");
+    expect(screen.getByText("Imagem padrão da espécie · foto própria não cadastrada")).toBeTruthy();
+  });
+
+  it("renders the bird primary photo when the API returns a non-default image", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse({ imageUrl: "/api/birds/bird-a/attachments/photo-a/content", isDefaultImage: false }))
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+
+    const photo = screen.getByRole("img", { name: "Foto de perfil de Aurora" });
+    expect(photo.querySelector("img")?.getAttribute("src")).toBe("https://localhost:58016/api/birds/bird-a/attachments/photo-a/content");
+    expect(screen.getByText("Foto de perfil")).toBeTruthy();
+  });
+
   it("scrolls to genealogy without reloading the bird detail", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())

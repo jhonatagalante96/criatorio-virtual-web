@@ -8,6 +8,7 @@ import { AppLoadingState } from "../../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../../components/brand";
 import { AuthenticatedShell } from "../../../components/authenticated-shell";
 import { DashboardIcon } from "../../../components/dashboard-icons";
+import { resolveBirdImageUrl } from "../bird-image";
 import { BirdStatusAction, type BirdStatus, type BirdStatusResponse } from "../bird-status-action";
 
 interface BreedingFarmSummary {
@@ -55,6 +56,8 @@ interface BirdDetailsResponse {
   fatherBirdId: string | null;
   genealogyRootId: string | null;
   identificationPending: boolean;
+  imageUrl?: string | null;
+  isDefaultImage?: boolean;
   mother: BirdParent | null;
   motherBirdId: string | null;
   name: string;
@@ -606,12 +609,24 @@ function BirdDetailActionMenu({
   );
 }
 
-function BirdDetailPhoto({ status }: Readonly<{ status: BirdStatus }>) {
+function BirdDetailPhoto({ bird }: Readonly<{ bird: BirdDetailsResponse }>) {
+  const hasApiImage = Boolean(bird.imageUrl);
+  const imageDescription = bird.isDefaultImage
+    ? `Imagem padrão da espécie: ${bird.speciesPopularName}`
+    : hasApiImage
+      ? `Foto de perfil de ${bird.name}`
+      : "Foto da ave não cadastrada";
+  const imageCaption = bird.isDefaultImage
+    ? "Imagem padrão da espécie · foto própria não cadastrada"
+    : hasApiImage
+      ? "Foto de perfil"
+      : "Imagem ilustrativa · foto não cadastrada";
+
   return (
-    <div aria-label="Foto da ave não cadastrada" className="bird-detail-profile-photo">
-      <img alt="" aria-hidden="true" src="/assets/imagery/birds/great-tit-header-hd.webp" />
-      <span className={`bird-detail-photo-status bird-status-${status.toLowerCase()}`}><span aria-hidden="true" />{statusLabel(status)}</span>
-      <span className="bird-detail-photo-caption">Imagem ilustrativa · foto não cadastrada</span>
+    <div aria-label={imageDescription} className="bird-detail-profile-photo" role="img">
+      <img alt="" aria-hidden="true" src={resolveBirdImageUrl(bird.imageUrl)} />
+      <span className={`bird-detail-photo-status bird-status-${bird.status.toLowerCase()}`}><span aria-hidden="true" />{statusLabel(bird.status)}</span>
+      <span className="bird-detail-photo-caption">{imageCaption}</span>
     </div>
   );
 }
@@ -905,7 +920,7 @@ function BirdDetailPage() {
       <nav aria-label="Navegação estrutural" className="bird-detail-breadcrumb"><Link href="/dashboard">Painel</Link><span aria-hidden="true">›</span><Link href="/plantel/aves">Aves</Link><span aria-hidden="true">›</span><span aria-current="page">{bird.name}</span></nav>
 
       <section aria-labelledby="titulo-ficha-ave" className="bird-detail-profile">
-        <BirdDetailPhoto status={bird.status} />
+        <BirdDetailPhoto bird={bird} />
         <div className="bird-detail-profile-content">
           <div className="bird-detail-profile-heading">
             <div>

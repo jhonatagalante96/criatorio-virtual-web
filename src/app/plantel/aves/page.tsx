@@ -10,6 +10,7 @@ import { AuthenticatedShell } from "../../components/authenticated-shell";
 import { DashboardIcon } from "../../components/dashboard-icons";
 import type { DashboardIconName } from "../../components/dashboard-icons";
 import { SpeciesSummary } from "../../components/species-selector";
+import { resolveBirdImageUrl } from "./bird-image";
 import { BirdStatusAction } from "./bird-status-action";
 
 interface BreedingFarmSummary {
@@ -36,8 +37,9 @@ interface BirdListItem {
   birthDate: string | null;
   birdId: string;
   identificationPending: boolean;
+  imageUrl?: string | null;
+  isDefaultImage?: boolean;
   name: string;
-  photoUrl?: string | null;
   ringNumber: string | null;
   sex: BirdSex;
   speciesId: string;
@@ -479,7 +481,7 @@ function BirdCard({
     <li>
       <article aria-label={`Ave ${bird.name}`} className="bird-list-card">
         <span aria-hidden="true" className="bird-list-card-photo">
-          <img alt="" src={bird.photoUrl ?? "/assets/imagery/birds/great-tit-header-hd.webp"} />
+          <img alt="" src={resolveBirdImageUrl(bird.imageUrl)} />
         </span>
         <div className="bird-list-card-name">
           <h2><Link aria-label={`Abrir ficha de ${bird.name}`} href={`/plantel/aves/${bird.birdId}`}>{bird.name}</Link></h2>
