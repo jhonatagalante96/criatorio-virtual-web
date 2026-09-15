@@ -2301,7 +2301,7 @@ h1, h2 { line-height: 1.08; }
 .document-photo-focus-editor { margin: 0 auto; max-width: 58rem; position: relative; }
 .document-photo-focus-model-preview { min-width: 0; position: relative; }
 .document-photo-focus-model-preview > .document-wizard-preview, .document-photo-focus-model-preview > .document-wizard-certificate-preview { width: 100%; }
-.document-photo-focus-editor h3 { color: #24584f; font-size: .82rem; margin: 0 0 .65rem; }
+.document-photo-focus-controls h3 { color: #24584f; font-size: .82rem; margin: 0 0 .65rem; }
 .document-photo-focus-frame { aspect-ratio: 4 / 5; background: #dfece3; border: 1px solid #b9d0c4; border-radius: .4rem; cursor: grab; max-height: 15rem; overflow: hidden; position: relative; touch-action: none; user-select: none; width: 100%; }
 .document-photo-focus-frame.is-dragging { cursor: grabbing; }
 .document-photo-focus-frame img { display: block; height: 100%; object-fit: cover; pointer-events: none; transform-origin: center; width: 100%; }
