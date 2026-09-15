@@ -44,6 +44,8 @@ function bird(overrides: Partial<{
   birthDate: string | null;
   birdId: string;
   identificationPending: boolean;
+  imageUrl: string | null;
+  isDefaultImage: boolean;
   name: string;
   ringNumber: string | null;
   sex: "Female" | "Male" | "Unknown";
@@ -53,6 +55,8 @@ function bird(overrides: Partial<{
     birthDate: "2024-02-14",
     birdId: "bird-a",
     identificationPending: false,
+    imageUrl: "/api/birds/bird-a/attachments/primary-a/content",
+    isDefaultImage: false,
     name: "Aurora",
     ringNumber: "123456",
     sex: "Female" as const,
@@ -448,6 +452,30 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByText("Ave elegível para o certificado")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
+    const photo = screen.getByRole("img", { name: "Prévia da foto de Aurora" });
+    expect(photo.getAttribute("src")).toContain("/api/birds/bird-a/attachments/primary-a/content");
+    const photoFrame = screen.getByRole("group", { name: "Arraste para posicionar a foto de Aurora" });
+    vi.spyOn(photoFrame, "getBoundingClientRect").mockReturnValue({
+      bottom: 200,
+      height: 200,
+      left: 0,
+      right: 200,
+      top: 0,
+      width: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({})
+    } as DOMRect);
+    fireEvent(photoFrame, new MouseEvent("pointerdown", { bubbles: true, button: 0, clientX: 100, clientY: 100 }));
+    fireEvent(photoFrame, new MouseEvent("pointermove", { bubbles: true, clientX: 140, clientY: 80 }));
+    expect((photo as HTMLImageElement).style.objectPosition).toBe("30% 60%");
+    fireEvent(photoFrame, new MouseEvent("pointerup", { bubbles: true, clientX: 140, clientY: 80 }));
+    fireEvent.click(screen.getByRole("button", { name: "Centralizar imagem" }));
+    expect((photo as HTMLImageElement).style.objectPosition).toBe("50% 50%");
+    fireEvent.change(screen.getByRole("slider", { name: "Zoom da foto" }), { target: { value: "1.5" } });
+    fireEvent.change(screen.getByRole("slider", { name: "Posição horizontal da foto" }), { target: { value: "72" } });
+    fireEvent.change(screen.getByRole("slider", { name: "Posição vertical da foto" }), { target: { value: "38" } });
+    expect(screen.getByText("72%")).toBeTruthy();
     expect(screen.getByText("Clássico Premium")).toBeTruthy();
     expect(screen.getByText("Institucional Claro")).toBeTruthy();
     expect(screen.getByText("Moderno")).toBeTruthy();
@@ -465,7 +493,11 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Certificado gerado com sucesso" })).toBeTruthy());
     const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
     expect(postCall).toBeTruthy();
-    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({ type: "GenealogyCertificate", modelId: "Modern" });
+    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({
+      type: "GenealogyCertificate",
+      modelId: "Modern",
+      photoFocus: { x: 72, y: 38, zoom: 1.5 }
+    });
     expect(screen.getByRole("link", { name: "Baixar certificado" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-certificate-a/content");
   });
