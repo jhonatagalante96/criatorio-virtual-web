@@ -175,6 +175,19 @@ describe("BirdListPage", () => {
     expect(birdRow.querySelector(".bird-row-actions")?.hasAttribute("open")).toBe(false);
   });
 
+  it("defaults the listing to active birds", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([bird()]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openList(fetchMock);
+
+    expect((document.getElementById("bird-status-filter") as HTMLSelectElement).value).toBe("Active");
+    expect(listUrl(fetchMock, 2)).toContain("status=Active");
+  });
+
   it("prefers the bird primary photo when the API does not mark the image as default", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
@@ -221,7 +234,7 @@ describe("BirdListPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
 
     await waitFor(() => expect(screen.getByRole("article", { name: "Ave Aurora Filtrada" })).toBeTruthy());
-    expect(window.location.search).toBe("?search=Aurora");
+    expect(window.location.search).toBe("?search=Aurora&status=Active");
     expect(listUrl(fetchMock, 3)).toContain("search=Aurora");
   });
 
@@ -238,9 +251,7 @@ describe("BirdListPage", () => {
     fireEvent.click(within(birdRow).getByRole("button", { name: "Inativar" }));
     fireEvent.click(screen.getByRole("radio", { name: "Registrar falecimento" }));
     fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar alteração" }));
-
-    expect(await screen.findByText("Informe a data do falecimento.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Confirmar alteração" }) as HTMLButtonElement).disabled).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
@@ -259,8 +270,10 @@ describe("BirdListPage", () => {
     fireEvent.click(within(birdRow).getByRole("button", { name: "Abrir ações de Aurora" }));
     fireEvent.click(within(birdRow).getByRole("button", { name: "Inativar" }));
     fireEvent.click(screen.getByRole("radio", { name: "Registrar falecimento" }));
+    expect((screen.getByRole("button", { name: "Confirmar alteração" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.change(screen.getByLabelText("Data do falecimento (obrigatória)"), { target: { value: "2025-02-01" } });
     fireEvent.click(screen.getByRole("checkbox"));
+    expect((screen.getByRole("button", { name: "Confirmar alteração" }) as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Confirmar alteração" }));
 
     expect(await screen.findByText("Alteração concluída")).toBeTruthy();
@@ -385,7 +398,7 @@ describe("BirdListPage", () => {
     fireEvent.click(within(emptyState).getByRole("button", { name: "Limpar filtros" }));
 
     await waitFor(() => expect(screen.getByRole("article", { name: "Ave Aurora" })).toBeTruthy());
-    expect(window.location.search).toBe("");
+    expect(window.location.search).toBe("?status=Active");
     expect(listUrl(fetchMock, 3)).not.toContain("search=");
   });
 
@@ -515,7 +528,7 @@ describe("BirdListPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Próxima página" }));
 
     await waitFor(() => expect(screen.getByRole("article", { name: "Ave Segunda Página" })).toBeTruthy());
-    expect(window.location.search).toBe("?page=2");
+    expect(window.location.search).toBe("?status=Active&page=2");
     expect(listUrl(fetchMock, 3)).toContain("page=2");
     expect(screen.getByRole("button", { name: "Página anterior" }).hasAttribute("disabled")).toBe(false);
   });
