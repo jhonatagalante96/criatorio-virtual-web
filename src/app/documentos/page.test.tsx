@@ -370,6 +370,8 @@ describe("DocumentsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Selecione os campos" })).toBeTruthy());
+    expect(screen.getByRole("checkbox", { name: /Endereço do criatório/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Endereço do criatório/ }));
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o tamanho" })).toBeTruthy());
     fireEvent.click(screen.getByRole("radio", { name: /Grande/ }));
@@ -387,7 +389,7 @@ describe("DocumentsPage", () => {
       type: "Badge",
       modelId: "Photographic",
       printSize: "Large",
-      selectedFields: ["Name", "RingNumber", "Species", "Sex"]
+      selectedFields: ["Name", "RingNumber", "Species", "Sex", "BreedingFarmAddress"]
     });
     expect(screen.getByRole("link", { name: "Baixar crachá" }).getAttribute("href"))
       .toContain("/api/birds/bird-a/documents/document-a/content");
