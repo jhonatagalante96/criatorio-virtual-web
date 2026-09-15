@@ -80,7 +80,7 @@ const defaultFilters: BirdFilters = {
   sortDirection: "asc",
   speciesId: "",
   speciesName: "",
-  status: ""
+  status: "Active"
 };
 
 const birdStatuses: Array<{ label: string; value: BirdStatus }> = [
@@ -121,7 +121,7 @@ function parsePage(value: string | null): number {
 function parseFilters(search: string): BirdFilters {
   const params = new URLSearchParams(search);
   const sex = params.get("sex") ?? "";
-  const status = params.get("status") ?? "";
+  const status = params.get("status");
   const sortBy = params.get("sortBy") ?? "";
   const sortDirection = params.get("sortDirection") ?? "";
   const identificationPending = params.get("identificationPending") ?? "";
@@ -136,7 +136,7 @@ function parseFilters(search: string): BirdFilters {
     sortDirection: sortDirection === "desc" ? "desc" : "asc",
     speciesId: speciesId.trim(),
     speciesName: speciesId.trim() ? params.get("speciesName")?.trim() ?? "" : "",
-    status: isBirdStatus(status) ? status : ""
+    status: status === null ? "Active" : isBirdStatus(status) ? status : ""
   };
 }
 
@@ -415,6 +415,9 @@ function BirdActionMenu({
   prepareStatusMutation: () => Promise<void>;
 }>) {
   const menuRef = useRef<HTMLDetailsElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuPlacement, setMenuPlacement] = useState<"above" | "below">("below");
 
   useEffect(() => {
     function closeOnOutsidePointer(event: PointerEvent) {
@@ -426,10 +429,38 @@ function BirdActionMenu({
     return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setMenuPlacement("below");
+      return;
+    }
+
+    function updateMenuPlacement() {
+      const trigger = menuRef.current?.querySelector("summary");
+      const menu = menuPanelRef.current;
+      if (!trigger || !menu) return;
+
+      const triggerBounds = trigger.getBoundingClientRect();
+      const menuHeight = menu.getBoundingClientRect().height;
+      const spaceBelow = window.innerHeight - triggerBounds.bottom;
+      const spaceAbove = triggerBounds.top;
+      setMenuPlacement(menuHeight > spaceBelow && spaceAbove > spaceBelow ? "above" : "below");
+    }
+
+    const frame = window.setTimeout(updateMenuPlacement, 0);
+    window.addEventListener("resize", updateMenuPlacement);
+    window.addEventListener("scroll", updateMenuPlacement, true);
+    return () => {
+      window.clearTimeout(frame);
+      window.removeEventListener("resize", updateMenuPlacement);
+      window.removeEventListener("scroll", updateMenuPlacement, true);
+    };
+  }, [isOpen]);
+
   return (
-    <details className="bird-row-actions" ref={menuRef}>
+    <details className="bird-row-actions" onToggle={(event) => setIsOpen(event.currentTarget.open)} ref={menuRef}>
       <summary aria-label={`Abrir ações de ${bird.name}`} role="button">⋯</summary>
-      <div className="bird-row-actions-menu">
+      <div className="bird-row-actions-menu" data-placement={menuPlacement} ref={menuPanelRef}>
         <Link aria-label={`Ver detalhes de ${bird.name}`} className="bird-row-action" href={`/plantel/aves/${bird.birdId}`}>
           <DashboardIcon name="eye" />
           <span>Ver detalhes</span>

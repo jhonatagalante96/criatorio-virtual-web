@@ -119,6 +119,7 @@ export function BirdStatusAction({
   const dialogRef = useRef<HTMLDivElement>(null);
   const firstControlRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const isSubmitDisabled = isSubmitting || !confirmed || (status === "Deceased" && !deathDate);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -350,7 +351,7 @@ export function BirdStatusAction({
 
                 <div className="bird-status-dialog-actions">
                   <button className="auth-secondary-action" disabled={isSubmitting} onClick={closeDialog} type="button">Cancelar</button>
-                  <button className="auth-primary-action" disabled={isSubmitting} type="submit">{isSubmitting ? "Salvando…" : "Confirmar alteração"}</button>
+                  <button className="auth-primary-action" disabled={isSubmitDisabled} type="submit">{isSubmitting ? "Salvando…" : "Confirmar alteração"}</button>
                 </div>
               </form>
             )}
