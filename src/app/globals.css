@@ -2439,6 +2439,8 @@ h1, h2 { line-height: 1.08; }
 .dashboard-pending-list a:hover, .dashboard-pending-list a:focus-visible { border-color: #d9a95b; outline-offset: 2px; }
 .dashboard-pending-item { background: #fff9ed; border: 1px solid #f0dfbd; }
 .dashboard-pending-mark { align-items: center; background: #f5dcae; border-radius: 50%; color: #79521e; display: inline-flex; flex: 0 0 auto; font-size: .75rem; font-weight: 900; height: 1.45rem; justify-content: center; width: 1.45rem; }
+.dashboard-bird-photo { overflow: hidden; }
+.dashboard-bird-photo img { display: block; height: 100%; object-fit: cover; width: 100%; }
 .dashboard-pending-copy, .dashboard-activity-copy { display: grid; gap: .12rem; min-width: 0; }
 .dashboard-pending-copy strong, .dashboard-activity-copy strong { color: var(--ink); font-size: .7rem; overflow-wrap: anywhere; }
 .dashboard-pending-copy span, .dashboard-activity-copy span { color: #78919a; font-size: .61rem; overflow-wrap: anywhere; }

@@ -11,6 +11,7 @@ import { DashboardIcon } from "../components/dashboard-icons";
 import { PasskeyActivationPrompt } from "../components/passkey-activation-prompt";
 import { SessionRecovery } from "../components/session-recovery";
 import type { DashboardIconName } from "../components/dashboard-icons";
+import { resolveBirdImageUrl } from "../plantel/aves/bird-image";
 
 interface BreedingFarmSummary {
   breedingFarmId: string;
@@ -33,6 +34,7 @@ interface DashboardIndicators {
 interface DashboardPending {
   code: string;
   count: number;
+  imageUrl?: string | null;
   resourceType: string;
   title: string;
 }
@@ -40,9 +42,20 @@ interface DashboardPending {
 interface DashboardActivity {
   activityType: string;
   occurredAtUtc: string;
+  imageUrl?: string | null;
   resourceId: string;
   resourceType: string;
   title: string;
+}
+
+interface DashboardBirdImage {
+  birdId: string;
+  imageUrl?: string | null;
+}
+
+interface DashboardBirdImageResponse {
+  breedingFarmId: string;
+  items: DashboardBirdImage[];
 }
 
 interface DashboardData {
@@ -70,6 +83,10 @@ function stringValue(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
 
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
 function countValue(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
 }
@@ -87,6 +104,7 @@ function normalizeDashboard(value: unknown): DashboardData {
   const pending = (rawPending ?? []).filter(isRecord).map((item) => ({
     code: stringValue(item.code, "Pending"),
     count: countValue(item.count),
+    imageUrl: nullableString(item.imageUrl),
     resourceType: stringValue(item.resourceType, ""),
     title: stringValue(item.title, "Pendência no criatório")
   }));
@@ -94,6 +112,7 @@ function normalizeDashboard(value: unknown): DashboardData {
   const activities = (rawActivities ?? []).filter(isRecord).map((item) => ({
     activityType: stringValue(item.activityType, "ActivityRegistered"),
     occurredAtUtc: stringValue(item.occurredAtUtc, ""),
+    imageUrl: nullableString(item.imageUrl),
     resourceId: stringValue(item.resourceId, ""),
     resourceType: stringValue(item.resourceType, ""),
     title: stringValue(item.title, "Atividade registrada")
@@ -109,6 +128,19 @@ function normalizeDashboard(value: unknown): DashboardData {
     },
     isPartial: !rawIndicators || !rawPending || !rawActivities,
     pending
+  };
+}
+
+function normalizeDashboardBirdImages(value: unknown): DashboardBirdImageResponse {
+  const root = isRecord(value) ? value : {};
+  const rawItems = Array.isArray(root.items) ? root.items : [];
+
+  return {
+    breedingFarmId: stringValue(root.breedingFarmId, ""),
+    items: rawItems.filter(isRecord).map((item) => ({
+      birdId: stringValue(item.birdId, ""),
+      imageUrl: nullableString(item.imageUrl)
+    }))
   };
 }
 
@@ -151,6 +183,58 @@ function pendingHref(pending: DashboardPending): string | undefined {
   return pending.code === "BirdIdentificationPending" || pending.resourceType.toLowerCase() === "bird"
     ? "/plantel/aves?identificationPending=true"
     : undefined;
+}
+
+function isBirdActivity(activity: DashboardActivity): boolean {
+  return activity.resourceType.toLowerCase() === "bird" && Boolean(activity.resourceId);
+}
+
+async function requestDashboardBirdImages(
+  client: ApiClient,
+  path: string,
+  breedingFarmId: string
+): Promise<DashboardBirdImage[]> {
+  try {
+    const response = normalizeDashboardBirdImages(await client.request<unknown>(path));
+    if (!sameTenantId(response.breedingFarmId, breedingFarmId)) throw new StaleTenantResponseError();
+    return response.items;
+  } catch (requestError) {
+    if (requestError instanceof StaleTenantResponseError) throw requestError;
+    return [];
+  }
+}
+
+async function enrichDashboardWithBirdImages(
+  client: ApiClient,
+  dashboard: DashboardData,
+  breedingFarmId: string
+): Promise<DashboardData> {
+  const hasBirdActivities = dashboard.activities.some(isBirdActivity);
+  const hasBirdPending = dashboard.pending.some((item) => Boolean(pendingHref(item)));
+  if (!hasBirdActivities && !hasBirdPending) return dashboard;
+
+  const [recentBirds, pendingBirds] = await Promise.all([
+    hasBirdActivities
+      ? requestDashboardBirdImages(client, "api/birds?sortBy=createdAt&sortDirection=desc&page=1&pageSize=10", breedingFarmId)
+      : Promise.resolve([]),
+    hasBirdPending
+      ? requestDashboardBirdImages(client, "api/birds?identificationPending=true&sortBy=createdAt&sortDirection=desc&page=1&pageSize=1", breedingFarmId)
+      : Promise.resolve([])
+  ]);
+
+  const imagesByBirdId = new Map(recentBirds.map((bird) => [bird.birdId, bird.imageUrl]));
+  const pendingImageUrl = pendingBirds[0]?.imageUrl ?? null;
+
+  return {
+    ...dashboard,
+    activities: dashboard.activities.map((activity) => {
+      const imageUrl = imagesByBirdId.get(activity.resourceId);
+      return imageUrl ? { ...activity, imageUrl } : activity;
+    }),
+    pending: dashboard.pending.map((item) => item.imageUrl || !pendingHref(item)
+      ? item
+      : { ...item, imageUrl: pendingImageUrl })
+  };
 }
 
 function AccessState({
@@ -221,6 +305,16 @@ function DashboardMetric({ detail, href, icon, label, value, tone = "green" }: R
     : metric;
 }
 
+function DashboardBirdPhoto({ className, imageUrl }: Readonly<{ className: string; imageUrl?: string | null }>) {
+  if (!imageUrl) return null;
+
+  return (
+    <span aria-hidden="true" className={className}>
+      <img alt="" src={resolveBirdImageUrl(imageUrl)} />
+    </span>
+  );
+}
+
 function PendingSection({ pending }: Readonly<{ pending: DashboardPending[] }>) {
   return (
     <section aria-labelledby="titulo-pendencias" className="dashboard-section dashboard-pending-section">
@@ -246,7 +340,11 @@ function PendingSection({ pending }: Readonly<{ pending: DashboardPending[] }>) 
             const href = pendingHref(item);
             const content = (
               <>
-                <span aria-hidden="true" className="dashboard-pending-mark">!</span>
+                {item.imageUrl ? (
+                  <DashboardBirdPhoto className="dashboard-pending-mark dashboard-bird-photo" imageUrl={item.imageUrl} />
+                ) : (
+                  <span aria-hidden="true" className="dashboard-pending-mark">!</span>
+                )}
                 <span className="dashboard-pending-copy">
                   <strong>{item.title}</strong>
                   <span>{formatCount(item.count, "registro", "registros")}</span>
@@ -302,9 +400,13 @@ function ActivitiesSection({ activities }: Readonly<{ activities: DashboardActiv
                 : "transfer";
             const activityContent = (
               <>
-                <span aria-hidden="true" className={`dashboard-activity-icon dashboard-activity-icon-${activityTone}`}>
-                  <DashboardIcon name={activityIcon} />
-                </span>
+                {activity.imageUrl ? (
+                  <DashboardBirdPhoto className={`dashboard-activity-icon dashboard-activity-icon-${activityTone} dashboard-bird-photo`} imageUrl={activity.imageUrl} />
+                ) : (
+                  <span aria-hidden="true" className={`dashboard-activity-icon dashboard-activity-icon-${activityTone}`}>
+                    <DashboardIcon name={activityIcon} />
+                  </span>
+                )}
                 <span className="dashboard-activity-copy">
                   <strong>{activity.title}</strong>
                   <span>{formatActivityType(activity.activityType)}</span>
@@ -504,7 +606,9 @@ function DashboardScreen() {
       if (!sameTenantId(dashboard.breedingFarmId, selectedFarm.breedingFarmId)) {
         throw new StaleTenantResponseError();
       }
-      setView({ dashboard, farm: selectedFarm, kind: "ready" });
+      const enrichedDashboard = await enrichDashboardWithBirdImages(client.current!, dashboard, selectedFarm.breedingFarmId);
+      if (!isCurrentRequest()) return;
+      setView({ dashboard: enrichedDashboard, farm: selectedFarm, kind: "ready" });
     } catch (requestError) {
       if (!isCurrentRequest()) return;
 
