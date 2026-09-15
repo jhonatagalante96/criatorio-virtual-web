@@ -382,6 +382,10 @@ describe("DocumentsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
+    expect(screen.getByRole("group", { name: "Arraste para posicionar a foto de Aurora" })).toBeTruthy();
+    fireEvent.change(screen.getByRole("slider", { name: "Posição horizontal da foto" }), { target: { value: "25" } });
+    expect(screen.getByText("25%")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Centralizar imagem" }));
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Revise e gere" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Gerar crachá" }));
