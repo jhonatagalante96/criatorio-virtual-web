@@ -382,7 +382,9 @@ describe("DocumentsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
-    expect(screen.getByRole("group", { name: "Arraste para posicionar a foto de Aurora" })).toBeTruthy();
+    const badgePreview = document.querySelector('[aria-label="Prévia do crachá Aurora"]');
+    expect(badgePreview).toBeTruthy();
+    expect(within(badgePreview as HTMLElement).getByRole("group", { name: "Arraste para posicionar a foto de Aurora" })).toBeTruthy();
     fireEvent.change(screen.getByRole("slider", { name: "Posição horizontal da foto" }), { target: { value: "25" } });
     expect(screen.getByText("25%")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Centralizar imagem" }));
@@ -459,7 +461,9 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
     const photo = screen.getByRole("img", { name: "Prévia da foto de Aurora" });
     expect(photo.getAttribute("src")).toContain("/api/birds/bird-a/attachments/primary-a/content");
-    const photoFrame = screen.getByRole("group", { name: "Arraste para posicionar a foto de Aurora" });
+    const certificatePreview = document.querySelector('[aria-label="Prévia do certificado de genealogia Aurora"]');
+    expect(certificatePreview).toBeTruthy();
+    const photoFrame = within(certificatePreview as HTMLElement).getByRole("group", { name: "Arraste para posicionar a foto de Aurora" });
     vi.spyOn(photoFrame, "getBoundingClientRect").mockReturnValue({
       bottom: 200,
       height: 200,
@@ -579,7 +583,9 @@ describe("DocumentsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
-    expect(screen.getByRole("group", { name: "Arraste para posicionar a foto de Aurora" })).toBeTruthy();
+    const provenancePreview = document.querySelector('[aria-label="Prévia do documento de procedência Aurora"]');
+    expect(provenancePreview).toBeTruthy();
+    expect(within(provenancePreview as HTMLElement).getByRole("group", { name: "Arraste para posicionar a foto de Aurora" })).toBeTruthy();
     expect(screen.getByText("Pais e ancestrais registrados")).toBeTruthy();
     expect(screen.getByText("Data de emissão")).toBeTruthy();
     expect(screen.getByText("Assinatura do responsável")).toBeTruthy();
