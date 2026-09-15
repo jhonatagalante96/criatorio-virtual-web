@@ -93,6 +93,21 @@ describe("ApiClient", () => {
     await expect(client.request("api/private")).rejects.toMatchObject({ status: 403 });
   });
 
+  it("returns an explicitly accepted non-success JSON status to the caller", async () => {
+    const payload = { status: "NoDocumentsGenerated", items: [{ status: "MissingRingNumber" }] };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), {
+      headers: { "content-type": "application/json" },
+      status: 422
+    })));
+    const client = new ApiClient("http://localhost:5000");
+
+    await expect(client.request("api/birds/documents/batch", {
+      acceptedStatuses: [422],
+      body: "{}",
+      method: "POST"
+    })).resolves.toEqual(payload);
+  });
+
   it("requests PDF content without caching it and keeps the tenant guard", async () => {
     const pdf = new Blob(["%PDF-1.7"], { type: "application/pdf" });
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(pdf, {

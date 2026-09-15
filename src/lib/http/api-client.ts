@@ -5,6 +5,7 @@ export const ANTIFORGERY_HEADER = "X-XSRF-TOKEN";
 export type ValidationErrors = Record<string, string[]>;
 
 export interface ApiRequestOptions {
+  acceptedStatuses?: readonly number[];
   body?: BodyInit | null;
   headers?: HeadersInit;
   method?: ApiMethod;
@@ -115,7 +116,7 @@ export class ApiClient {
     });
 
     if (requestVersion !== this.tenantVersion) throw new StaleTenantResponseError();
-    if (!response.ok) throw await toApiError(response);
+    if (!response.ok && !options.acceptedStatuses?.includes(response.status)) throw await toApiError(response);
     if (response.status === 204) return undefined as T;
 
     const data = await response.json() as T;
