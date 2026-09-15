@@ -16,7 +16,7 @@ type BadgeModelId = "Classic" | "Minimalist" | "Competition" | "Photographic";
 type GenealogyCertificateModelId = "ClassicPremium" | "Institutional" | "Modern";
 type DocumentModelId = BadgeModelId | GenealogyCertificateModelId;
 type BadgePrintSize = "Small" | "Medium" | "Large";
-type DocumentField = "Name" | "RingNumber" | "Sex" | "Species" | "BirthDate" | "BirdPhoto" | "BreedingFarmName" | "GenealogyTree";
+type DocumentField = "Name" | "RingNumber" | "Sex" | "Species" | "BirthDate" | "BirdPhoto" | "BreedingFarmName" | "BreedingFarmAddress" | "GenealogyTree";
 type DocumentView = "generate" | "history";
 type DocumentHistoryFilter = "All" | DocumentType;
 type FarmState = "blocked" | "error" | "loading" | "ready";
@@ -149,6 +149,7 @@ const fieldOptions: Array<{ id: DocumentField; description: string; name: string
   { id: "BirthDate", description: "Data de nascimento, quando informada.", name: "Nascimento" },
   { id: "BirdPhoto", description: "Foto principal, quando cadastrada.", name: "Foto" },
   { id: "BreedingFarmName", description: "Nome do criatório selecionado.", name: "Criatório" },
+  { id: "BreedingFarmAddress", description: "Endereço cadastrado do criatório.", name: "Endereço do criatório" },
   { id: "GenealogyTree", description: "Árvore genealógica disponível para a ave.", name: "Árvore genealógica" }
 ];
 
