@@ -100,7 +100,9 @@ describe("TransferListScreen", () => {
 
     const detailLink = await screen.findByRole("link", { name: "Ver detalhes da transferência de Canário Belga" });
     expect(detailLink.getAttribute("href")).toBe("/transferencias/transfer-a");
-    expect(screen.getByRole("link", { name: "Nova transferência" }).getAttribute("href")).toBe("/transferencias/nova");
+    fireEvent.click(screen.getByText("Nova transferência"));
+    expect(screen.getByRole("link", { name: "Transferência interna" }).getAttribute("href")).toBe("/transferencias/nova");
+    expect(screen.getByRole("link", { name: "Transferência externa" }).getAttribute("href")).toBe("/transferencias/nova/externa");
     expect(screen.getByText("Origem: Criatório Aurora")).toBeTruthy();
     expect(screen.getByText(/Anilha 123456/)).toBeTruthy();
     expect(screen.getByText("Pendente")).toBeTruthy();

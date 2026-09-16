@@ -266,7 +266,15 @@ export function TransferListScreen() {
         <nav aria-label="Navegação estrutural" className="document-wizard-breadcrumb"><Link href="/dashboard">Painel</Link><span aria-hidden="true">›</span><span aria-current="page">Transferências</span></nav>
         <header className="document-wizard-header transfer-page-header">
           <div><p className="eyebrow">Transferências · Criatório selecionado</p><h1>Transferências</h1><p>Consulte solicitações enviadas e recebidas neste criatório.</p></div>
-          <div className="document-wizard-header-actions"><Link className="auth-primary-action" href="/transferencias/nova">Nova transferência</Link></div>
+          <div className="document-wizard-header-actions">
+            <details className="transfer-create-menu">
+              <summary className="auth-primary-action"><span>Nova transferência</span><span aria-hidden="true">⌄</span></summary>
+              <div className="transfer-create-menu-options">
+                <Link href="/transferencias/nova">Transferência interna</Link>
+                <Link href="/transferencias/nova/externa">Transferência externa</Link>
+              </div>
+            </details>
+          </div>
         </header>
 
         <section aria-busy={listState === "loading"} aria-labelledby="titulo-transferencias" className="document-history-results document-wizard-card transfer-results">

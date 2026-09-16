@@ -3012,6 +3012,22 @@ h1, h2 { line-height: 1.08; }
 }
 
 .transfer-page-header { margin-bottom: 1.25rem; }
+.transfer-create-menu { position: relative; z-index: 5; }
+.transfer-create-menu > summary { align-items: center; cursor: pointer; display: inline-flex; gap: .7rem; list-style: none; }
+.transfer-create-menu > summary::-webkit-details-marker { display: none; }
+.transfer-create-menu > summary:focus-visible { outline: 3px solid rgb(25 111 81 / 28%); outline-offset: 3px; }
+.transfer-create-menu-options { background: #fff; border: 1px solid #d8e6e4; border-radius: .55rem; box-shadow: 0 .6rem 1.5rem rgb(30 60 67 / 13%); display: grid; gap: .15rem; min-width: 13rem; padding: .35rem; position: absolute; right: 0; top: calc(100% + .35rem); }
+.transfer-create-menu-options a { border-radius: .35rem; color: #29464c; font-size: .72rem; font-weight: 700; padding: .65rem .75rem; text-decoration: none; }
+.transfer-create-menu-options a:hover, .transfer-create-menu-options a:focus-visible { background: #eff8f4; color: #176247; outline: none; }
+.external-transfer-fields { display: grid; gap: .85rem; }
+.external-transfer-fields .document-wizard-search small { color: #74838b; font-size: .6rem; justify-self: end; }
+.external-transfer-fields .external-transfer-notes textarea { background: #fff; border: 1px solid #d3e1e2; border-radius: .45rem; color: #263f4a; font: inherit; font-size: .75rem; line-height: 1.45; min-height: 6rem; padding: .7rem .8rem; resize: vertical; width: 100%; }
+.external-transfer-fields .external-transfer-notes textarea:focus-visible { border-color: #63a98b; outline: 3px solid rgb(45 131 100 / 15%); }
+.external-transfer-aside-recipient { border-top: 1px solid #e0e9e7; display: grid; gap: .18rem; margin-top: 1rem; padding-top: .8rem; }
+.external-transfer-aside-recipient > span { color: #71818a; font-size: .56rem; font-weight: 800; }
+.external-transfer-aside-recipient strong { color: #243f4d; font-size: .69rem; overflow-wrap: anywhere; }
+.external-transfer-aside-recipient small { color: #71818a; font-size: .58rem; }
+.external-transfer-review-notes { white-space: pre-wrap; overflow-wrap: anywhere; }
 .transfer-results { overflow: hidden; }
 .transfer-results-heading { align-items: flex-end; }
 .transfer-direction-tabs { border-bottom: 1px solid #e4eeee; display: flex; gap: .35rem; padding: .8rem clamp(1.1rem, 3vw, 2rem) 0; }
