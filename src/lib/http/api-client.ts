@@ -5,6 +5,7 @@ export const ANTIFORGERY_HEADER = "X-XSRF-TOKEN";
 export type ValidationErrors = Record<string, string[]>;
 
 export interface ApiRequestOptions {
+  accept?: string;
   acceptedStatuses?: readonly number[];
   body?: BodyInit | null;
   headers?: HeadersInit;
@@ -129,8 +130,11 @@ export class ApiClient {
   async requestBlob(path: string, options: ApiRequestOptions = {}): Promise<Blob> {
     const method = options.method ?? "GET";
     const url = new URL(path, this.endpoint).toString();
+    if (new URL(url).origin !== new URL(this.endpoint).origin) {
+      throw new Error("Binary API requests must use the configured API origin.");
+    }
     const headers = new Headers(options.headers);
-    headers.set("accept", "application/pdf");
+    headers.set("accept", options.accept ?? "application/pdf");
 
     if (isMutation(method)) {
       const token = this.csrfToken();
