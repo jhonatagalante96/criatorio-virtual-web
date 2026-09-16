@@ -178,6 +178,43 @@ function genealogyPositionLabel(position: string): string {
   return "Ancestral";
 }
 
+function genealogyRelationshipLabel(
+  node: BirdGenealogyNode,
+  position: string,
+  lineagePosition?: "father" | "mother"
+): string {
+  if (node.generation === 0) return "Ave consultada";
+  if (node.generation === 1) return genealogyPositionLabel(position);
+
+  const ancestorTerms: Record<number, { feminine: string; masculine: string }> = {
+    2: { feminine: "Avó", masculine: "Avô" },
+    3: { feminine: "Bisavó", masculine: "Bisavô" },
+    4: { feminine: "Trisavó", masculine: "Trisavô" },
+    5: { feminine: "Tetravó", masculine: "Tetravô" },
+    6: { feminine: "Pentavó", masculine: "Pentavô" }
+  };
+  const branchSide = lineagePosition === "father" ? "paterno" : lineagePosition === "mother" ? "materno" : undefined;
+  const degree = ancestorTerms[node.generation];
+
+  if (!degree) {
+    const branch = branchSide ? ` no ramo ${branchSide}` : "";
+    return `Ancestral de ${node.generation}ª geração${branch}`;
+  }
+
+  if (node.sex === "Male") return `${degree.masculine}${branchSide ? ` ${branchSide}` : ""}`;
+  if (node.sex === "Female") {
+    const feminineBranchSide = lineagePosition === "father" ? "paterna" : lineagePosition === "mother" ? "materna" : undefined;
+    return `${degree.feminine}${feminineBranchSide ? ` ${feminineBranchSide}` : ""}`;
+  }
+  return `Ancestral de ${node.generation}ª geração${branchSide ? ` no ramo ${branchSide}` : ""}`;
+}
+
+function genealogyPositionOrder(position: string): number {
+  if (position === "father") return 0;
+  if (position === "mother") return 1;
+  return 2;
+}
+
 function genealogySourceLabel(node: BirdGenealogyNode): string {
   if (node.source === "External") return "Ancestral externo · sem cadastro";
   if (!node.isAccessible) return "Registro preservado · acesso restrito";
@@ -187,7 +224,6 @@ function genealogySourceLabel(node: BirdGenealogyNode): string {
 
 function genealogyNodeSummary(node: BirdGenealogyNode): string {
   return [
-    genealogyPositionLabel(node.position),
     `geração ${node.generation}`,
     sexLabel(node.sex),
     node.ringNumber ? `anilha ${node.ringNumber}` : undefined
@@ -361,10 +397,12 @@ function ParentCard({
 function GenealogyNodeCard({
   hasParents,
   node,
+  relationshipLabel,
   onEdit
 }: Readonly<{
   hasParents: boolean;
   node: BirdGenealogyNode;
+  relationshipLabel: string;
   onEdit?: (node: BirdGenealogyNode) => void;
 }>) {
   const isNavigable = node.generation > 0 && node.canNavigate && node.isAccessible && Boolean(node.birdId);
@@ -372,12 +410,15 @@ function GenealogyNodeCard({
   const className = [
     "bird-genealogy-node",
     node.generation === 0 ? "is-root" : "",
+    node.source === "Private" ? "is-private" : "",
+    node.source === "Snapshot" ? "is-snapshot" : "",
+    node.source === "External" ? "is-external" : "",
     isNavigable ? "is-navigable" : "",
     !node.isAccessible ? "is-restricted" : ""
   ].filter(Boolean).join(" ");
   const content = (
     <>
-      <span className="bird-genealogy-node-position">{genealogyPositionLabel(node.position)}</span>
+      <span className="bird-genealogy-node-position">{relationshipLabel}</span>
       <strong>{node.name}</strong>
       <span>{genealogySourceLabel(node)}</span>
       <small>{genealogyNodeSummary(node)}</small>
@@ -385,11 +426,11 @@ function GenealogyNodeCard({
   );
 
   if (isNavigable && node.birdId) {
-    return <Link aria-label={`${node.name}, ${genealogyNodeSummary(node)}, abrir ficha`} className={className} href={`/plantel/aves/${encodeURIComponent(node.birdId)}`}>{content}</Link>;
+    return <Link aria-label={`${node.name}, ${relationshipLabel}, ${genealogyNodeSummary(node)}, abrir ficha`} className={className} href={`/plantel/aves/${encodeURIComponent(node.birdId)}`}>{content}</Link>;
   }
 
   return (
-    <div aria-label={`${node.name}, ${genealogyNodeSummary(node)}`} className={className}>
+    <div aria-label={`${node.name}, ${relationshipLabel}, ${genealogyNodeSummary(node)}`} className={className}>
       {content}
       {canEdit && onEdit && (
         <button className="bird-genealogy-edit-action" onClick={() => onEdit(node)} type="button">
@@ -402,14 +443,22 @@ function GenealogyNodeCard({
 
 function GenealogyBranch({
   nodeKey,
+  relationshipPosition,
+  lineagePosition,
   nodesByKey,
   onEdit,
+  onBranchToggle,
+  expandedBranches,
   parentsByChild,
   visited
 }: Readonly<{
   nodeKey: string;
+  relationshipPosition: string;
+  lineagePosition?: "father" | "mother";
   nodesByKey: ReadonlyMap<string, BirdGenealogyNode>;
   onEdit?: (node: BirdGenealogyNode) => void;
+  onBranchToggle: (nodeKey: string, expanded: boolean) => void;
+  expandedBranches: Readonly<Record<string, boolean>>;
   parentsByChild: ReadonlyMap<string, BirdGenealogyEdge[]>;
   visited: ReadonlySet<string>;
 }>) {
@@ -419,24 +468,42 @@ function GenealogyBranch({
   const nextVisited = new Set(visited);
   nextVisited.add(nodeKey);
   const parents = (parentsByChild.get(nodeKey) ?? [])
-    .filter((edge) => !nextVisited.has(edge.parentNodeKey) && nodesByKey.has(edge.parentNodeKey));
+    .filter((edge) => !nextVisited.has(edge.parentNodeKey) && nodesByKey.has(edge.parentNodeKey))
+    .sort((left, right) => genealogyPositionOrder(left.position) - genealogyPositionOrder(right.position));
+  const isExpanded = expandedBranches[nodeKey] ?? node.generation < 2;
+  const relationshipLabel = genealogyRelationshipLabel(node, relationshipPosition, lineagePosition);
 
   return (
     <li className="bird-genealogy-branch">
-      <GenealogyNodeCard hasParents={parents.length > 0} node={node} onEdit={onEdit} />
+      <GenealogyNodeCard hasParents={parents.length > 0} node={node} onEdit={onEdit} relationshipLabel={relationshipLabel} />
       {parents.length > 0 && (
-        <ul aria-label={`Pais de ${node.name}`} className="bird-genealogy-children">
-          {parents.map((edge) => (
-            <GenealogyBranch
-              key={`${edge.parentNodeKey}-${edge.position}`}
-              nodeKey={edge.parentNodeKey}
-              nodesByKey={nodesByKey}
-              onEdit={onEdit}
-              parentsByChild={parentsByChild}
-              visited={nextVisited}
-            />
-          ))}
-        </ul>
+        <details
+          className="bird-genealogy-branch-expansion"
+          onToggle={(event) => onBranchToggle(nodeKey, event.currentTarget.open)}
+          open={isExpanded}
+        >
+          <summary aria-label={`${isExpanded ? "Recolher" : "Expandir"} pais de ${node.name}`} className="bird-genealogy-expand-action">
+            {isExpanded ? "Ascendência aberta" : "Ver ascendência"} ({parents.length})
+          </summary>
+          <ul aria-label={`Pais de ${node.name}`} className="bird-genealogy-children">
+            {parents.map((edge) => (
+              <GenealogyBranch
+                key={`${edge.parentNodeKey}-${edge.position}`}
+                expandedBranches={expandedBranches}
+                nodeKey={edge.parentNodeKey}
+                nodesByKey={nodesByKey}
+                onBranchToggle={onBranchToggle}
+                onEdit={onEdit}
+                parentsByChild={parentsByChild}
+                relationshipPosition={edge.position}
+                lineagePosition={node.generation === 0
+                  ? edge.position === "father" || edge.position === "mother" ? edge.position : undefined
+                  : lineagePosition}
+                visited={nextVisited}
+              />
+            ))}
+          </ul>
+        </details>
       )}
     </li>
   );
@@ -447,19 +514,26 @@ function GenealogyNodes({
   client,
   genealogy,
   onMutationComplete,
+  onBranchToggle,
   onSave,
   onSessionExpired,
-  onUnlink
+  onUnlink,
+  expandedBranches,
+  scrollPosition
 }: Readonly<{
   birdId: string;
   client: ApiClient;
   genealogy: BirdGenealogyResponse;
   onMutationComplete: () => void;
+  onBranchToggle: (nodeKey: string, expanded: boolean) => void;
   onSave: (ancestorId: string, position: ExternalParentPosition, parent: ParentLinkInput) => Promise<void>;
   onSessionExpired: () => Promise<boolean>;
   onUnlink: (ancestorId: string, position: ExternalParentPosition) => Promise<void>;
+  expandedBranches: Readonly<Record<string, boolean>>;
+  scrollPosition: React.MutableRefObject<number | null>;
 }>) {
   const [editingAncestor, setEditingAncestor] = useState<{ ancestor: BirdGenealogyNode; ancestorId: string }>();
+  const graphRef = useRef<HTMLDivElement>(null);
   const nodesByKey = new Map(genealogy.nodes.map((node) => [node.nodeKey, node]));
   const parentsByChild = new Map<string, BirdGenealogyEdge[]>();
   for (const edge of genealogy.edges) {
@@ -471,6 +545,22 @@ function GenealogyNodes({
   const root = genealogy.nodes.find((node) => node.birdId === genealogy.rootBirdId && node.generation === 0)
     ?? genealogy.nodes.find((node) => node.generation === 0);
   const ancestors = genealogy.nodes.filter((node) => node.generation > 0);
+  useEffect(() => {
+    const graph = graphRef.current;
+    if (!graph) return;
+
+    if (scrollPosition.current !== null) {
+      graph.scrollLeft = scrollPosition.current;
+      return;
+    }
+
+    const rootCard = graph.querySelector<HTMLElement>(".bird-genealogy-node.is-root");
+    if (!rootCard) return;
+    const graphBounds = graph.getBoundingClientRect();
+    const rootBounds = rootCard.getBoundingClientRect();
+    graph.scrollLeft += rootBounds.left - graphBounds.left - (graph.clientWidth - rootCard.clientWidth) / 2;
+  }, [genealogy, scrollPosition]);
+
   const openEditor = (node: BirdGenealogyNode) => {
     const ancestorId = externalAncestorIdFromNodeKey(node.nodeKey);
     if (!node.canEdit || node.source !== "External" || !ancestorId) return;
@@ -498,15 +588,33 @@ function GenealogyNodes({
 
   return (
     <>
-      <div aria-label="Árvore genealógica" className="bird-genealogy-graph" role="region">
+      <div
+        aria-describedby="genealogy-tree-navigation-help"
+        aria-label="Árvore genealógica"
+        className="bird-genealogy-graph"
+        onScroll={(event) => { scrollPosition.current = event.currentTarget.scrollLeft; }}
+        ref={graphRef}
+        role="region"
+        tabIndex={0}
+      >
         <ul className="bird-genealogy-root">
-          <GenealogyBranch nodeKey={root.nodeKey} nodesByKey={nodesByKey} onEdit={openEditor} parentsByChild={parentsByChild} visited={new Set()} />
+          <GenealogyBranch
+            expandedBranches={expandedBranches}
+            nodeKey={root.nodeKey}
+            nodesByKey={nodesByKey}
+            onBranchToggle={onBranchToggle}
+            onEdit={openEditor}
+            parentsByChild={parentsByChild}
+            relationshipPosition={root.position}
+            visited={new Set()}
+          />
         </ul>
       </div>
       {ancestors.length === 0 && <EmptySection message="Ainda não há outros ancestrais registrados para esta ave." />}
       <div aria-label="Legenda da árvore genealógica" className="bird-genealogy-legend">
-        <span><i aria-hidden="true" className="is-link" />Ave acessível · abrir ficha</span>
-        <span><i aria-hidden="true" className="is-snapshot" />Registro preservado ou ancestral externo · sem acesso direto</span>
+        <span><i aria-hidden="true" className="is-private" />Ave do plantel · navegação conforme autorização</span>
+        <span><i aria-hidden="true" className="is-snapshot" />Snapshot vinculado · dados preservados</span>
+        <span><i aria-hidden="true" className="is-external" />Ancestral externo · sem cadastro no plantel</span>
       </div>
       {genealogy.isTruncated && <p className="bird-detail-help">A árvore foi limitada a {genealogy.maxGenerations} gerações para manter a consulta rápida.</p>}
       {editingAncestor && (
@@ -809,11 +917,13 @@ function BirdDetailPage() {
   const [genealogyError, setGenealogyError] = useState<string>();
   const [genealogyMaxGenerations, setGenealogyMaxGenerations] = useState(DEFAULT_GENEALOGY_GENERATIONS);
   const [genealogyState, setGenealogyState] = useState<GenealogyState>("loading");
+  const [expandedGenealogyBranches, setExpandedGenealogyBranches] = useState<Record<string, boolean>>({});
   const [reloadVersion, setReloadVersion] = useState(0);
   const client = useRef<ApiClient | null>(null);
   const csrfToken = useRef<string | undefined>(undefined);
   const requestVersion = useRef(0);
   const genealogyRequestVersion = useRef(0);
+  const genealogyScrollPosition = useRef<number | null>(null);
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
 
@@ -1019,9 +1129,21 @@ function BirdDetailPage() {
     void loadGenealogy(genealogyMaxGenerations);
   }, [genealogyMaxGenerations, loadGenealogy]);
 
+  const handleGenealogyBranchToggle = useCallback((nodeKey: string, expanded: boolean) => {
+    setExpandedGenealogyBranches((current) => current[nodeKey] === expanded
+      ? current
+      : { ...current, [nodeKey]: expanded });
+  }, []);
+
   useEffect(() => {
     setBirdId(readBirdIdFromPathname());
   }, []);
+
+  useEffect(() => {
+    if (!birdId) return;
+    setExpandedGenealogyBranches({});
+    genealogyScrollPosition.current = null;
+  }, [birdId]);
 
   useEffect(() => {
     if (!birdId) return;
@@ -1121,7 +1243,7 @@ function BirdDetailPage() {
               <div className="bird-genealogy-tree-heading">
                 <div>
                   <h3>Árvore consultada</h3>
-                  <p>Explore os vínculos por geração. Fichas acessíveis ficam disponíveis para navegação.</p>
+                  <p id="genealogy-tree-navigation-help">Explore os vínculos. Role a árvore na horizontal e expanda cada ramo para ver gerações mais profundas.</p>
                 </div>
                 <label className="bird-genealogy-depth-control" htmlFor="genealogy-depth">
                   <span>Gerações exibidas</span>
@@ -1140,13 +1262,16 @@ function BirdDetailPage() {
               {genealogyState === "ready" && genealogy && (
                 <GenealogyNodes
                   birdId={birdId}
-                  client={client.current!}
-                  genealogy={genealogy}
-                  onMutationComplete={refreshGenealogyAfterMutation}
-                  onSave={saveExternalParent}
-                  onSessionExpired={refreshEditorSession}
-                  onUnlink={unlinkExternalParent}
-                />
+                client={client.current!}
+                expandedBranches={expandedGenealogyBranches}
+                genealogy={genealogy}
+                onBranchToggle={handleGenealogyBranchToggle}
+                onMutationComplete={refreshGenealogyAfterMutation}
+                onSave={saveExternalParent}
+                onSessionExpired={refreshEditorSession}
+                onUnlink={unlinkExternalParent}
+                scrollPosition={genealogyScrollPosition}
+              />
               )}
             </div>
           </section>
