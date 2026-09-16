@@ -24,6 +24,10 @@ type ListState = "error" | "loading" | "ready";
 
 const PAGE_SIZE = 20;
 
+function directionTabId(direction: TransferDirection): string {
+  return direction === "Received" ? "transfer-tab-received" : "transfer-tab-sent";
+}
+
 function farmErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 403) return "Sua conta não tem permissão para acessar este criatório.";
   if (error instanceof ApiError && error.status === 404) return "O criatório selecionado não está disponível.";
@@ -161,6 +165,19 @@ export function TransferListScreen() {
     setFilter(value);
   }
 
+  function handleDirectionTabKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, current: TransferDirection) {
+    let next: TransferDirection | undefined;
+    if (event.key === "ArrowRight") next = current === "Received" ? "Sent" : "Received";
+    if (event.key === "ArrowLeft") next = current === "Sent" ? "Received" : "Sent";
+    if (event.key === "Home") next = "Received";
+    if (event.key === "End") next = "Sent";
+    if (!next) return;
+
+    event.preventDefault();
+    changeDirection(next);
+    document.getElementById(directionTabId(next))?.focus();
+  }
+
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
     return <AppLoadingState activeNav="transfers" email={session?.email} farmName={farmName} label="Preparando transferências" message="Consultando o criatório selecionado." />;
   }
@@ -211,40 +228,42 @@ export function TransferListScreen() {
           </header>
 
           <div aria-label="Tipo de transferência" className="transfer-direction-tabs" role="tablist">
-            <button aria-selected={direction === "Received"} onClick={() => changeDirection("Received")} role="tab" type="button">Recebidas</button>
-            <button aria-selected={direction === "Sent"} onClick={() => changeDirection("Sent")} role="tab" type="button">Enviadas</button>
+            <button aria-controls="transfer-panel" aria-selected={direction === "Received"} id={directionTabId("Received")} onClick={() => changeDirection("Received")} onKeyDown={(event) => handleDirectionTabKeyDown(event, "Received")} role="tab" tabIndex={direction === "Received" ? 0 : -1} type="button">Recebidas</button>
+            <button aria-controls="transfer-panel" aria-selected={direction === "Sent"} id={directionTabId("Sent")} onClick={() => changeDirection("Sent")} onKeyDown={(event) => handleDirectionTabKeyDown(event, "Sent")} role="tab" tabIndex={direction === "Sent" ? 0 : -1} type="button">Enviadas</button>
           </div>
 
-          {listState === "loading" && <div className="document-history-state" role="status"><span aria-hidden="true" className="document-preview-dialog-spinner" /><strong>Consultando transferências…</strong><span>Buscando somente solicitações autorizadas para o criatório selecionado.</span></div>}
-          {listState === "error" && <div className="document-history-state is-error" role="alert"><strong>Não foi possível consultar as transferências</strong><span>{listError}</span><button className="auth-secondary-action" onClick={() => void loadTransfers()} type="button">Tentar novamente</button></div>}
-          {listState === "ready" && list?.items.length === 0 && <div className="document-history-state" role="status">
-            <strong>{emptyHeading}</strong>
-            <span>{emptyMessage}</span>
-            {filter && <button className="auth-secondary-action" onClick={() => changeFilter("")} type="button">Limpar filtro</button>}
-          </div>}
-          {listState === "ready" && list && list.items.length > 0 && <>
-            <ul aria-label={heading} className="document-history-list transfer-history-list">
-              {list.items.map((item) => {
-                const otherFarmName = direction === "Sent" ? item.destinationBreedingFarmName : item.sourceBreedingFarmName;
-                return <li key={item.transferRequestId}>
-                  <Link aria-label={`Ver detalhes da transferência de ${item.birdName}`} className="document-history-item transfer-history-item" href={`/transferencias/${encodeURIComponent(item.transferRequestId)}`}>
-                    <span aria-hidden="true" className="document-history-item-icon"><DashboardIcon name="bird" /></span>
-                    <span className="document-history-item-main">
-                      <span className="document-history-item-title"><strong>{item.birdName}</strong><TransferStatusBadge status={item.status} /></span>
-                      <span className="transfer-history-counterparty">{direction === "Sent" ? "Destino" : "Origem"}: {otherFarmName}</span>
-                      <small>{item.ringNumber ? `Anilha ${item.ringNumber}` : "Sem anilha informada"} <span aria-hidden="true">·</span> Solicitada em {formatTransferTimestamp(item.createdAtUtc)}</small>
-                    </span>
-                    <span className="document-history-item-actions"><span className="auth-secondary-action">Ver detalhes <span aria-hidden="true">›</span></span></span>
-                  </Link>
-                </li>;
-              })}
-            </ul>
-            {list.totalPages > 1 && <nav aria-label="Paginação das transferências" className="document-history-pagination transfer-history-pagination">
-              <button aria-label="Página anterior" className="auth-secondary-action" disabled={list.page <= 1} onClick={() => setPage(list.page - 1)} type="button">Anterior</button>
-              <span aria-live="polite">Página {list.page} de {list.totalPages} · {list.totalCount} solicitações</span>
-              <button aria-label="Próxima página" className="auth-secondary-action" disabled={list.page >= list.totalPages} onClick={() => setPage(list.page + 1)} type="button">Próxima</button>
-            </nav>}
-          </>}
+          <div aria-labelledby={directionTabId(direction)} id="transfer-panel" role="tabpanel" tabIndex={0}>
+            {listState === "loading" && <div className="document-history-state" role="status"><span aria-hidden="true" className="document-preview-dialog-spinner" /><strong>Consultando transferências…</strong><span>Buscando somente solicitações autorizadas para o criatório selecionado.</span></div>}
+            {listState === "error" && <div className="document-history-state is-error" role="alert"><strong>Não foi possível consultar as transferências</strong><span>{listError}</span><button className="auth-secondary-action" onClick={() => void loadTransfers()} type="button">Tentar novamente</button></div>}
+            {listState === "ready" && list?.items.length === 0 && <div className="document-history-state" role="status">
+              <strong>{emptyHeading}</strong>
+              <span>{emptyMessage}</span>
+              {filter && <button className="auth-secondary-action" onClick={() => changeFilter("")} type="button">Limpar filtro</button>}
+            </div>}
+            {listState === "ready" && list && list.items.length > 0 && <>
+              <ul aria-label={heading} className="document-history-list transfer-history-list">
+                {list.items.map((item) => {
+                  const otherFarmName = direction === "Sent" ? item.destinationBreedingFarmName : item.sourceBreedingFarmName;
+                  return <li key={item.transferRequestId}>
+                    <Link aria-label={`Ver detalhes da transferência de ${item.birdName}`} className="document-history-item transfer-history-item" href={`/transferencias/${encodeURIComponent(item.transferRequestId)}`}>
+                      <span aria-hidden="true" className="document-history-item-icon"><DashboardIcon name="bird" /></span>
+                      <span className="document-history-item-main">
+                        <span className="document-history-item-title"><strong>{item.birdName}</strong><TransferStatusBadge status={item.status} /></span>
+                        <span className="transfer-history-counterparty">{direction === "Sent" ? "Destino" : "Origem"}: {otherFarmName}</span>
+                        <small>{item.ringNumber ? `Anilha ${item.ringNumber}` : "Sem anilha informada"} <span aria-hidden="true">·</span> Solicitada em {formatTransferTimestamp(item.createdAtUtc)}</small>
+                      </span>
+                      <span className="document-history-item-actions"><span className="auth-secondary-action">Ver detalhes <span aria-hidden="true">›</span></span></span>
+                    </Link>
+                  </li>;
+                })}
+              </ul>
+              {list.totalPages > 1 && <nav aria-label="Paginação das transferências" className="document-history-pagination transfer-history-pagination">
+                <button aria-label="Página anterior" className="auth-secondary-action" disabled={list.page <= 1} onClick={() => setPage(list.page - 1)} type="button">Anterior</button>
+                <span aria-live="polite">Página {list.page} de {list.totalPages} · {list.totalCount} solicitações</span>
+                <button aria-label="Próxima página" className="auth-secondary-action" disabled={list.page >= list.totalPages} onClick={() => setPage(list.page + 1)} type="button">Próxima</button>
+              </nav>}
+            </>}
+          </div>
         </section>
         <p className="auth-footer">A ficha completa da ave não é aberta enquanto a transferência estiver pendente.</p>
       </main>

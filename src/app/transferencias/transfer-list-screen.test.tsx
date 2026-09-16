@@ -105,6 +105,28 @@ describe("TransferListScreen", () => {
     expect(fetchMock.mock.calls[1][1]?.credentials).toBe("include");
   });
 
+  it("supports arrow-key navigation between linked direction tabs", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([], { direction: "Sent" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<TransferListScreen />);
+    const receivedTab = await screen.findByRole("tab", { name: "Recebidas" });
+    const sentTab = screen.getByRole("tab", { name: "Enviadas" });
+    const panel = screen.getByRole("tabpanel");
+
+    expect(receivedTab.getAttribute("aria-controls")).toBe(panel.id);
+    expect(panel.getAttribute("aria-labelledby")).toBe(receivedTab.id);
+    fireEvent.keyDown(receivedTab, { key: "ArrowRight" });
+
+    await waitFor(() => expect(String(fetchMock.mock.calls[2][0])).toContain("/api/internal-transfers/sent?"));
+    expect(document.activeElement).toBe(sentTab);
+    expect(sentTab.getAttribute("aria-selected")).toBe("true");
+    expect(sentTab.getAttribute("tabindex")).toBe("0");
+  });
+
   it("applies status filters, preserves them while paging, and loads sent requests separately", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
