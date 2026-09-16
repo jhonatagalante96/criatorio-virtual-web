@@ -1302,15 +1302,71 @@ h1, h2 { line-height: 1.08; }
 .bird-genealogy-node strong { color: var(--ink); font-size: .74rem; overflow-wrap: anywhere; }
 .bird-genealogy-node > span:not(.bird-genealogy-node-position) { color: #78919a; font-size: .6rem; line-height: 1.35; }
 .bird-genealogy-node small { color: #557d6f; font-size: .58rem; line-height: 1.35; }
+.bird-genealogy-edit-action { background: #fff; border: 1px solid #b9d5cb; border-radius: .45rem; color: #17634a; cursor: pointer; font: inherit; font-size: .63rem; font-weight: 800; min-height: 2.75rem; padding: .42rem .55rem; text-align: left; }
+.bird-genealogy-edit-action:hover, .bird-genealogy-edit-action:focus-visible { background: #eef9f4; border-color: #72b98d; outline: 3px solid rgb(114 185 141 / 18%); outline-offset: 1px; }
 .bird-genealogy-legend { display: flex; flex-wrap: wrap; gap: .6rem 1rem; margin-top: .15rem; }
 .bird-genealogy-legend span { align-items: center; color: #78919a; display: inline-flex; font-size: .58rem; gap: .3rem; }
 .bird-genealogy-legend i { border-radius: 50%; display: inline-block; height: .45rem; width: .45rem; }
 .bird-genealogy-legend i.is-link { background: #72b98d; }
 .bird-genealogy-legend i.is-snapshot { background: #e1b860; }
+.external-ancestor-dialog { background: #fff; border: 1px solid #d7e5e4; border-radius: 1.1rem 1.1rem 0 0; box-shadow: 0 -.8rem 3rem rgb(5 29 42 / 20%); color: var(--ink); margin: auto 0 0; max-height: min(92dvh, 52rem); max-width: none; overflow: auto; overscroll-behavior: contain; padding: 0; width: 100%; }
+.external-ancestor-dialog::backdrop { background: rgb(4 27 39 / 52%); }
+.external-ancestor-dialog-content { display: grid; gap: 1rem; padding: 1rem; }
+.external-ancestor-dialog-header { align-items: flex-start; display: flex; gap: .8rem; justify-content: space-between; }
+.external-ancestor-dialog-header .eyebrow { margin: 0 0 .25rem; }
+.external-ancestor-dialog-header h2 { font-size: 1.1rem; margin: 0; }
+.external-ancestor-dialog-header p:last-child { color: #607d89; font-size: .72rem; line-height: 1.45; margin: .3rem 0 0; max-width: 48ch; }
+.external-ancestor-close { align-items: center; background: #f3f7f7; border: 1px solid #d7e5e4; border-radius: 50%; color: #365f72; cursor: pointer; display: inline-flex; flex: 0 0 auto; font-size: 1.2rem; height: 2.75rem; justify-content: center; line-height: 1; width: 2.75rem; }
+.external-ancestor-close:focus-visible { outline: 3px solid rgb(23 105 160 / 25%); outline-offset: 2px; }
+.external-ancestor-form { display: grid; gap: .9rem; }
+.external-ancestor-controls, .external-ancestor-field-group { display: grid; gap: .55rem; }
+.external-ancestor-field { color: #365f72; display: grid; font-size: .7rem; font-weight: 800; gap: .3rem; }
+.external-ancestor-field input, .external-ancestor-field select { background: #fff; border: 1px solid #cfdde2; border-radius: .45rem; color: #173b53; font: inherit; font-size: .78rem; min-height: 2.75rem; padding: .55rem .65rem; width: 100%; }
+.external-ancestor-field input:focus-visible, .external-ancestor-field select:focus-visible { border-color: #1769a0; outline: 3px solid rgb(23 105 160 / 18%); outline-offset: 1px; }
+.external-ancestor-origin { border: 1px solid #d7e5e4; border-radius: .6rem; display: flex; flex-wrap: wrap; gap: .55rem 1rem; margin: 0; padding: .7rem; }
+.external-ancestor-origin legend { color: #365f72; font-size: .7rem; font-weight: 800; padding: 0 .25rem; }
+.external-ancestor-origin label { align-items: center; color: #365f72; display: inline-flex; font-size: .72rem; gap: .4rem; min-height: 2.5rem; }
+.external-ancestor-origin input { accent-color: #1769a0; height: 1rem; width: 1rem; }
+.external-ancestor-help { color: #78919a; font-size: .65rem; line-height: 1.4; margin: 0; }
+.external-ancestor-current, .external-ancestor-selected { align-items: flex-start; background: #f8fbfc; border: 1px solid #d9e8ea; border-radius: .55rem; display: grid; gap: .65rem; padding: .7rem; }
+.external-ancestor-current > div:first-child, .external-ancestor-selected > span { display: grid; gap: .2rem; }
+.external-ancestor-current span, .external-ancestor-selected strong { color: #365f72; font-size: .68rem; font-weight: 800; }
+.external-ancestor-current strong, .external-ancestor-selected small { color: var(--ink); font-size: .76rem; overflow-wrap: anywhere; }
+.external-ancestor-current small { color: #78919a; font-size: .63rem; }
+.external-ancestor-unlink { background: #fff; border: 1px solid #e6b8b4; border-radius: .45rem; color: #922d27; cursor: pointer; font: inherit; font-size: .68rem; font-weight: 800; min-height: 2.75rem; padding: .45rem .6rem; }
+.external-ancestor-unlink:hover, .external-ancestor-unlink:focus-visible, .external-ancestor-danger-action:hover, .external-ancestor-danger-action:focus-visible { background: #fff6f4; outline: 3px solid rgb(146 45 39 / 14%); outline-offset: 1px; }
+.external-ancestor-selected { align-items: center; display: flex; justify-content: space-between; }
+.external-ancestor-results { display: grid; gap: .4rem; }
+.external-ancestor-results > p, .external-ancestor-search-error p { color: #607d89; font-size: .67rem; margin: 0; }
+.external-ancestor-options { border: 1px solid #d9e8ea; border-radius: .55rem; list-style: none; margin: 0; max-height: 13rem; overflow-y: auto; padding: 0; }
+.external-ancestor-options li + li { border-top: 1px solid #e5eeee; }
+.external-ancestor-options button { background: #fff; border: 0; color: inherit; cursor: pointer; display: grid; gap: .2rem; min-height: 3.25rem; padding: .6rem .7rem; text-align: left; width: 100%; }
+.external-ancestor-options button:hover, .external-ancestor-options button:focus-visible { background: #f1f8f5; outline: 2px solid #72b98d; outline-offset: -2px; }
+.external-ancestor-options strong { color: var(--ink); font-size: .72rem; }
+.external-ancestor-options span { color: #78919a; font-size: .63rem; }
+.external-ancestor-review { background: #f5f9f8; border-radius: .6rem; padding: .75rem; }
+.external-ancestor-review h3 { color: #365f72; font-size: .73rem; margin: 0 0 .45rem; }
+.external-ancestor-review dl { display: grid; gap: .4rem; margin: 0; }
+.external-ancestor-review dl div { display: grid; gap: .1rem; grid-template-columns: 6.5rem minmax(0, 1fr); }
+.external-ancestor-review dt { color: #78919a; font-size: .63rem; }
+.external-ancestor-review dd { color: var(--ink); font-size: .67rem; font-weight: 700; margin: 0; overflow-wrap: anywhere; }
+.external-ancestor-confirmation { background: #fff9ee; border: 1px solid #ecd9aa; border-radius: .55rem; color: #68572e; display: grid; gap: .6rem; padding: .7rem; }
+.external-ancestor-confirmation p { font-size: .68rem; line-height: 1.45; margin: 0; }
+.external-ancestor-confirmation-actions, .external-ancestor-actions { display: grid; gap: .5rem; }
+.external-ancestor-danger-action { background: #a4312a; border: 1px solid #a4312a; border-radius: .45rem; color: #fff; cursor: pointer; font: inherit; font-size: .68rem; font-weight: 800; min-height: 2.75rem; padding: .5rem .65rem; }
+.external-ancestor-error { background: #fff6f4; border: 1px solid #efc9c5; border-radius: .5rem; color: #8f2b25; font-size: .69rem; line-height: 1.4; margin: 0; padding: .65rem .75rem; }
+.external-ancestor-actions button { min-height: 2.75rem; }
 @media (max-width: 47.99rem) {
   .bird-genealogy-tree-heading { align-items: stretch; flex-direction: column; gap: .65rem; }
   .bird-genealogy-depth-control { align-self: flex-start; }
   .bird-genealogy-graph { margin-inline: -.2rem; }
+}
+@media (min-width: 40rem) {
+  .external-ancestor-dialog { border-radius: 1rem; margin: auto; max-height: min(90dvh, 52rem); max-width: 42rem; width: calc(100% - 2rem); }
+  .external-ancestor-dialog-content { padding: 1.25rem; }
+  .external-ancestor-current { align-items: center; grid-template-columns: minmax(0, 1fr) auto; }
+  .external-ancestor-confirmation-actions, .external-ancestor-actions { align-items: center; display: flex; justify-content: flex-end; }
+  .external-ancestor-confirmation-actions button, .external-ancestor-actions button { min-width: 10rem; }
 }
 .bird-detail-substate { align-items: center; color: #78919a; display: flex; font-size: .67rem; gap: .45rem; min-height: 2.2rem; }
 .bird-detail-empty { color: #78919a; font-size: .69rem; line-height: 1.45; margin: 0; }
