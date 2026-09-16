@@ -431,4 +431,27 @@ describe("ReproductionDetailScreen", () => {
     expect(screen.getByRole("button", { name: "Alterar seleção" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Atualizar reprodução" })).toBeNull();
   });
+
+  it("shows a recoverable search error and retries loading eligible birds", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: 403, title: "Forbidden" }), {
+        headers: { "content-type": "application/problem+json" },
+        status: 403
+      }))
+      .mockResolvedValueOnce(originOptionsResponse([originBirdOption()]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReproductionDetailScreen reproductionId="reproduction-a" />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Vincular origem reprodutiva" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Vincular origem reprodutiva" }));
+    fireEvent.change(screen.getByLabelText("Buscar ave por nome ou anilha"), { target: { value: "Filhote Sol" } });
+
+    expect(await screen.findByText("Sua conta não tem permissão para buscar aves deste criatório.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+
+    expect(await screen.findByRole("option", { name: /Filhote Sol/ })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
 });
