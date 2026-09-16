@@ -74,6 +74,58 @@ function genealogyResponse(overrides: Record<string, unknown> = {}): Response {
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
+const editableAncestorId = "10000000-0000-4000-8000-000000000143";
+
+function editableExternalGenealogyResponse(
+  parents: Array<{
+    birdId: string | null;
+    name: string;
+    nodeKey: string;
+    position: "father" | "mother";
+    ringNumber?: string | null;
+    source: "External" | "Private" | "Snapshot";
+  }> = [],
+  canEdit = true
+): Response {
+  const externalNodeKey = `external:${editableAncestorId}`;
+  const nodes = [
+    { birthDate: "2021-06-15", birdId: "bird-a", canEdit: false, canNavigate: true, generation: 0, isAccessible: true, isSnapshot: false, name: "Aurora", nodeKey: "bird:bird-a", position: "root", ringNumber: "123456", sex: "Female", source: "Private", status: "Active" },
+    { birthDate: null, birdId: null, canEdit, canNavigate: false, generation: 1, isAccessible: false, isSnapshot: true, name: "Avô Externo", nodeKey: externalNodeKey, position: "father", ringNumber: null, sex: "Male", source: "External", status: null },
+    ...parents.map((parent) => ({
+      birthDate: "2014-04-10",
+      birdId: parent.birdId,
+      canEdit: false,
+      canNavigate: parent.source === "Private" && Boolean(parent.birdId),
+      generation: 2,
+      isAccessible: parent.source === "Private",
+      isSnapshot: parent.source !== "Private",
+      name: parent.name,
+      nodeKey: parent.nodeKey,
+      position: parent.position,
+      ringNumber: parent.ringNumber ?? null,
+      sex: parent.position === "father" ? "Male" : "Female",
+      source: parent.source,
+      status: parent.source === "Private" ? "Active" : null
+    }))
+  ];
+  const edges = [
+    { childNodeKey: "bird:bird-a", parentNodeKey: externalNodeKey, position: "father" },
+    ...parents.map((parent) => ({ childNodeKey: externalNodeKey, parentNodeKey: parent.nodeKey, position: parent.position }))
+  ];
+  return genealogyResponse({ edges, nodes });
+}
+
+function antiforgeryTokenResponse(): Response {
+  return new Response(null, { headers: { "X-XSRF-TOKEN": "test-csrf-token" }, status: 204 });
+}
+
+function parentOptionsResponse(): Response {
+  return new Response(JSON.stringify({
+    breedingFarmId: "farm-a",
+    items: [{ birthDate: "2014-04-10", birdId: "bird-new-father", name: "Pai Cadastrado", ringNumber: "654321", sex: "Male" }]
+  }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
 async function openDetail(fetchMock: ReturnType<typeof vi.fn>) {
   render(<BirdDetailPage />);
   await waitFor(() => expect(screen.getByRole("heading", { name: "Aurora" })).toBeTruthy());
@@ -231,6 +283,216 @@ describe("BirdDetailPage", () => {
     expect(within(tree).getByText("Registro preservado · acesso restrito")).toBeTruthy();
     expect(within(tree).queryByRole("link", { name: /Avô Azul/ })).toBeNull();
     expect(within(tree).getByRole("list", { name: "Pais de Pai Azul" })).toBeTruthy();
+  });
+
+  it("keeps ancestry editing hidden unless the API authorizes the external node", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(editableExternalGenealogyResponse([], false));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+
+    expect(screen.queryByRole("button", { name: "Adicionar ascendência" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Adicionar ascendência de Avô Externo" })).toBeNull();
+  });
+
+  it("adds an external grandparent through the official mutation and reloads the current tree depth", async () => {
+    const updatedTree = genealogyResponse({
+      edges: [
+        { childNodeKey: "bird:bird-a", parentNodeKey: `external:${editableAncestorId}`, position: "father" },
+        { childNodeKey: `external:${editableAncestorId}`, parentNodeKey: "external:20000000-0000-4000-8000-000000000001", position: "father" }
+      ],
+      nodes: [
+        { birthDate: "2021-06-15", birdId: "bird-a", canEdit: false, canNavigate: true, generation: 0, isAccessible: true, isSnapshot: false, name: "Aurora", nodeKey: "bird:bird-a", position: "root", ringNumber: "123456", sex: "Female", source: "Private", status: "Active" },
+        { birthDate: null, birdId: null, canEdit: true, canNavigate: false, generation: 1, isAccessible: false, isSnapshot: true, name: "Avô Externo", nodeKey: `external:${editableAncestorId}`, position: "father", ringNumber: null, sex: "Male", source: "External", status: null },
+        { birthDate: null, birdId: null, canEdit: false, canNavigate: false, generation: 2, isAccessible: false, isSnapshot: true, name: "Avô Azul", nodeKey: "external:20000000-0000-4000-8000-000000000001", position: "father", ringNumber: null, sex: "Male", source: "External", status: null }
+      ]
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(editableExternalGenealogyResponse())
+      .mockResolvedValueOnce(antiforgeryTokenResponse())
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(updatedTree);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar ascendência" }));
+    const dialog = await screen.findByRole("dialog", { name: "Adicionar ascendência" });
+    fireEvent.change(within(dialog).getByLabelText("Posição"), { target: { value: "father" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Ancestral externo" }));
+    fireEvent.change(within(dialog).getByLabelText(/Nome do ancestral externo/), { target: { value: " Avô Azul " } });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar e salvar ascendência" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(8));
+    const mutationUrl = String(fetchMock.mock.calls[6][0]);
+    const mutationOptions = fetchMock.mock.calls[6][1] as RequestInit;
+    expect(mutationUrl).toContain(`/api/birds/bird-a/genealogy/ancestors/${editableAncestorId}/parents/father`);
+    expect(mutationOptions.method).toBe("PUT");
+    expect(JSON.parse(String(mutationOptions.body))).toEqual({ name: "Avô Azul" });
+    expect(new Headers(mutationOptions.headers).get("X-XSRF-TOKEN")).toBe("test-csrf-token");
+    expect(String(fetchMock.mock.calls[7][0])).toContain("/api/birds/bird-a/genealogy?maxGenerations=2");
+    await waitFor(() => expect(screen.getByText("Avô Azul")).toBeTruthy());
+    expect(fetchMock.mock.calls.some(([, options]) => options?.method === "POST")).toBe(false);
+  });
+
+  it("searches tenant parent options by the selected position and confirms before replacing a parent", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(editableExternalGenealogyResponse([
+        { birdId: null, name: "Pai Antigo", nodeKey: "external:20000000-0000-4000-8000-000000000002", position: "father", source: "External" }
+      ]))
+      .mockResolvedValueOnce(parentOptionsResponse())
+      .mockResolvedValueOnce(antiforgeryTokenResponse())
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+    fireEvent.click(screen.getByRole("button", { name: "Editar ascendência" }));
+    const dialog = await screen.findByRole("dialog", { name: "Editar ascendência" });
+    fireEvent.change(within(dialog).getByLabelText("Posição"), { target: { value: "father" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Ave cadastrada" }));
+    fireEvent.change(within(dialog).getByLabelText(/Buscar pai cadastrado/), { target: { value: "Pai Cadastrado" } });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    expect(String(fetchMock.mock.calls[5][0])).toContain("/api/birds/parent-options?search=Pai%20Cadastrado&sex=Male&limit=5");
+    fireEvent.click(await within(dialog).findByRole("option", { name: /Pai Cadastrado/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar e salvar ascendência" }));
+
+    expect(within(dialog).getByRole("group", { name: "Confirmar substituição" }).textContent).toContain("Pai Antigo");
+    expect(within(dialog).getByRole("group", { name: "Confirmar substituição" }).textContent).toContain("Pai Cadastrado");
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar substituição" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
+    const mutationOptions = fetchMock.mock.calls[7][1] as RequestInit;
+    expect(mutationOptions.method).toBe("PUT");
+    expect(JSON.parse(String(mutationOptions.body))).toEqual({ linkedBirdId: "bird-new-father" });
+    expect(String(fetchMock.mock.calls[8][0])).toContain("/api/birds/bird-a/genealogy?maxGenerations=2");
+  });
+
+  it("retries a forbidden parent search and reports an empty result", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(editableExternalGenealogyResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Only the owner can search birds." }), { headers: { "content-type": "application/problem+json" }, status: 403 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ breedingFarmId: "farm-a", items: [] }), { headers: { "content-type": "application/json" }, status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar ascendência" }));
+    const dialog = await screen.findByRole("dialog", { name: "Adicionar ascendência" });
+    fireEvent.change(within(dialog).getByLabelText("Posição"), { target: { value: "mother" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Ave cadastrada" }));
+    fireEvent.change(within(dialog).getByLabelText(/Buscar mãe cadastrada/), { target: { value: "Mãe" } });
+
+    expect(await within(dialog).findByRole("alert")).toHaveProperty("textContent", "Sua conta não tem permissão para buscar aves deste criatório.");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Tentar novamente" }));
+
+    expect(await within(dialog).findByText("Nenhuma ave ativa encontrada para essa busca.")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+    expect(String(fetchMock.mock.calls[5][0])).toContain("sex=Female&limit=5");
+    expect(String(fetchMock.mock.calls[6][0])).toBe(String(fetchMock.mock.calls[5][0]));
+  });
+
+  it("confirms unlinking only the selected position and preserves the other branch", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(editableExternalGenealogyResponse([
+        { birdId: null, name: "Pai Preservado", nodeKey: "external:20000000-0000-4000-8000-000000000003", position: "father", source: "External" },
+        { birdId: null, name: "Mãe Removida", nodeKey: "external:20000000-0000-4000-8000-000000000004", position: "mother", source: "External" }
+      ]))
+      .mockResolvedValueOnce(antiforgeryTokenResponse())
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(editableExternalGenealogyResponse([
+        { birdId: null, name: "Pai Preservado", nodeKey: "external:20000000-0000-4000-8000-000000000003", position: "father", source: "External" }
+      ]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+    fireEvent.click(screen.getByRole("button", { name: "Editar ascendência" }));
+    const dialog = await screen.findByRole("dialog", { name: "Editar ascendência" });
+    fireEvent.change(within(dialog).getByLabelText("Posição"), { target: { value: "mother" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Desvincular Mãe" }));
+    expect(within(dialog).getByText(/removerá somente o vínculo de Mãe/)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar desvínculo de Mãe" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(8));
+    const unlinkUrl = String(fetchMock.mock.calls[6][0]);
+    const unlinkOptions = fetchMock.mock.calls[6][1] as RequestInit;
+    expect(unlinkUrl).toContain(`/api/birds/bird-a/genealogy/ancestors/${editableAncestorId}/parents/mother`);
+    expect(unlinkOptions.method).toBe("DELETE");
+    expect(unlinkOptions.body).toBeUndefined();
+    const tree = screen.getByLabelText("Árvore genealógica");
+    expect(within(tree).getByText("Pai Preservado")).toBeTruthy();
+    expect(within(tree).queryByText("Mãe Removida")).toBeNull();
+  });
+
+  it("explains a genealogy conflict without applying client-side cycle rules", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(editableExternalGenealogyResponse())
+      .mockResolvedValueOnce(antiforgeryTokenResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "The genealogy change conflicts with the current genealogy state." }), { headers: { "content-type": "application/problem+json" }, status: 409 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar ascendência" }));
+    const dialog = await screen.findByRole("dialog", { name: "Adicionar ascendência" });
+    fireEvent.change(within(dialog).getByLabelText("Posição"), { target: { value: "father" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Ancestral externo" }));
+    fireEvent.change(within(dialog).getByLabelText(/Nome do ancestral externo/), { target: { value: "Avô de Teste" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar e salvar ascendência" }));
+
+    expect(await within(dialog).findByRole("alert")).toHaveProperty("textContent", "A alteração não é compatível com o estado atual da árvore. Confira os vínculos e tente novamente.");
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+  });
+
+  it.each([
+    [403, "The breeding farm owner is required.", "Somente o responsável pelo criatório pode editar esta ascendência."],
+    [404, "The genealogy node was not found.", "O ancestral ou o vínculo selecionado não está mais disponível. Atualize a árvore e tente novamente."]
+  ])("explains an API rejection with status %i", async (status, title, expectedMessage) => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(editableExternalGenealogyResponse())
+      .mockResolvedValueOnce(antiforgeryTokenResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title }), { headers: { "content-type": "application/problem+json" }, status }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar ascendência" }));
+    const dialog = await screen.findByRole("dialog", { name: "Adicionar ascendência" });
+    fireEvent.change(within(dialog).getByLabelText("Posição"), { target: { value: "father" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Ancestral externo" }));
+    fireEvent.change(within(dialog).getByLabelText(/Nome do ancestral externo/), { target: { value: "Avô de Teste" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar e salvar ascendência" }));
+
+    expect(await within(dialog).findByRole("alert")).toHaveProperty("textContent", expectedMessage);
+    expect(fetchMock).toHaveBeenCalledTimes(7);
   });
 
   it("changes the requested genealogy depth without reloading the bird detail", async () => {
