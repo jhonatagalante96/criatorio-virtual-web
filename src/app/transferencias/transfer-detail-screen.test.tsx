@@ -116,13 +116,28 @@ describe("TransferDetailScreen", () => {
     expect(screen.queryByRole("button", { name: "Cancelar transferência" })).toBeNull();
   });
 
+  it("moves keyboard focus into the confirmation and restores it when cancelled", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse("farm-b"))
+      .mockResolvedValueOnce(detailResponse(details()));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<TransferDetailScreen transferRequestId="transfer-a" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Rejeitar transferência" }));
+    const confirmation = screen.getByRole("group", { name: "Confirmar rejeição da transferência" });
+    expect(document.activeElement).toBe(confirmation);
+
+    fireEvent.click(screen.getByRole("button", { name: "Voltar" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Rejeitar transferência" }));
+  });
+
   it.each([
     {
       action: "reject" as const,
       selectedFarmId: "farm-b",
       confirmation: "Confirmar rejeição",
       group: "Confirmar rejeição da transferência",
-      progress: "Rejeitando…",
       resultStatus: "Rejected",
       notice: "A transferência foi rejeitada",
       otherAction: "Cancelar transferência"
@@ -132,7 +147,6 @@ describe("TransferDetailScreen", () => {
       selectedFarmId: "farm-a",
       confirmation: "Confirmar cancelamento",
       group: "Confirmar cancelamento da transferência",
-      progress: "Cancelando…",
       resultStatus: "Cancelled",
       notice: "A transferência foi cancelada",
       otherAction: "Rejeitar transferência"

@@ -107,8 +107,31 @@ export function TransferDetailScreen({ transferRequestId }: Readonly<{ transferR
   const [actionError, setActionError] = useState<string>();
   const [actionNotice, setActionNotice] = useState<string>();
   const [confirmingAction, setConfirmingAction] = useState<TransferAction | null>(null);
+  const confirmationRef = useRef<HTMLDivElement | null>(null);
+  const actionButtonRefs = useRef<Partial<Record<TransferAction, HTMLButtonElement | null>>>({});
+  const actionErrorRef = useRef<HTMLParagraphElement | null>(null);
+  const actionNoticeRef = useRef<HTMLParagraphElement | null>(null);
+  const focusReturnAction = useRef<TransferAction | null>(null);
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
+
+  useEffect(() => {
+    if (confirmingAction) {
+      confirmationRef.current?.focus();
+      return;
+    }
+
+    if (focusReturnAction.current) {
+      actionButtonRefs.current[focusReturnAction.current]?.focus();
+      focusReturnAction.current = null;
+    }
+  }, [confirmingAction]);
+
+  useEffect(() => {
+    if (detailState !== "ready") return;
+    if (actionError) actionErrorRef.current?.focus();
+    else if (actionNotice) actionNoticeRef.current?.focus();
+  }, [actionError, actionNotice, detailState]);
 
   const loadFarm = useCallback(async (recoverSession = true) => {
     const version = ++farmRequestVersion.current;
@@ -284,8 +307,8 @@ export function TransferDetailScreen({ transferRequestId }: Readonly<{ transferR
           <Link className="auth-secondary-action" href="/transferencias">Voltar às transferências</Link>
         </header>
 
-        {actionNotice && <p className="transfer-action-notice" role="status">{actionNotice}</p>}
-        {actionError && <p className="transfer-action-error" role="alert">{actionError}</p>}
+        {actionNotice && <p className="transfer-action-notice" ref={actionNoticeRef} role="status" tabIndex={-1}>{actionNotice}</p>}
+        {actionError && <p className="transfer-action-error" ref={actionErrorRef} role="alert" tabIndex={-1}>{actionError}</p>}
 
         <div className="transfer-detail-grid">
           <section aria-labelledby="titulo-resumo-transferencia" className="document-wizard-card transfer-detail-card">
@@ -322,13 +345,13 @@ export function TransferDetailScreen({ transferRequestId }: Readonly<{ transferR
           <p className="eyebrow">Ação disponível</p><h2 id="titulo-acao-transferencia">{received ? "Decidir sobre a transferência" : "Cancelar transferência"}</h2>
           <p>{received ? "Confira os dados e escolha como responder à solicitação recebida." : "Você pode cancelar esta solicitação enquanto o criatório de destino ainda não respondeu."}</p>
           {!confirmingAction ? <div className="transfer-action-buttons">
-            {canAccept && <button className="auth-primary-action" disabled={isSubmitting} onClick={() => { setActionError(undefined); setConfirmingAction("accept"); }} type="button">{transferActionCopy.accept.button}</button>}
-            {canReject && <button className="auth-secondary-action transfer-action-danger" disabled={isSubmitting} onClick={() => { setActionError(undefined); setConfirmingAction("reject"); }} type="button">{transferActionCopy.reject.button}</button>}
-            {canCancel && <button className="auth-secondary-action transfer-action-danger" disabled={isSubmitting} onClick={() => { setActionError(undefined); setConfirmingAction("cancel"); }} type="button">{transferActionCopy.cancel.button}</button>}
-          </div> : <div aria-label={confirmationCopy?.group} className="transfer-action-confirmation" role="group">
+            {canAccept && <button className="auth-primary-action" disabled={isSubmitting} onClick={() => { setActionError(undefined); setConfirmingAction("accept"); }} ref={(element) => { actionButtonRefs.current.accept = element; }} type="button">{transferActionCopy.accept.button}</button>}
+            {canReject && <button className="auth-secondary-action transfer-action-danger" disabled={isSubmitting} onClick={() => { setActionError(undefined); setConfirmingAction("reject"); }} ref={(element) => { actionButtonRefs.current.reject = element; }} type="button">{transferActionCopy.reject.button}</button>}
+            {canCancel && <button className="auth-secondary-action transfer-action-danger" disabled={isSubmitting} onClick={() => { setActionError(undefined); setConfirmingAction("cancel"); }} ref={(element) => { actionButtonRefs.current.cancel = element; }} type="button">{transferActionCopy.cancel.button}</button>}
+          </div> : <div aria-label={confirmationCopy?.group} className="transfer-action-confirmation" ref={confirmationRef} role="group" tabIndex={-1}>
             <p>{confirmationCopy?.prompt}</p>
             <div>
-              <button className="auth-secondary-action" disabled={isSubmitting} onClick={() => { setConfirmingAction(null); setActionError(undefined); }} type="button">Voltar</button>
+              <button className="auth-secondary-action" disabled={isSubmitting} onClick={() => { focusReturnAction.current = confirmingAction; setConfirmingAction(null); setActionError(undefined); }} type="button">Voltar</button>
               <button className={`auth-primary-action${confirmingAction === "accept" ? "" : " transfer-action-danger"}`} disabled={isSubmitting} onClick={() => void performTransferAction(confirmingAction)} type="button">{isSubmitting ? confirmationCopy?.progress : confirmationCopy?.confirmation}</button>
             </div>
           </div>}
