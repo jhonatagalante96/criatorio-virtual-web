@@ -59,4 +59,19 @@ describe("AuthenticatedShell", () => {
     expect(container.querySelector(".authenticated-account-menu-panel a[href='/configuracoes/criatorio']")).not.toBeNull();
     expect(container.querySelector(".authenticated-account-menu-panel a[href='/configuracoes']")).not.toBeNull();
   });
+
+  it("opens the reproduction history from the primary navigation", async () => {
+    render(
+      <AuthenticatedShell activeNav="reproduction" email="jhonata@example.com" farmName="Criatório Aurora">
+        <div>Histórico de reproduções</div>
+      </AuthenticatedShell>
+    );
+
+    await waitFor(() => expect(screen.getAllByText("Jhonata").length).toBeGreaterThan(0));
+
+    const reproductionLinks = screen.getAllByRole("link", { name: "Reprodução" });
+    expect(reproductionLinks.length).toBeGreaterThan(0);
+    expect(reproductionLinks.every((link) => link.getAttribute("href") === "/reproducao")).toBe(true);
+    expect(reproductionLinks.some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
+  });
 });
