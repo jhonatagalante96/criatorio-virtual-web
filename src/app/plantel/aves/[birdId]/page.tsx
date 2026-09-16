@@ -14,6 +14,7 @@ import {
   ExternalAncestorEditor,
   type ExistingGenealogyParent,
   type ExternalParentPosition,
+  type ParentOption,
   type ParentLinkInput
 } from "./external-ancestor-editor";
 
@@ -77,6 +78,16 @@ interface BirdDetailsResponse {
   updatedAtUtc: string;
 }
 
+interface BirdGenealogyUpdateResponse {
+  externalFatherName: string | null;
+  externalFatherSex: BirdSex | null;
+  externalMotherName: string | null;
+  externalMotherSex: BirdSex | null;
+  fatherBirdId: string | null;
+  motherBirdId: string | null;
+  updatedAtUtc: string;
+}
+
 interface BirdEligibilityIssue {
   code: string;
   message: string;
@@ -119,6 +130,10 @@ interface BirdGenealogyEdge {
   parentNodeKey: string;
   position: string;
 }
+
+type EditingGenealogyTarget =
+  | { ancestor: BirdGenealogyNode; kind: "external"; ancestorId: string }
+  | { ancestor: BirdGenealogyNode; kind: "root" };
 
 const statusLabels: Record<BirdStatus, string> = {
   Active: "Ativa",
@@ -397,18 +412,25 @@ function ParentCard({
 function GenealogyNodeCard({
   hasParents,
   showAscendancyMissing,
+  hasMissingRootParents,
   node,
   relationshipLabel,
   onEdit
 }: Readonly<{
   hasParents: boolean;
   showAscendancyMissing: boolean;
+  hasMissingRootParents: boolean;
   node: BirdGenealogyNode;
   relationshipLabel: string;
   onEdit?: (node: BirdGenealogyNode) => void;
 }>) {
   const isNavigable = node.generation > 0 && node.canNavigate && node.isAccessible && Boolean(node.birdId);
-  const canEdit = node.source === "External" && node.canEdit && Boolean(externalAncestorIdFromNodeKey(node.nodeKey)) && Boolean(onEdit) && (hasParents || showAscendancyMissing);
+  const canEditRoot = node.generation === 0 && hasMissingRootParents && Boolean(onEdit);
+  const canEditExternal = node.source === "External" && node.canEdit && Boolean(externalAncestorIdFromNodeKey(node.nodeKey)) && Boolean(onEdit) && (hasParents || showAscendancyMissing);
+  const canEdit = canEditRoot || canEditExternal;
+  const editActionLabel = node.generation === 0
+    ? hasParents ? "Completar ascendência" : "Adicionar ascendência"
+    : hasParents ? "Editar ascendência" : "Adicionar ascendência";
   const className = [
     "bird-genealogy-node",
     node.generation === 0 ? "is-root" : "",
@@ -437,7 +459,7 @@ function GenealogyNodeCard({
       {showAscendancyMissing && <p className="bird-genealogy-node-guidance">Ascendência ainda não informada</p>}
       {canEdit && onEdit && (
         <button className="bird-genealogy-edit-action" onClick={() => onEdit(node)} type="button">
-          {hasParents ? "Editar ascendência" : "Adicionar ascendência"}
+          {editActionLabel}
         </button>
       )}
     </div>
@@ -450,6 +472,8 @@ function GenealogyBranch({
   lineagePosition,
   nodesByKey,
   onEdit,
+  rootHasParents,
+  rootHasMissingParents,
   onBranchToggle,
   expandedBranches,
   parentsByChild,
@@ -462,6 +486,8 @@ function GenealogyBranch({
   lineagePosition?: "father" | "mother";
   nodesByKey: ReadonlyMap<string, BirdGenealogyNode>;
   onEdit?: (node: BirdGenealogyNode) => void;
+  rootHasParents: boolean;
+  rootHasMissingParents: boolean;
   onBranchToggle: (nodeKey: string, expanded: boolean) => void;
   expandedBranches: Readonly<Record<string, boolean>>;
   parentsByChild: ReadonlyMap<string, BirdGenealogyEdge[]>;
@@ -483,7 +509,8 @@ function GenealogyBranch({
   return (
     <li className="bird-genealogy-branch">
       <GenealogyNodeCard
-        hasParents={parents.length > 0}
+        hasMissingRootParents={rootHasMissingParents}
+        hasParents={node.generation === 0 ? rootHasParents : parents.length > 0}
         node={node}
         onEdit={onEdit}
         relationshipLabel={relationshipLabel}
@@ -508,6 +535,8 @@ function GenealogyBranch({
                 onBranchToggle={onBranchToggle}
                 onEdit={onEdit}
                 parentsByChild={parentsByChild}
+                rootHasMissingParents={rootHasMissingParents}
+                rootHasParents={rootHasParents}
                 relationshipPosition={edge.position}
                 maxGenerations={maxGenerations}
                 isTruncated={isTruncated}
@@ -528,26 +557,32 @@ function GenealogyNodes({
   birdId,
   client,
   genealogy,
+  rootBird,
   onMutationComplete,
   onBranchToggle,
   onSave,
+  onSaveRoot,
   onSessionExpired,
   onUnlink,
+  onUnlinkRoot,
   expandedBranches,
   scrollPosition
 }: Readonly<{
   birdId: string;
   client: ApiClient;
   genealogy: BirdGenealogyResponse;
+  rootBird: BirdDetailsResponse;
   onMutationComplete: () => void;
   onBranchToggle: (nodeKey: string, expanded: boolean) => void;
   onSave: (ancestorId: string, position: ExternalParentPosition, parent: ParentLinkInput) => Promise<void>;
+  onSaveRoot: (position: ExternalParentPosition, parent: ParentLinkInput, selectedParent?: ParentOption) => Promise<void>;
   onSessionExpired: () => Promise<boolean>;
   onUnlink: (ancestorId: string, position: ExternalParentPosition) => Promise<void>;
+  onUnlinkRoot: (position: ExternalParentPosition) => Promise<void>;
   expandedBranches: Readonly<Record<string, boolean>>;
   scrollPosition: React.MutableRefObject<number | null>;
 }>) {
-  const [editingAncestor, setEditingAncestor] = useState<{ ancestor: BirdGenealogyNode; ancestorId: string }>();
+  const [editingAncestor, setEditingAncestor] = useState<EditingGenealogyTarget>();
   const graphRef = useRef<HTMLDivElement>(null);
   const nodesByKey = new Map(genealogy.nodes.map((node) => [node.nodeKey, node]));
   const parentsByChild = new Map<string, BirdGenealogyEdge[]>();
@@ -560,6 +595,28 @@ function GenealogyNodes({
   const root = genealogy.nodes.find((node) => node.birdId === genealogy.rootBirdId && node.generation === 0)
     ?? genealogy.nodes.find((node) => node.generation === 0);
   const ancestors = genealogy.nodes.filter((node) => node.generation > 0);
+  const rootParents: Partial<Record<ExternalParentPosition, ExistingGenealogyParent>> = {};
+  if (rootBird.fatherBirdId) {
+    rootParents.father = {
+      birdId: rootBird.fatherBirdId,
+      name: rootBird.father?.name ?? "Ave cadastrada",
+      ringNumber: rootBird.father?.ringNumber ?? null,
+      source: "Private"
+    };
+  } else if (rootBird.externalFatherName?.trim()) {
+    rootParents.father = { birdId: null, name: rootBird.externalFatherName.trim(), ringNumber: null, source: "External" };
+  }
+  if (rootBird.motherBirdId) {
+    rootParents.mother = {
+      birdId: rootBird.motherBirdId,
+      name: rootBird.mother?.name ?? "Ave cadastrada",
+      ringNumber: rootBird.mother?.ringNumber ?? null,
+      source: "Private"
+    };
+  } else if (rootBird.externalMotherName?.trim()) {
+    rootParents.mother = { birdId: null, name: rootBird.externalMotherName.trim(), ringNumber: null, source: "External" };
+  }
+  const missingRootPositions = (["father", "mother"] as const).filter((position) => !rootParents[position]);
   useEffect(() => {
     const graph = graphRef.current;
     if (!graph) return;
@@ -577,13 +634,18 @@ function GenealogyNodes({
   }, [genealogy, scrollPosition]);
 
   const openEditor = (node: BirdGenealogyNode) => {
+    if (node.generation === 0 && node.birdId === genealogy.rootBirdId) {
+      if (missingRootPositions.length > 0) setEditingAncestor({ ancestor: node, kind: "root" });
+      return;
+    }
     const ancestorId = externalAncestorIdFromNodeKey(node.nodeKey);
     if (!node.canEdit || node.source !== "External" || !ancestorId) return;
-    setEditingAncestor({ ancestor: node, ancestorId });
+    setEditingAncestor({ ancestor: node, ancestorId, kind: "external" });
   };
 
   let currentParents: Partial<Record<ExternalParentPosition, ExistingGenealogyParent>> = {};
-  if (editingAncestor) {
+  let availablePositions: ExternalParentPosition[] | undefined;
+  if (editingAncestor?.kind === "external") {
     currentParents = (parentsByChild.get(editingAncestor.ancestor.nodeKey) ?? []).reduce((result, edge) => {
       if (edge.position !== "father" && edge.position !== "mother") return result;
       const parent = nodesByKey.get(edge.parentNodeKey);
@@ -595,6 +657,8 @@ function GenealogyNodes({
       };
       return result;
     }, {} as Partial<Record<ExternalParentPosition, ExistingGenealogyParent>>);
+  } else if (editingAncestor?.kind === "root") {
+    availablePositions = missingRootPositions;
   }
 
   if (!root) {
@@ -620,6 +684,8 @@ function GenealogyNodes({
             onBranchToggle={onBranchToggle}
             onEdit={openEditor}
             parentsByChild={parentsByChild}
+            rootHasMissingParents={missingRootPositions.length > 0}
+            rootHasParents={Boolean(rootParents.father || rootParents.mother)}
             relationshipPosition={root.position}
             maxGenerations={genealogy.maxGenerations}
             isTruncated={genealogy.isTruncated}
@@ -637,13 +703,18 @@ function GenealogyNodes({
       {editingAncestor && (
         <ExternalAncestorEditor
           ancestorName={editingAncestor.ancestor.name}
+          availablePositions={availablePositions}
           client={client}
           currentParents={currentParents}
           onClose={() => setEditingAncestor(undefined)}
           onMutationComplete={onMutationComplete}
-          onSave={(position, parent) => onSave(editingAncestor.ancestorId, position, parent)}
+          onSave={(position, parent, selectedParent) => editingAncestor.kind === "root"
+            ? onSaveRoot(position, parent, selectedParent)
+            : onSave(editingAncestor.ancestorId, position, parent)}
           onSessionExpired={onSessionExpired}
-          onUnlink={(position) => onUnlink(editingAncestor.ancestorId, position)}
+          onUnlink={(position) => editingAncestor.kind === "root"
+            ? onUnlinkRoot(position)
+            : onUnlink(editingAncestor.ancestorId, position)}
         />
       )}
     </>
@@ -1142,6 +1213,71 @@ function BirdDetailPage() {
     client.current!.clearCache();
   }, [birdId, refresh]);
 
+  const updateRootParent = useCallback(async (
+    position: ExternalParentPosition,
+    parent?: ParentLinkInput,
+    selectedParent?: ParentOption
+  ) => {
+    if (!bird) throw new Error("A ficha da ave não está disponível para atualizar a genealogia.");
+
+    const externalName = parent?.linkedBirdId ? null : parent?.name?.trim() || null;
+    const requestBody = {
+      fatherBirdId: position === "father" ? parent?.linkedBirdId ?? null : bird.fatherBirdId,
+      externalFatherName: position === "father" ? externalName : bird.externalFatherName,
+      externalFatherSex: position === "father" ? externalName ? "Male" : null : bird.externalFatherSex,
+      motherBirdId: position === "mother" ? parent?.linkedBirdId ?? null : bird.motherBirdId,
+      externalMotherName: position === "mother" ? externalName : bird.externalMotherName,
+      externalMotherSex: position === "mother" ? externalName ? "Female" : null : bird.externalMotherSex
+    };
+    const path = `api/birds/${encodeURIComponent(birdId)}/genealogy`;
+    const sendRequest = async () => {
+      if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
+      return client.current!.request<BirdGenealogyUpdateResponse>(path, {
+        body: JSON.stringify(requestBody),
+        headers: { "content-type": "application/json" },
+        method: "PUT"
+      });
+    };
+
+    let updatedBird: BirdGenealogyUpdateResponse;
+    try {
+      updatedBird = await sendRequest();
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 401) throw error;
+      const refreshed = await refresh();
+      if (!refreshed.ok) throw error;
+      csrfToken.current = await client.current!.fetchAntiforgeryToken();
+      updatedBird = await sendRequest();
+    }
+    client.current!.clearCache();
+    const selectedBirdParent: BirdParent | null = selectedParent ? {
+      birdId: selectedParent.birdId,
+      birthDate: selectedParent.birthDate,
+      name: selectedParent.name,
+      ringNumber: selectedParent.ringNumber,
+      sex: selectedParent.sex,
+      status: "Active"
+    } : null;
+    setBird((current) => current ? {
+      ...current,
+      father: position === "father" ? selectedBirdParent : current.father,
+      fatherBirdId: updatedBird.fatherBirdId,
+      externalFatherName: updatedBird.externalFatherName,
+      externalFatherSex: updatedBird.externalFatherSex,
+      mother: position === "mother" ? selectedBirdParent : current.mother,
+      motherBirdId: updatedBird.motherBirdId,
+      externalMotherName: updatedBird.externalMotherName,
+      externalMotherSex: updatedBird.externalMotherSex,
+      updatedAtUtc: updatedBird.updatedAtUtc
+    } : current);
+  }, [bird, birdId, refresh]);
+
+  const saveRootParent = useCallback((position: ExternalParentPosition, parent: ParentLinkInput, selectedParent?: ParentOption) =>
+    updateRootParent(position, parent, selectedParent), [updateRootParent]);
+
+  const unlinkRootParent = useCallback((position: ExternalParentPosition) =>
+    updateRootParent(position), [updateRootParent]);
+
   const refreshGenealogyAfterMutation = useCallback(() => {
     void loadGenealogy(genealogyMaxGenerations);
   }, [genealogyMaxGenerations, loadGenealogy]);
@@ -1287,16 +1423,19 @@ function BirdDetailPage() {
               {genealogyState === "ready" && genealogy && (
                 <GenealogyNodes
                   birdId={birdId}
-                client={client.current!}
-                expandedBranches={expandedGenealogyBranches}
-                genealogy={genealogy}
-                onBranchToggle={handleGenealogyBranchToggle}
-                onMutationComplete={refreshGenealogyAfterMutation}
-                onSave={saveExternalParent}
-                onSessionExpired={refreshEditorSession}
-                onUnlink={unlinkExternalParent}
-                scrollPosition={genealogyScrollPosition}
-              />
+                  client={client.current!}
+                  expandedBranches={expandedGenealogyBranches}
+                  genealogy={genealogy}
+                  onBranchToggle={handleGenealogyBranchToggle}
+                  onMutationComplete={refreshGenealogyAfterMutation}
+                  onSave={saveExternalParent}
+                  onSaveRoot={saveRootParent}
+                  onSessionExpired={refreshEditorSession}
+                  onUnlink={unlinkExternalParent}
+                  onUnlinkRoot={unlinkRootParent}
+                  rootBird={bird}
+                  scrollPosition={genealogyScrollPosition}
+                />
               )}
             </div>
           </section>
