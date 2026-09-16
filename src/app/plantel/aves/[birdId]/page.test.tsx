@@ -170,17 +170,32 @@ function antiforgeryTokenResponse(): Response {
   return new Response(null, { headers: { "X-XSRF-TOKEN": "test-csrf-token" }, status: 204 });
 }
 
-function parentOptionsResponse(): Response {
+function parentOptionsResponse(sex: "Female" | "Male" = "Male"): Response {
   return new Response(JSON.stringify({
     breedingFarmId: "farm-a",
-    items: [{ birthDate: "2014-04-10", birdId: "bird-new-father", name: "Pai Cadastrado", ringNumber: "654321", sex: "Male" }]
+    items: [sex === "Male"
+      ? { birthDate: "2014-04-10", birdId: "bird-new-father", name: "Pai Cadastrado", ringNumber: "654321", sex }
+      : { birthDate: "2014-04-10", birdId: "bird-new-mother", name: "Mãe Cadastrada", ringNumber: "654322", sex }]
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
-async function openDetail(fetchMock: ReturnType<typeof vi.fn>) {
+function genealogyUpdateResponse(overrides: Record<string, unknown> = {}): Response {
+  return new Response(JSON.stringify({
+    externalFatherName: null,
+    externalFatherSex: null,
+    externalMotherName: null,
+    externalMotherSex: null,
+    fatherBirdId: "father-a",
+    motherBirdId: null,
+    updatedAtUtc: "2025-02-04T13:30:00Z",
+    ...overrides
+  }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
+async function openDetail(fetchMock: ReturnType<typeof vi.fn>, expectedParentName = "Pai Azul") {
   render(<BirdDetailPage />);
   await waitFor(() => expect(screen.getByRole("heading", { name: "Aurora" })).toBeTruthy());
-  await waitFor(() => expect(screen.getAllByText("Pai Azul").length).toBeGreaterThan(0));
+  if (expectedParentName) await waitFor(() => expect(screen.getAllByText(expectedParentName).length).toBeGreaterThan(0));
   expect(fetchMock).toHaveBeenCalledTimes(5);
 }
 
@@ -420,6 +435,137 @@ describe("BirdDetailPage", () => {
     expect(screen.queryByRole("button", { name: "Adicionar ascendência" })).toBeNull();
   });
 
+  it("adds an external parent to an empty root directly from the tree", async () => {
+    const emptyDetails = detailsResponse({
+      externalFatherName: null,
+      externalFatherSex: null,
+      father: null,
+      fatherBirdId: null,
+      externalMotherName: null,
+      externalMotherSex: null,
+      mother: null,
+      motherBirdId: null
+    });
+    const rootOnlyTree = genealogyResponse({
+      edges: [],
+      nodes: [
+        { birthDate: "2021-06-15", birdId: "bird-a", canEdit: false, canNavigate: true, generation: 0, isAccessible: true, isSnapshot: false, name: "Aurora", nodeKey: "bird:bird-a", position: "root", ringNumber: "123456", sex: "Female", source: "Private", status: "Active" }
+      ]
+    });
+    const updatedBird = genealogyUpdateResponse({ externalFatherName: "Pai Externo", externalFatherSex: "Male", fatherBirdId: null });
+    const updatedTree = genealogyResponse({
+      edges: [{ childNodeKey: "bird:bird-a", parentNodeKey: `external:${editableAncestorId}`, position: "father" }],
+      nodes: [
+        { birthDate: "2021-06-15", birdId: "bird-a", canEdit: false, canNavigate: true, generation: 0, isAccessible: true, isSnapshot: false, name: "Aurora", nodeKey: "bird:bird-a", position: "root", ringNumber: "123456", sex: "Female", source: "Private", status: "Active" },
+        { birthDate: null, birdId: null, canEdit: true, canNavigate: false, generation: 1, isAccessible: false, isSnapshot: true, name: "Pai Externo", nodeKey: `external:${editableAncestorId}`, position: "father", ringNumber: null, sex: "Male", source: "External", status: null }
+      ]
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(emptyDetails)
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(rootOnlyTree)
+      .mockResolvedValueOnce(antiforgeryTokenResponse())
+      .mockResolvedValueOnce(updatedBird)
+      .mockResolvedValueOnce(updatedTree);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock, "");
+    const tree = screen.getByRole("region", { name: "Árvore genealógica" });
+    fireEvent.click(within(tree).getByRole("button", { name: "Adicionar ascendência" }));
+    const dialog = await screen.findByRole("dialog", { name: "Adicionar ascendência" });
+    fireEvent.change(within(dialog).getByLabelText("Posição"), { target: { value: "father" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Ancestral externo" }));
+    fireEvent.change(within(dialog).getByLabelText(/Nome do ancestral externo/), { target: { value: " Pai Externo " } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar e salvar ascendência" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(8));
+    const mutationUrl = String(fetchMock.mock.calls[6][0]);
+    const mutationOptions = fetchMock.mock.calls[6][1] as RequestInit;
+    expect(mutationUrl).toContain("/api/birds/bird-a/genealogy");
+    expect(mutationOptions.method).toBe("PUT");
+    expect(JSON.parse(String(mutationOptions.body))).toEqual({
+      fatherBirdId: null,
+      externalFatherName: "Pai Externo",
+      externalFatherSex: "Male",
+      motherBirdId: null,
+      externalMotherName: null,
+      externalMotherSex: null
+    });
+    expect(new Headers(mutationOptions.headers).get("X-XSRF-TOKEN")).toBe("test-csrf-token");
+    expect(String(fetchMock.mock.calls[7][0])).toContain("/api/birds/bird-a/genealogy?maxGenerations=2");
+    await waitFor(() => expect(screen.getAllByText("Pai Externo").length).toBeGreaterThan(1));
+    expect(fetchMock.mock.calls.some(([, options]) => options?.method === "POST")).toBe(false);
+  });
+
+  it("adds a registered bird as the missing root parent and preserves the other parent", async () => {
+    const updatedBird = genealogyUpdateResponse({
+      motherBirdId: "bird-new-mother"
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(genealogyResponse())
+      .mockResolvedValueOnce(parentOptionsResponse("Female"))
+      .mockResolvedValueOnce(antiforgeryTokenResponse())
+      .mockResolvedValueOnce(updatedBird)
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+    const tree = screen.getByRole("region", { name: "Árvore genealógica" });
+    fireEvent.click(within(tree).getByRole("button", { name: "Completar ascendência" }));
+    const dialog = await screen.findByRole("dialog", { name: "Adicionar ascendência" });
+    const position = within(dialog).getByLabelText("Posição") as HTMLSelectElement;
+    expect(Array.from(position.options).map((option) => option.value)).toEqual(["", "mother"]);
+    fireEvent.change(position, { target: { value: "mother" } });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Ave cadastrada" }));
+    fireEvent.change(within(dialog).getByLabelText(/Buscar mãe cadastrada/), { target: { value: "Mãe Cadastrada" } });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    expect(String(fetchMock.mock.calls[5][0])).toContain("/api/birds/parent-options?search=M%C3%A3e%20Cadastrada&sex=Female&limit=5");
+    fireEvent.click(await within(dialog).findByRole("option", { name: /Mãe Cadastrada/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar e salvar ascendência" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
+    const mutationUrl = String(fetchMock.mock.calls[7][0]);
+    const mutationOptions = fetchMock.mock.calls[7][1] as RequestInit;
+    expect(mutationUrl).toContain("/api/birds/bird-a/genealogy");
+    expect(mutationOptions.method).toBe("PUT");
+    expect(JSON.parse(String(mutationOptions.body))).toEqual({
+      fatherBirdId: "father-a",
+      externalFatherName: null,
+      externalFatherSex: null,
+      motherBirdId: "bird-new-mother",
+      externalMotherName: null,
+      externalMotherSex: null
+    });
+    expect(String(fetchMock.mock.calls[8][0])).toContain("/api/birds/bird-a/genealogy?maxGenerations=2");
+    await waitFor(() => expect(screen.getAllByText("Mãe Cadastrada").length).toBeGreaterThan(0));
+  });
+
+  it("does not offer root editing when both direct parents are already informed", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse({
+        mother: { birdId: "mother-a", birthDate: "2017-05-10", name: "Mãe Rubi", ringNumber: "222222", sex: "Female", status: "Active" },
+        motherBirdId: "mother-a"
+      }))
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+
+    const tree = screen.getByRole("region", { name: "Árvore genealógica" });
+    expect(within(tree).queryByRole("button", { name: "Completar ascendência" })).toBeNull();
+    expect(within(tree).queryByRole("button", { name: "Adicionar ascendência" })).toBeNull();
+  });
+
   it("scrolls to genealogy when opened from the registration completion link", async () => {
     const scrollIntoView = vi.fn();
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scrollIntoView });
@@ -482,8 +628,8 @@ describe("BirdDetailPage", () => {
     expect(new Headers(mutationOptions.headers).get("X-XSRF-TOKEN")).toBe("test-csrf-token");
     expect(String(fetchMock.mock.calls[7][0])).toContain("/api/birds/bird-a/genealogy?maxGenerations=2");
     await waitFor(() => expect(screen.getByText("Avô Azul")).toBeTruthy());
-    const updatedAncestor = screen.getByText("Avô Externo").closest(".bird-genealogy-node");
-    const addedAncestor = screen.getByText("Avô Azul").closest(".bird-genealogy-node");
+    const updatedAncestor = screen.getByText("Avô Externo").closest(".bird-genealogy-node") as HTMLElement | null;
+    const addedAncestor = screen.getByText("Avô Azul").closest(".bird-genealogy-node") as HTMLElement | null;
     expect(updatedAncestor).toBeTruthy();
     expect(addedAncestor).toBeTruthy();
     expect(within(updatedAncestor!).queryByText("Ascendência ainda não informada")).toBeNull();

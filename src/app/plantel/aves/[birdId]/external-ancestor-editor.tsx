@@ -17,7 +17,7 @@ export interface ParentLinkInput {
   name?: string;
 }
 
-interface ParentOption {
+export interface ParentOption {
   birthDate: string | null;
   birdId: string;
   name: string;
@@ -35,11 +35,12 @@ type ParentOrigin = "bird" | "external" | "";
 
 interface ExternalAncestorEditorProps {
   ancestorName: string;
+  availablePositions?: ExternalParentPosition[];
   client: ApiClient;
   currentParents: Partial<Record<ExternalParentPosition, ExistingGenealogyParent>>;
   onClose: () => void;
   onMutationComplete: () => void;
-  onSave: (position: ExternalParentPosition, parent: ParentLinkInput) => Promise<void>;
+  onSave: (position: ExternalParentPosition, parent: ParentLinkInput, selectedParent?: ParentOption) => Promise<void>;
   onSessionExpired: () => Promise<boolean>;
   onUnlink: (position: ExternalParentPosition) => Promise<void>;
 }
@@ -86,6 +87,7 @@ function mutationErrorMessage(error: unknown): string {
 
 export function ExternalAncestorEditor({
   ancestorName,
+  availablePositions,
   client,
   currentParents,
   onClose,
@@ -181,6 +183,7 @@ export function ExternalAncestorEditor({
   }, [client, onSessionExpired, origin, position, query, searchRetry]);
 
   const currentParent = position ? currentParents[position] : undefined;
+  const selectablePositions = availablePositions ?? ["father", "mother"];
   const currentPositionLabel = position ? positionLabel(position) : "";
   const dialogTitle = Object.values(currentParents).some(Boolean) ? "Editar ascendência" : "Adicionar ascendência";
   const parentRelation = position === "father" ? "pai cadastrado" : "mãe cadastrada";
@@ -262,7 +265,7 @@ export function ExternalAncestorEditor({
 
     setIsSaving(true);
     try {
-      await onSave(position, parent);
+      await onSave(position, parent, origin === "bird" ? selectedParent : undefined);
       onClose();
       onMutationComplete();
     } catch (error) {
@@ -314,8 +317,9 @@ export function ExternalAncestorEditor({
               <span>Posição</span>
               <select disabled={isBusy} id={positionId} onChange={(event) => changePosition(event.target.value)} value={position}>
                 <option value="">Escolha Pai ou Mãe</option>
-                <option value="father">Pai</option>
-                <option value="mother">Mãe</option>
+                {selectablePositions.map((availablePosition) => (
+                  <option key={availablePosition} value={availablePosition}>{positionLabel(availablePosition)}</option>
+                ))}
               </select>
             </label>
 
