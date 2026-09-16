@@ -3,11 +3,18 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 import BirdDetailPage from "./page";
 
+const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+
 afterEach(() => {
   cleanup();
   window.history.pushState({}, "", "/plantel/aves/bird-a");
   window.sessionStorage.clear();
   vi.unstubAllGlobals();
+  if (originalScrollIntoView) {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: originalScrollIntoView });
+  } else {
+    Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
+  }
 });
 
 function authenticatedSession(): Response {
@@ -85,7 +92,9 @@ function editableExternalGenealogyResponse(
     ringNumber?: string | null;
     source: "External" | "Private" | "Snapshot";
   }> = [],
-  canEdit = true
+  canEdit = true,
+  maxGenerations = 2,
+  isTruncated = false
 ): Response {
   const externalNodeKey = `external:${editableAncestorId}`;
   const nodes = [
@@ -112,7 +121,7 @@ function editableExternalGenealogyResponse(
     { childNodeKey: "bird:bird-a", parentNodeKey: externalNodeKey, position: "father" },
     ...parents.map((parent) => ({ childNodeKey: externalNodeKey, parentNodeKey: parent.nodeKey, position: parent.position }))
   ];
-  return genealogyResponse({ edges, nodes });
+  return genealogyResponse({ edges, isTruncated, maxGenerations, nodes });
 }
 
 function recursiveGenealogyResponse(): Response {
@@ -391,8 +400,41 @@ describe("BirdDetailPage", () => {
 
     await openDetail(fetchMock);
 
+    expect(screen.getByText("Ascendência ainda não informada")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Adicionar ascendência" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Adicionar ascendência de Avô Externo" })).toBeNull();
+  });
+
+  it("does not claim ancestry is missing beyond a truncated query depth", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(editableExternalGenealogyResponse([], true, 1, true));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+
+    expect(screen.queryByText("Ascendência ainda não informada")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Adicionar ascendência" })).toBeNull();
+  });
+
+  it("scrolls to genealogy when opened from the registration completion link", async () => {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scrollIntoView });
+    window.history.pushState({}, "", "/plantel/aves/bird-a#genealogia");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(genealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" }));
   });
 
   it("adds an external grandparent through the official mutation and reloads the current tree depth", async () => {
@@ -419,6 +461,7 @@ describe("BirdDetailPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await openDetail(fetchMock);
+    expect(screen.getByText("Ascendência ainda não informada")).toBeTruthy();
     const initialTree = screen.getByRole("region", { name: "Árvore genealógica" });
     Object.defineProperty(initialTree, "scrollLeft", { configurable: true, value: 180, writable: true });
     fireEvent.scroll(initialTree);
@@ -439,6 +482,12 @@ describe("BirdDetailPage", () => {
     expect(new Headers(mutationOptions.headers).get("X-XSRF-TOKEN")).toBe("test-csrf-token");
     expect(String(fetchMock.mock.calls[7][0])).toContain("/api/birds/bird-a/genealogy?maxGenerations=2");
     await waitFor(() => expect(screen.getByText("Avô Azul")).toBeTruthy());
+    const updatedAncestor = screen.getByText("Avô Externo").closest(".bird-genealogy-node");
+    const addedAncestor = screen.getByText("Avô Azul").closest(".bird-genealogy-node");
+    expect(updatedAncestor).toBeTruthy();
+    expect(addedAncestor).toBeTruthy();
+    expect(within(updatedAncestor!).queryByText("Ascendência ainda não informada")).toBeNull();
+    expect(within(addedAncestor!).getByText("Ascendência ainda não informada")).toBeTruthy();
     await waitFor(() => expect(screen.getByRole("region", { name: "Árvore genealógica" }).scrollLeft).toBe(180));
     expect(fetchMock.mock.calls.some(([, options]) => options?.method === "POST")).toBe(false);
   });

@@ -1311,6 +1311,7 @@ h1, h2 { line-height: 1.08; }
 .bird-genealogy-node strong { color: var(--ink); font-size: .74rem; overflow-wrap: anywhere; }
 .bird-genealogy-node > span:not(.bird-genealogy-node-position) { color: #78919a; font-size: .6rem; line-height: 1.35; }
 .bird-genealogy-node small { color: #557d6f; font-size: .58rem; line-height: 1.35; }
+.bird-genealogy-node-guidance { color: #79521e; font-size: .6rem; line-height: 1.35; margin: .08rem 0; }
 .bird-genealogy-edit-action { background: #fff; border: 1px solid #b9d5cb; border-radius: .45rem; color: #17634a; cursor: pointer; font: inherit; font-size: .63rem; font-weight: 800; min-height: 2.75rem; padding: .42rem .55rem; text-align: left; }
 .bird-genealogy-edit-action:hover, .bird-genealogy-edit-action:focus-visible { background: #eef9f4; border-color: #72b98d; outline: 3px solid rgb(114 185 141 / 18%); outline-offset: 1px; }
 .bird-genealogy-legend { display: flex; flex-wrap: wrap; gap: .6rem 1rem; margin-top: .15rem; }
@@ -1818,6 +1819,7 @@ h1, h2 { line-height: 1.08; }
 .bird-parent-search-clear { align-items: center; background: transparent; border: 0; color: #66808d; cursor: pointer; display: flex; font-size: 1.25rem; height: 2.25rem; justify-content: center; line-height: 1; position: absolute; right: .2rem; top: .2rem; width: 2.25rem; }
 .bird-parent-search-clear:focus-visible { border-radius: .35rem; outline: 3px solid #e5a343; outline-offset: -2px; }
 .bird-parent-help { color: #78919a; font-size: .65rem; margin: 0; }
+.bird-parent-external-help, .bird-parent-ancestry-note { color: #557d6f; font-size: .66rem; line-height: 1.45; margin: 0; }
 .bird-parent-results { min-height: 2.05rem; }
 .bird-parent-results > p { color: #78919a; font-size: .68rem; margin: .2rem 0; }
 .bird-parent-options { background: #fff; border: 1px solid #dcebed; border-radius: .55rem; display: grid; gap: .3rem; list-style: none; margin: .1rem 0 0; padding: .3rem; }
@@ -1843,6 +1845,7 @@ h1, h2 { line-height: 1.08; }
 .bird-registration-success h1 { overflow-wrap: anywhere; }
 .bird-registration-success > .lede { color: #67808d; font-size: .82rem; margin: .55rem auto 1.4rem; max-width: 38ch; }
 .bird-registration-success .auth-primary-action { width: 100%; }
+.bird-registration-success .auth-secondary-action { width: 100%; }
 .bird-registration-success .text-action { display: block; margin-top: .8rem; }
 
 @media (max-width: 47.99rem) {
