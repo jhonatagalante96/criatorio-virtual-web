@@ -2506,6 +2506,7 @@ h1, h2 { line-height: 1.08; }
 .internal-transfer-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(15rem, .85fr); }
 .internal-transfer-layout:not(.has-selected-bird) { grid-template-columns: minmax(0, 1.65fr) minmax(15rem, .85fr); }
 .internal-transfer-main { min-width: 0; }
+.internal-transfer-main > section { padding: clamp(1.1rem, 3vw, 2rem); }
 .internal-transfer-aside { align-self: stretch; background: #f7faf9; border-left: 1px solid #e1ebea; min-width: 0; padding: 1.45rem 1.1rem; }
 .internal-transfer-aside > p { color: #71818a; font-size: .68rem; line-height: 1.5; margin: 1rem 0 0; }
 .internal-transfer-aside-heading { align-items: center; display: flex; gap: .65rem; margin-bottom: 1rem; }
@@ -3018,6 +3019,7 @@ h1, h2 { line-height: 1.08; }
 .transfer-direction-tabs button[aria-selected="true"] { border-bottom-color: #18734f; color: #176949; }
 .transfer-direction-tabs button:focus-visible { border-radius: .25rem; outline: 2px solid #4c9d78; outline-offset: 1px; }
 .transfer-history-list { padding-top: 1rem; }
+.transfer-history-bird-photo { border-radius: inherit; height: 100%; object-fit: cover; width: 100%; }
 .transfer-history-item { color: inherit; text-decoration: none; transition: background .15s ease, border-color .15s ease; }
 .transfer-history-item:hover, .transfer-history-item:focus-visible { background: #f3faf6; border-color: #9dcbb2; outline: 0; }
 .transfer-history-item .document-history-item-main { display: grid; gap: .28rem; }
@@ -3052,13 +3054,16 @@ h1, h2 { line-height: 1.08; }
 .transfer-action-notice { background: #f3fbf6; border: 1px solid #cfe5d7; border-radius: .55rem; color: #256744; font-size: .7rem; line-height: 1.45; margin: 0 0 1rem; padding: .75rem .85rem; }
 .transfer-action-card { margin-top: 1rem; padding: clamp(1rem, 2.5vw, 1.45rem); }
 .transfer-action-card > p:not(.eyebrow, .transfer-action-error) { color: #687e89; font-size: .69rem; line-height: 1.5; margin: .45rem 0 .9rem; }
-.transfer-action-card > .auth-primary-action { min-height: 2.4rem; padding: .55rem .8rem; }
+.transfer-action-buttons { display: flex; flex-wrap: wrap; gap: .55rem; }
+.transfer-action-buttons button { min-height: 2.4rem; padding: .55rem .8rem; }
+.transfer-action-danger { background: #fff8f7; border-color: #e8c1bd; color: #a3332d; }
+.transfer-action-danger:hover:not(:disabled) { background: #fff0ee; border-color: #dba9a4; }
 .transfer-action-card button:disabled { cursor: wait; opacity: .7; }
 .transfer-action-error { background: #fff4f2; border: 1px solid #edc8c3; border-radius: .45rem; color: #9b2e27; font-size: .67rem; line-height: 1.45; margin: .8rem 0; padding: .65rem .75rem; }
-.transfer-accept-confirmation { background: #f5faf9; border: 1px solid #dcebe5; border-radius: .55rem; padding: .8rem; }
-.transfer-accept-confirmation > p { color: #385968; font-size: .68rem; line-height: 1.45; margin: 0 0 .7rem; }
-.transfer-accept-confirmation > div { display: flex; flex-wrap: wrap; gap: .5rem; }
-.transfer-accept-confirmation button { font-size: .65rem; min-height: 2.35rem; padding: .45rem .75rem; }
+.transfer-action-confirmation { background: #f5faf9; border: 1px solid #dcebe5; border-radius: .55rem; padding: .8rem; }
+.transfer-action-confirmation > p { color: #385968; font-size: .68rem; line-height: 1.45; margin: 0 0 .7rem; }
+.transfer-action-confirmation > div { display: flex; flex-wrap: wrap; gap: .5rem; }
+.transfer-action-confirmation button { font-size: .65rem; min-height: 2.35rem; padding: .45rem .75rem; }
 
 @media (max-width: 48rem) {
   .transfer-results-heading { align-items: stretch; }
@@ -3070,7 +3075,9 @@ h1, h2 { line-height: 1.08; }
   .transfer-detail-header { align-items: flex-start; flex-direction: column; }
   .transfer-detail-header > a { width: 100%; }
   .transfer-detail-grid { grid-template-columns: minmax(0, 1fr); }
-  .transfer-accept-confirmation > div { align-items: stretch; flex-direction: column; }
+  .transfer-action-buttons { align-items: stretch; flex-direction: column; }
+  .transfer-action-buttons button { width: 100%; }
+  .transfer-action-confirmation > div { align-items: stretch; flex-direction: column; }
 }
 
 @media (max-width: 30rem) {

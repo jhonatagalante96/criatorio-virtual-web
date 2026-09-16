@@ -62,6 +62,10 @@ function listResponse(items: Record<string, unknown>[], overrides: Record<string
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
+function birdDetailsResponse(imageUrl: string | null): Response {
+  return new Response(JSON.stringify({ imageUrl }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
 describe("TransferListScreen", () => {
   it("does not request transfer data without an authenticated session", () => {
     const fetchMock = vi.fn();
@@ -103,6 +107,25 @@ describe("TransferListScreen", () => {
     expect(String(fetchMock.mock.calls[1][0])).toContain("/api/internal-transfers/received?page=1&pageSize=20");
     expect(fetchMock.mock.calls.every(([url]) => !String(url).includes("/api/birds/"))).toBe(true);
     expect(fetchMock.mock.calls[1][1]?.credentials).toBe("include");
+  });
+
+  it("shows a source-owned bird photo for sent transfers", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([transfer()], { direction: "Sent" }))
+      .mockResolvedValueOnce(birdDetailsResponse("/api/birds/bird-a/attachments/photo-a/content"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<TransferListScreen />);
+    await screen.findByRole("tab", { name: "Enviadas" });
+    fireEvent.click(screen.getByRole("tab", { name: "Enviadas" }));
+
+    await waitFor(() => {
+      const image = document.querySelector<HTMLImageElement>(".transfer-history-bird-photo");
+      expect(image?.getAttribute("src")).toContain("/api/birds/bird-a/attachments/photo-a/content");
+    });
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/birds/bird-a"))).toBe(true);
   });
 
   it("supports arrow-key navigation between linked direction tabs", async () => {

@@ -20,6 +20,31 @@ import {
 type FarmState = "blocked" | "error" | "loading" | "ready";
 type DetailState = "error" | "loading" | "ready" | "not-found";
 type ActionState = "error" | "idle" | "submitting";
+type TransferAction = "accept" | "reject" | "cancel";
+
+const transferActionCopy: Record<TransferAction, { button: string; confirmation: string; group: string; progress: string; prompt: string }> = {
+  accept: {
+    button: "Aceitar transferência",
+    confirmation: "Confirmar aceite",
+    group: "Confirmar aceite da transferência",
+    progress: "Confirmando…",
+    prompt: "Ao aceitar, a ave passará para o criatório selecionado. Confira os dados antes de confirmar."
+  },
+  reject: {
+    button: "Rejeitar transferência",
+    confirmation: "Confirmar rejeição",
+    group: "Confirmar rejeição da transferência",
+    progress: "Rejeitando…",
+    prompt: "Ao rejeitar, a solicitação será encerrada e a ave permanecerá no criatório de origem."
+  },
+  cancel: {
+    button: "Cancelar transferência",
+    confirmation: "Confirmar cancelamento",
+    group: "Confirmar cancelamento da transferência",
+    progress: "Cancelando…",
+    prompt: "Ao cancelar, a solicitação será encerrada e a ave permanecerá no criatório de origem."
+  }
+};
 
 function farmErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 403) return "Sua conta não tem permissão para acessar este criatório.";
@@ -81,9 +106,32 @@ export function TransferDetailScreen({ transferRequestId }: Readonly<{ transferR
   const [actionState, setActionState] = useState<ActionState>("idle");
   const [actionError, setActionError] = useState<string>();
   const [actionNotice, setActionNotice] = useState<string>();
-  const [confirmingAcceptance, setConfirmingAcceptance] = useState(false);
+  const [confirmingAction, setConfirmingAction] = useState<TransferAction | null>(null);
+  const confirmationRef = useRef<HTMLDivElement | null>(null);
+  const actionButtonRefs = useRef<Partial<Record<TransferAction, HTMLButtonElement | null>>>({});
+  const actionErrorRef = useRef<HTMLParagraphElement | null>(null);
+  const actionNoticeRef = useRef<HTMLParagraphElement | null>(null);
+  const focusReturnAction = useRef<TransferAction | null>(null);
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
+
+  useEffect(() => {
+    if (confirmingAction) {
+      confirmationRef.current?.focus();
+      return;
+    }
+
+    if (focusReturnAction.current) {
+      actionButtonRefs.current[focusReturnAction.current]?.focus();
+      focusReturnAction.current = null;
+    }
+  }, [confirmingAction]);
+
+  useEffect(() => {
+    if (detailState !== "ready") return;
+    if (actionError) actionErrorRef.current?.focus();
+    else if (actionNotice) actionNoticeRef.current?.focus();
+  }, [actionError, actionNotice, detailState]);
 
   const loadFarm = useCallback(async (recoverSession = true) => {
     const version = ++farmRequestVersion.current;
@@ -148,37 +196,53 @@ export function TransferDetailScreen({ transferRequestId }: Readonly<{ transferR
     }
   }, [refresh, selectedFarmId, transferRequestId]);
 
-  const acceptTransfer = useCallback(async (recoverSession = true) => {
-    if (!details || details.status !== "Pending" || details.destinationBreedingFarmId !== selectedFarmId) return;
-    setActionState("submitting");
-    setActionError(undefined);
-    try {
-      if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
-      await client.current!.request<InternalTransferRequestResponse>(`api/internal-transfers/${encodeURIComponent(transferRequestId)}/accept`, { method: "POST" });
-      client.current!.clearCache();
-      setActionState("idle");
-      setConfirmingAcceptance(false);
-      setActionNotice("A transferência foi aceita. A ave agora pertence ao criatório selecionado.");
-      await loadDetails(false);
-    } catch (error) {
-      if (error instanceof StaleTenantResponseError) return;
-      if (error instanceof ApiError && error.status === 401 && recoverSession) {
-        csrfToken.current = undefined;
-        const result = await refresh({ showLoading: false });
-        if (result.ok) {
-          await acceptTransfer(false);
+  const performTransferAction = useCallback(async (action: TransferAction, recoverSession = true) => {
+    if (!details || details.status !== "Pending" || !selectedFarmId) return;
+    const authorizedFarmId = action === "cancel" ? details.sourceBreedingFarmId : details.destinationBreedingFarmId;
+    if (authorizedFarmId !== selectedFarmId) return;
+
+    const execute = async (allowSessionRecovery: boolean): Promise<void> => {
+      setActionState("submitting");
+      setActionError(undefined);
+      try {
+        if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
+        await client.current!.request<InternalTransferRequestResponse>(`api/internal-transfers/${encodeURIComponent(transferRequestId)}/${action}`, { method: "POST" });
+        client.current!.clearCache();
+        setActionState("idle");
+        setConfirmingAction(null);
+        setActionNotice(action === "accept"
+          ? "A transferência foi aceita. A ave agora pertence ao criatório selecionado."
+          : action === "reject"
+            ? "A transferência foi rejeitada. A ave permanece no criatório de origem."
+            : "A transferência foi cancelada. A ave permanece no criatório de origem.");
+        await loadDetails(false);
+      } catch (error) {
+        if (error instanceof StaleTenantResponseError) {
+          setActionState("idle");
+          setConfirmingAction(null);
           return;
         }
+        if (error instanceof ApiError && error.status === 401 && allowSessionRecovery) {
+          csrfToken.current = undefined;
+          const result = await refresh({ showLoading: false });
+          if (result.ok) {
+            await execute(false);
+            return;
+          }
+        }
+        setActionState("error");
+        setActionError(error instanceof ApiError && error.status === 409
+          ? "A situação da transferência mudou enquanto você analisava. Os detalhes foram atualizados."
+          : transferErrorMessage(error));
+        if (error instanceof ApiError && (error.status === 404 || error.status === 409)) {
+          setConfirmingAction(null);
+          client.current!.clearCache();
+          await loadDetails(false);
+        }
       }
-      setActionState("error");
-      setActionError(error instanceof ApiError && error.status === 409
-        ? "A situação da transferência mudou. Atualize os detalhes antes de tentar novamente."
-        : transferErrorMessage(error));
-      if (error instanceof ApiError && (error.status === 404 || error.status === 409)) {
-        client.current!.clearCache();
-        await loadDetails(false);
-      }
-    }
+    };
+
+    await execute(recoverSession);
   }, [details, loadDetails, refresh, selectedFarmId, transferRequestId]);
 
   useEffect(() => {
@@ -226,7 +290,13 @@ export function TransferDetailScreen({ transferRequestId }: Readonly<{ transferR
   }
 
   const received = details.destinationBreedingFarmId === selectedFarmId;
-  const canAccept = received && details.status === "Pending";
+  const sent = details.sourceBreedingFarmId === selectedFarmId;
+  const pending = details.status === "Pending";
+  const canAccept = received && pending;
+  const canReject = received && pending;
+  const canCancel = sent && pending;
+  const isSubmitting = actionState === "submitting";
+  const confirmationCopy = confirmingAction ? transferActionCopy[confirmingAction] : undefined;
 
   return (
     <AuthenticatedShell activeNav="transfers" email={session.email} farmName={farmName}>
@@ -237,8 +307,8 @@ export function TransferDetailScreen({ transferRequestId }: Readonly<{ transferR
           <Link className="auth-secondary-action" href="/transferencias">Voltar às transferências</Link>
         </header>
 
-        {actionNotice && <p className="transfer-action-notice" role="status">{actionNotice}</p>}
-        {actionError && <p className="transfer-action-error" role="alert">{actionError}</p>}
+        {actionNotice && <p className="transfer-action-notice" ref={actionNoticeRef} role="status" tabIndex={-1}>{actionNotice}</p>}
+        {actionError && <p className="transfer-action-error" ref={actionErrorRef} role="alert" tabIndex={-1}>{actionError}</p>}
 
         <div className="transfer-detail-grid">
           <section aria-labelledby="titulo-resumo-transferencia" className="document-wizard-card transfer-detail-card">
@@ -271,16 +341,23 @@ export function TransferDetailScreen({ transferRequestId }: Readonly<{ transferR
           </section>
         </div>
 
-        {canAccept && <section aria-labelledby="titulo-acao-transferencia" className="document-wizard-card transfer-action-card">
-          <p className="eyebrow">Ação disponível</p><h2 id="titulo-acao-transferencia">Aceitar transferência</h2>
-          <p>Ao aceitar, a ave passará para o criatório selecionado. Confira os dados antes de confirmar.</p>
-          {!confirmingAcceptance ? <button className="auth-primary-action" disabled={actionState === "submitting"} onClick={() => { setActionError(undefined); setConfirmingAcceptance(true); }} type="button">Aceitar transferência</button> : <div aria-label="Confirmar aceite da transferência" className="transfer-accept-confirmation" role="group">
-            <p>Confirme para registrar a transferência desta ave ao criatório selecionado.</p>
-            <div><button className="auth-secondary-action" disabled={actionState === "submitting"} onClick={() => setConfirmingAcceptance(false)} type="button">Voltar</button><button className="auth-primary-action" disabled={actionState === "submitting"} onClick={() => void acceptTransfer()} type="button">{actionState === "submitting" ? "Confirmando…" : "Confirmar aceite"}</button></div>
+        {(canAccept || canReject || canCancel) && <section aria-labelledby="titulo-acao-transferencia" aria-busy={isSubmitting} className="document-wizard-card transfer-action-card">
+          <p className="eyebrow">Ação disponível</p><h2 id="titulo-acao-transferencia">{received ? "Decidir sobre a transferência" : "Cancelar transferência"}</h2>
+          <p>{received ? "Confira os dados e escolha como responder à solicitação recebida." : "Você pode cancelar esta solicitação enquanto o criatório de destino ainda não respondeu."}</p>
+          {!confirmingAction ? <div className="transfer-action-buttons">
+            {canAccept && <button className="auth-primary-action" disabled={isSubmitting} onClick={() => { setActionError(undefined); setConfirmingAction("accept"); }} ref={(element) => { actionButtonRefs.current.accept = element; }} type="button">{transferActionCopy.accept.button}</button>}
+            {canReject && <button className="auth-secondary-action transfer-action-danger" disabled={isSubmitting} onClick={() => { setActionError(undefined); setConfirmingAction("reject"); }} ref={(element) => { actionButtonRefs.current.reject = element; }} type="button">{transferActionCopy.reject.button}</button>}
+            {canCancel && <button className="auth-secondary-action transfer-action-danger" disabled={isSubmitting} onClick={() => { setActionError(undefined); setConfirmingAction("cancel"); }} ref={(element) => { actionButtonRefs.current.cancel = element; }} type="button">{transferActionCopy.cancel.button}</button>}
+          </div> : <div aria-label={confirmationCopy?.group} className="transfer-action-confirmation" ref={confirmationRef} role="group" tabIndex={-1}>
+            <p>{confirmationCopy?.prompt}</p>
+            <div>
+              <button className="auth-secondary-action" disabled={isSubmitting} onClick={() => { focusReturnAction.current = confirmingAction; setConfirmingAction(null); setActionError(undefined); }} type="button">Voltar</button>
+              <button className={`auth-primary-action${confirmingAction === "accept" ? "" : " transfer-action-danger"}`} disabled={isSubmitting} onClick={() => void performTransferAction(confirmingAction)} type="button">{isSubmitting ? confirmationCopy?.progress : confirmationCopy?.confirmation}</button>
+            </div>
           </div>}
         </section>}
 
-        {details.status === "Pending" && !received && <p className="transfer-pending-note" role="status">Aguardando decisão do criatório de destino.</p>}
+        {pending && sent && <p className="transfer-pending-note" role="status">Aguardando decisão do criatório de destino.</p>}
       </main>
     </AuthenticatedShell>
   );

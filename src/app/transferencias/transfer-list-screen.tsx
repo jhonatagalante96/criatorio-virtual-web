@@ -7,6 +7,7 @@ import { useAuth } from "../../lib/auth/auth-context";
 import { AppLoadingState } from "../components/app-loading-state";
 import { AuthenticatedShell } from "../components/authenticated-shell";
 import { DashboardIcon } from "../components/dashboard-icons";
+import { resolveBirdImageUrl } from "../plantel/aves/bird-image";
 import { normalizeFarmResponse, selectedFarmFromResponse, type BreedingFarmSelectionResponse } from "../reproducao/reproduction-data";
 import {
   formatTransferTimestamp,
@@ -21,6 +22,10 @@ import {
 
 type FarmState = "blocked" | "error" | "loading" | "ready";
 type ListState = "error" | "loading" | "ready";
+
+interface BirdImageResponse {
+  imageUrl?: string | null;
+}
 
 const PAGE_SIZE = 20;
 
@@ -59,11 +64,24 @@ function TransferStatusBadge({ status }: Readonly<{ status: string }>) {
   return <span className={`transfer-status-badge ${transferStatusClass(status)}`}>{transferStatusLabel(status)}</span>;
 }
 
+function canLoadBirdImage(item: InternalTransferListResponse["items"][number], direction: TransferDirection, farmId: string): boolean {
+  if (direction === "Sent") return item.sourceBreedingFarmId === farmId && item.status !== "Accepted";
+  return item.destinationBreedingFarmId === farmId && item.status === "Accepted";
+}
+
+function TransferBirdImage({ imageUrl }: Readonly<{ imageUrl?: string | null }>) {
+  const [failed, setFailed] = useState(false);
+  if (!imageUrl || failed) return <DashboardIcon name="bird" />;
+
+  return <img alt="" aria-hidden="true" className="transfer-history-bird-photo" onError={() => setFailed(true)} src={resolveBirdImageUrl(imageUrl)} />;
+}
+
 export function TransferListScreen() {
   const { refresh, session, status } = useAuth();
   const client = useRef<ApiClient | null>(null);
   const farmRequestVersion = useRef(0);
   const listRequestVersion = useRef(0);
+  const birdImageRequestVersion = useRef(0);
   const [farmError, setFarmError] = useState<string>();
   const [farmName, setFarmName] = useState("Criatório selecionado");
   const [farmState, setFarmState] = useState<FarmState>("loading");
@@ -72,6 +90,7 @@ export function TransferListScreen() {
   const [filter, setFilter] = useState<TransferStatusFilter>("");
   const [page, setPage] = useState(1);
   const [list, setList] = useState<InternalTransferListResponse>();
+  const [birdImageUrls, setBirdImageUrls] = useState<Record<string, string | null>>({});
   const [listError, setListError] = useState<string>();
   const [listState, setListState] = useState<ListState>("loading");
 
@@ -154,6 +173,41 @@ export function TransferListScreen() {
     void loadTransfers();
     return () => { listRequestVersion.current += 1; };
   }, [farmState, loadTransfers, selectedFarmId, status]);
+
+  useEffect(() => {
+    const requestVersion = ++birdImageRequestVersion.current;
+    const controller = new AbortController();
+    setBirdImageUrls({});
+
+    if (listState !== "ready" || !list || !selectedFarmId) {
+      return () => {
+        controller.abort();
+        if (birdImageRequestVersion.current === requestVersion) birdImageRequestVersion.current += 1;
+      };
+    }
+
+    const visibleBirds = [...new Map(
+      list.items
+        .filter((item) => canLoadBirdImage(item, list.direction, selectedFarmId))
+        .map((item) => [item.birdId, item] as const)
+    ).values()];
+
+    void Promise.all(visibleBirds.map(async (item) => {
+      try {
+        const response = await client.current!.request<BirdImageResponse>(`api/birds/${encodeURIComponent(item.birdId)}`, { signal: controller.signal });
+        return [item.birdId, response.imageUrl ?? null] as const;
+      } catch {
+        return [item.birdId, null] as const;
+      }
+    })).then((entries) => {
+      if (birdImageRequestVersion.current === requestVersion) setBirdImageUrls(Object.fromEntries(entries));
+    });
+
+    return () => {
+      controller.abort();
+      if (birdImageRequestVersion.current === requestVersion) birdImageRequestVersion.current += 1;
+    };
+  }, [list, listState, selectedFarmId]);
 
   function changeDirection(value: TransferDirection) {
     setPage(1);
@@ -246,7 +300,7 @@ export function TransferListScreen() {
                   const otherFarmName = direction === "Sent" ? item.destinationBreedingFarmName : item.sourceBreedingFarmName;
                   return <li key={item.transferRequestId}>
                     <Link aria-label={`Ver detalhes da transferência de ${item.birdName}`} className="document-history-item transfer-history-item" href={`/transferencias/${encodeURIComponent(item.transferRequestId)}`}>
-                      <span aria-hidden="true" className="document-history-item-icon"><DashboardIcon name="bird" /></span>
+                      <span aria-hidden="true" className="document-history-item-icon"><TransferBirdImage imageUrl={birdImageUrls[item.birdId]} /></span>
                       <span className="document-history-item-main">
                         <span className="document-history-item-title"><strong>{item.birdName}</strong><TransferStatusBadge status={item.status} /></span>
                         <span className="transfer-history-counterparty">{direction === "Sent" ? "Destino" : "Origem"}: {otherFarmName}</span>
