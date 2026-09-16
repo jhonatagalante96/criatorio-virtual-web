@@ -306,13 +306,15 @@ describe("BirdDetailPage", () => {
         edges: [
           { childNodeKey: "bird:bird-a", parentNodeKey: "bird:father-a", position: "father" },
           { childNodeKey: "bird:bird-a", parentNodeKey: "external:bird-a:mother", position: "mother" },
-          { childNodeKey: "bird:father-a", parentNodeKey: "snapshot:father-a:father", position: "father" }
+          { childNodeKey: "bird:father-a", parentNodeKey: "snapshot:father-a:father", position: "father" },
+          { childNodeKey: "external:bird-a:mother", parentNodeKey: "snapshot:mother-a:mother", position: "mother" }
         ],
         nodes: [
           { birthDate: "2021-06-15", birdId: "bird-a", canNavigate: true, generation: 0, isAccessible: true, isSnapshot: false, name: "Aurora", nodeKey: "bird:bird-a", position: "root", ringNumber: "123456", sex: "Female", source: "Private", status: "Active" },
           { birthDate: "2018-04-10", birdId: "father-a", canNavigate: true, generation: 1, isAccessible: true, isSnapshot: false, name: "Pai Azul", nodeKey: "bird:father-a", position: "father", ringNumber: "111111", sex: "Male", source: "Private", status: "Active" },
           { birthDate: null, birdId: null, canNavigate: false, generation: 1, isAccessible: false, isSnapshot: true, name: "Mãe sem cadastro", nodeKey: "external:bird-a:mother", position: "mother", ringNumber: null, sex: "Female", source: "External", status: null },
-          { birthDate: "2015-01-01", birdId: null, canNavigate: false, generation: 2, isAccessible: false, isSnapshot: true, name: "Avô Azul", nodeKey: "snapshot:father-a:father", position: "father", ringNumber: "999999", sex: "Male", source: "Snapshot", status: "Archived" }
+          { birthDate: "2015-01-01", birdId: null, canNavigate: false, generation: 2, isAccessible: false, isSnapshot: true, name: "Avô Azul", nodeKey: "snapshot:father-a:father", position: "father", ringNumber: "999999", sex: "Male", source: "Snapshot", status: "Archived" },
+          { birthDate: "2014-01-01", birdId: null, canNavigate: false, generation: 2, isAccessible: false, isSnapshot: true, name: "Avó Azul", nodeKey: "snapshot:mother-a:mother", position: "mother", ringNumber: null, sex: "Female", source: "Snapshot", status: "Archived" }
         ]
       }));
     vi.stubGlobal("fetch", fetchMock);
@@ -322,9 +324,13 @@ describe("BirdDetailPage", () => {
     const tree = screen.getByLabelText("Árvore genealógica");
     expect(within(tree).getByRole("link", { name: /Pai Azul/ }).getAttribute("href")).toBe("/plantel/aves/father-a");
     expect(within(tree).getByText("Ancestral externo · sem cadastro")).toBeTruthy();
-    expect(within(tree).getByText("Registro preservado · acesso restrito")).toBeTruthy();
+    expect(within(tree).getAllByText("Registro preservado · acesso restrito")).toHaveLength(2);
     expect(within(tree).queryByRole("link", { name: /Avô Azul/ })).toBeNull();
     expect(within(tree).getByRole("list", { name: "Pais de Pai Azul" })).toBeTruthy();
+    expect(within(tree).getByText("Pai")).toBeTruthy();
+    expect(within(tree).getByText("Mãe")).toBeTruthy();
+    expect(within(tree).getByText("Avô paterno")).toBeTruthy();
+    expect(within(tree).getByText("Avó materna")).toBeTruthy();
   });
 
   it("shows recursive mixed ancestry through generation six with accessible branch expansion", async () => {
@@ -357,6 +363,10 @@ describe("BirdDetailPage", () => {
     expect(within(tree).getByRole("button", { name: "Editar ascendência" })).toBeTruthy();
     expect(within(tree).getAllByText("Ancestral externo · sem cadastro")).toHaveLength(5);
     expect(within(tree).getByText("Registro preservado · disponível para consulta")).toBeTruthy();
+    expect(within(tree).getByText("Bisavô paterno")).toBeTruthy();
+    expect(within(tree).getByText("Trisavô paterno")).toBeTruthy();
+    expect(within(tree).getByText("Tetravô paterno")).toBeTruthy();
+    expect(within(tree).getByText("Pentavô paterno")).toBeTruthy();
     expect(screen.getByText("A árvore foi limitada a 6 gerações para manter a consulta rápida.")).toBeTruthy();
 
     for (const [ancestorName, parentName] of [

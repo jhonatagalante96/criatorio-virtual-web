@@ -178,6 +178,37 @@ function genealogyPositionLabel(position: string): string {
   return "Ancestral";
 }
 
+function genealogyRelationshipLabel(
+  node: BirdGenealogyNode,
+  position: string,
+  lineagePosition?: "father" | "mother"
+): string {
+  if (node.generation === 0) return "Ave consultada";
+  if (node.generation === 1) return genealogyPositionLabel(position);
+
+  const ancestorTerms: Record<number, { feminine: string; masculine: string }> = {
+    2: { feminine: "Avó", masculine: "Avô" },
+    3: { feminine: "Bisavó", masculine: "Bisavô" },
+    4: { feminine: "Trisavó", masculine: "Trisavô" },
+    5: { feminine: "Tetravó", masculine: "Tetravô" },
+    6: { feminine: "Pentavó", masculine: "Pentavô" }
+  };
+  const branchSide = lineagePosition === "father" ? "paterno" : lineagePosition === "mother" ? "materno" : undefined;
+  const degree = ancestorTerms[node.generation];
+
+  if (!degree) {
+    const branch = branchSide ? ` no ramo ${branchSide}` : "";
+    return `Ancestral de ${node.generation}ª geração${branch}`;
+  }
+
+  if (node.sex === "Male") return `${degree.masculine}${branchSide ? ` ${branchSide}` : ""}`;
+  if (node.sex === "Female") {
+    const feminineBranchSide = lineagePosition === "father" ? "paterna" : lineagePosition === "mother" ? "materna" : undefined;
+    return `${degree.feminine}${feminineBranchSide ? ` ${feminineBranchSide}` : ""}`;
+  }
+  return `Ancestral de ${node.generation}ª geração${branchSide ? ` no ramo ${branchSide}` : ""}`;
+}
+
 function genealogyPositionOrder(position: string): number {
   if (position === "father") return 0;
   if (position === "mother") return 1;
@@ -193,7 +224,6 @@ function genealogySourceLabel(node: BirdGenealogyNode): string {
 
 function genealogyNodeSummary(node: BirdGenealogyNode): string {
   return [
-    genealogyPositionLabel(node.position),
     `geração ${node.generation}`,
     sexLabel(node.sex),
     node.ringNumber ? `anilha ${node.ringNumber}` : undefined
@@ -367,10 +397,12 @@ function ParentCard({
 function GenealogyNodeCard({
   hasParents,
   node,
+  relationshipLabel,
   onEdit
 }: Readonly<{
   hasParents: boolean;
   node: BirdGenealogyNode;
+  relationshipLabel: string;
   onEdit?: (node: BirdGenealogyNode) => void;
 }>) {
   const isNavigable = node.generation > 0 && node.canNavigate && node.isAccessible && Boolean(node.birdId);
@@ -386,7 +418,7 @@ function GenealogyNodeCard({
   ].filter(Boolean).join(" ");
   const content = (
     <>
-      <span className="bird-genealogy-node-position">{genealogyPositionLabel(node.position)}</span>
+      <span className="bird-genealogy-node-position">{relationshipLabel}</span>
       <strong>{node.name}</strong>
       <span>{genealogySourceLabel(node)}</span>
       <small>{genealogyNodeSummary(node)}</small>
@@ -394,11 +426,11 @@ function GenealogyNodeCard({
   );
 
   if (isNavigable && node.birdId) {
-    return <Link aria-label={`${node.name}, ${genealogyNodeSummary(node)}, abrir ficha`} className={className} href={`/plantel/aves/${encodeURIComponent(node.birdId)}`}>{content}</Link>;
+    return <Link aria-label={`${node.name}, ${relationshipLabel}, ${genealogyNodeSummary(node)}, abrir ficha`} className={className} href={`/plantel/aves/${encodeURIComponent(node.birdId)}`}>{content}</Link>;
   }
 
   return (
-    <div aria-label={`${node.name}, ${genealogyNodeSummary(node)}`} className={className}>
+    <div aria-label={`${node.name}, ${relationshipLabel}, ${genealogyNodeSummary(node)}`} className={className}>
       {content}
       {canEdit && onEdit && (
         <button className="bird-genealogy-edit-action" onClick={() => onEdit(node)} type="button">
@@ -411,6 +443,8 @@ function GenealogyNodeCard({
 
 function GenealogyBranch({
   nodeKey,
+  relationshipPosition,
+  lineagePosition,
   nodesByKey,
   onEdit,
   onBranchToggle,
@@ -419,6 +453,8 @@ function GenealogyBranch({
   visited
 }: Readonly<{
   nodeKey: string;
+  relationshipPosition: string;
+  lineagePosition?: "father" | "mother";
   nodesByKey: ReadonlyMap<string, BirdGenealogyNode>;
   onEdit?: (node: BirdGenealogyNode) => void;
   onBranchToggle: (nodeKey: string, expanded: boolean) => void;
@@ -435,10 +471,11 @@ function GenealogyBranch({
     .filter((edge) => !nextVisited.has(edge.parentNodeKey) && nodesByKey.has(edge.parentNodeKey))
     .sort((left, right) => genealogyPositionOrder(left.position) - genealogyPositionOrder(right.position));
   const isExpanded = expandedBranches[nodeKey] ?? node.generation < 2;
+  const relationshipLabel = genealogyRelationshipLabel(node, relationshipPosition, lineagePosition);
 
   return (
     <li className="bird-genealogy-branch">
-      <GenealogyNodeCard hasParents={parents.length > 0} node={node} onEdit={onEdit} />
+      <GenealogyNodeCard hasParents={parents.length > 0} node={node} onEdit={onEdit} relationshipLabel={relationshipLabel} />
       {parents.length > 0 && (
         <details
           className="bird-genealogy-branch-expansion"
@@ -458,6 +495,10 @@ function GenealogyBranch({
                 onBranchToggle={onBranchToggle}
                 onEdit={onEdit}
                 parentsByChild={parentsByChild}
+                relationshipPosition={edge.position}
+                lineagePosition={node.generation === 0
+                  ? edge.position === "father" || edge.position === "mother" ? edge.position : undefined
+                  : lineagePosition}
                 visited={nextVisited}
               />
             ))}
@@ -564,6 +605,7 @@ function GenealogyNodes({
             onBranchToggle={onBranchToggle}
             onEdit={openEditor}
             parentsByChild={parentsByChild}
+            relationshipPosition={root.position}
             visited={new Set()}
           />
         </ul>
