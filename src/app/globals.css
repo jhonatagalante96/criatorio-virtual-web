@@ -1801,7 +1801,7 @@ h1, h2 { line-height: 1.08; }
   .farm-edit-actions { flex-direction: column-reverse; }
   .farm-cancel-action, .farm-edit-actions .auth-primary-action { width: 100%; }
   .farm-identity-actions, .farm-identity-dialog-actions { align-items: stretch; flex-direction: column; }
-  .farm-identity-actions > *, .farm-identity-dialog-actions > * { width: 100%; }
+  .farm-identity-actions > :not(.farm-identity-file-input), .farm-identity-dialog-actions > * { width: 100%; }
   .farm-identity-pending { align-items: stretch; flex-direction: column; }
 }
 
