@@ -369,7 +369,7 @@ function ReproductionWizard() {
   function selectBird(kind: "female" | "male", bird: BirdListItem) {
     if (kind === "male") setMaleBirdId(bird.birdId);
     else setFemaleBirdId(bird.birdId);
-    setFieldErrors((current) => ({ ...current, maleBirdId: "", femaleBirdId: "" }));
+    setFieldErrors((current) => ({ ...current, maleBirdId: "", femaleBirdId: "", pair: "" }));
     setNotice(undefined);
   }
 

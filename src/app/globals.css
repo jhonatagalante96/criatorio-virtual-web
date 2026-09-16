@@ -514,7 +514,6 @@ h1, h2 { line-height: 1.08; }
 
 /* Reproduction registration wizard */
 
-.reproduction-wizard-progress { grid-template-columns: repeat(4, minmax(4.2rem, 1fr)); }
 .reproduction-wizard-card { display: grid; gap: 1rem; }
 .reproduction-parent-grid { display: grid; gap: .9rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .reproduction-bird-selector { background: #fbfdfc; border: 1px solid #e1ece8; border-radius: .65rem; display: grid; gap: .7rem; min-width: 0; padding: .8rem; }
