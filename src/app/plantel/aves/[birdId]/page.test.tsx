@@ -245,6 +245,9 @@ describe("BirdDetailPage", () => {
     expect(screen.getByText("Ave acompanhada desde o primeiro cadastro.")).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /Pai Azul/ }).some((link) => link.getAttribute("href") === "/plantel/aves/father-a")).toBe(true);
     expect(screen.getByRole("link", { name: "Editar dados" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
+    const transferLinks = screen.getAllByRole("link", { name: /Iniciar transferência/ });
+    expect(transferLinks.length).toBeGreaterThan(0);
+    expect(transferLinks.every((link) => link.getAttribute("href") === "/transferencias/nova?birdId=bird-a")).toBe(true);
     expect(screen.getByText("Árvore consultada")).toBeTruthy();
 
     const detailRequest = fetchMock.mock.calls[2];
@@ -632,8 +635,9 @@ describe("BirdDetailPage", () => {
     const addedAncestor = screen.getByText("Avô Azul").closest(".bird-genealogy-node") as HTMLElement | null;
     expect(updatedAncestor).toBeTruthy();
     expect(addedAncestor).toBeTruthy();
-    expect(within(updatedAncestor!).queryByText("Ascendência ainda não informada")).toBeNull();
-    expect(within(addedAncestor!).getByText("Ascendência ainda não informada")).toBeTruthy();
+    if (!(updatedAncestor instanceof HTMLElement) || !(addedAncestor instanceof HTMLElement)) throw new Error("Nós da árvore genealógica não encontrados.");
+    expect(within(updatedAncestor).queryByText("Ascendência ainda não informada")).toBeNull();
+    expect(within(addedAncestor).getByText("Ascendência ainda não informada")).toBeTruthy();
     await waitFor(() => expect(screen.getByRole("region", { name: "Árvore genealógica" }).scrollLeft).toBe(180));
     expect(fetchMock.mock.calls.some(([, options]) => options?.method === "POST")).toBe(false);
   });

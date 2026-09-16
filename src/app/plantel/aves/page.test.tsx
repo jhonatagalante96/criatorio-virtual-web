@@ -168,7 +168,7 @@ describe("BirdListPage", () => {
     if (!(actionMenu instanceof HTMLElement)) throw new Error("Menu de ações não encontrado.");
     expect(within(actionMenu).getByRole("link", { name: "Ver detalhes de Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a");
     expect(within(actionMenu).getByRole("link", { name: "Editar Aurora" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
-    expect(within(actionMenu).getByRole("button", { name: "Iniciar transferência" }).hasAttribute("disabled")).toBe(true);
+    expect(within(actionMenu).getByRole("link", { name: "Iniciar transferência" }).getAttribute("href")).toBe("/transferencias/nova?birdId=bird-a");
     expect(within(actionMenu).getByRole("button", { name: "Registrar competição" }).hasAttribute("disabled")).toBe(true);
     expect(within(actionMenu).getByRole("button", { name: "Inativar" }).hasAttribute("disabled")).toBe(false);
     fireEvent.pointerDown(document.body);
