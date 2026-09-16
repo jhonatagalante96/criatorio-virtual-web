@@ -25,7 +25,7 @@ interface NavigationItem {
 const primaryNavigation: NavigationItem[] = [
   { href: "/dashboard", icon: "home", id: "dashboard", label: "Painel" },
   { href: "/plantel/aves", icon: "bird", id: "birds", label: "Aves" },
-  { href: "/reproducao/novo", icon: "heart", id: "reproduction", label: "Reprodução" },
+  { href: "/reproducao", icon: "heart", id: "reproduction", label: "Reprodução" },
   { icon: "transfer", id: "transfers", label: "Transferências" },
   { icon: "trophy", id: "competitions", label: "Competições" },
   { href: "/documentos", icon: "document", id: "documents", label: "Documentos" }

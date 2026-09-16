@@ -100,6 +100,8 @@ describe("ReproductionPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar reprodução" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Reprodução registrada com sucesso" })).toBeTruthy());
+    expect(screen.getByRole("link", { name: "Ver detalhes" }).getAttribute("href")).toBe("/reproducao/reproduction-a");
+    expect(screen.getByRole("link", { name: "Ver todas as reproduções" }).getAttribute("href")).toBe("/reproducao");
     const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
     expect(postCall).toBeTruthy();
     expect(String(postCall?.[0])).toContain("/api/reproductions");

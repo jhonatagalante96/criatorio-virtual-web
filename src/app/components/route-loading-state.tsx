@@ -16,6 +16,12 @@ function loadingCopyForPathname(pathname: string): LoadingCopy {
     return { activeNav: "dashboard", label: "Carregando painel", message: "Um instante enquanto preparamos seu espaço." };
   }
 
+  if (pathname.startsWith("/reproducao")) {
+    return pathname.startsWith("/reproducao/novo")
+      ? { activeNav: "reproduction", label: "Carregando cadastro", message: "Um instante enquanto preparamos o registro da reprodução." }
+      : { activeNav: "reproduction", label: "Carregando reproduções", message: "Um instante enquanto consultamos o histórico do criatório." };
+  }
+
   if (pathname.startsWith("/plantel/aves/novo")) {
     return { activeNav: "birds", label: "Carregando cadastro", message: "Um instante enquanto preparamos o cadastro." };
   }

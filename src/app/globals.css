@@ -2767,3 +2767,60 @@ h1, h2 { line-height: 1.08; }
 
 /* Keep the reproduction wizard's four-step layout after generic wizard rules. */
 .reproduction-wizard-progress { grid-template-columns: repeat(4, minmax(4.2rem, 1fr)); }
+
+/* Reproduction history */
+.reproduction-history-page { max-width: 70rem; }
+.reproduction-history-page .document-wizard-header > div { min-width: 0; }
+.reproduction-history-page .document-wizard-header-actions { align-items: center; display: flex; gap: .6rem; justify-content: flex-end; }
+.reproduction-history-list { gap: .55rem; }
+.reproduction-history-item { color: inherit; text-decoration: none; transition: border-color .16s ease, box-shadow .16s ease; }
+.reproduction-history-item:hover, .reproduction-history-item:focus-visible { border-color: #80b99a; box-shadow: 0 .25rem .8rem rgb(35 107 88 / 9%); outline: 0; }
+.reproduction-history-item:focus-visible { box-shadow: 0 0 0 3px rgb(27 154 97 / 18%); }
+.reproduction-history-item .document-history-item-main { display: grid; gap: .28rem; }
+.reproduction-history-item .document-history-item-title { align-items: center; gap: .5rem; }
+.reproduction-history-item .document-history-item-title strong { overflow-wrap: anywhere; }
+.reproduction-history-period { color: #365f72; display: block; font-size: .68rem; line-height: 1.4; }
+.reproduction-history-item .document-history-item-main small { display: block; line-height: 1.4; }
+.reproduction-history-item .document-history-item-actions { min-width: 6.4rem; }
+.reproduction-history-item .document-history-item-actions > span { align-items: center; display: inline-flex; gap: .25rem; justify-content: center; white-space: nowrap; }
+.reproduction-status-badge { align-items: center; border: 1px solid transparent; border-radius: 999px; display: inline-flex; flex: 0 0 auto; font-size: .61rem; font-weight: 800; line-height: 1.2; padding: .25rem .5rem; }
+.reproduction-status-badge.is-active { background: #e6f5eb; border-color: #c6e6d0; color: #24734a; }
+.reproduction-status-badge.is-finished { background: #eaf2f8; border-color: #cfdeea; color: #315e7c; }
+.reproduction-status-badge.is-cancelled, .reproduction-status-badge.is-unknown { background: #f3eeee; border-color: #e2d5d5; color: #765555; }
+.reproduction-detail-card { display: grid; gap: 1.1rem; padding: clamp(1.1rem, 3vw, 2rem); }
+.reproduction-detail-heading { align-items: flex-start; border-bottom: 1px solid #e4eeee; display: flex; gap: 1rem; justify-content: space-between; padding-bottom: 1rem; }
+.reproduction-detail-heading h2 { color: var(--ink); font-size: clamp(1rem, 2.5vw, 1.35rem); margin: .1rem 0 0; }
+.reproduction-detail-pair { align-items: center; display: grid; gap: .7rem; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.reproduction-detail-pair-mark { color: #78919a; font-size: 1rem; font-weight: 800; }
+.reproduction-detail-bird { background: #fbfdfd; border: 1px solid #dce9ea; border-radius: .65rem; min-width: 0; padding: .85rem; }
+.reproduction-detail-bird > header { align-items: center; display: flex; gap: .65rem; }
+.reproduction-detail-bird-icon { align-items: center; background: #e4f1f2; border-radius: .5rem; color: #236f87; display: inline-flex; flex: 0 0 auto; height: 2.45rem; justify-content: center; width: 2.45rem; }
+.reproduction-detail-bird-icon .dashboard-icon { height: 1.2rem; width: 1.2rem; }
+.reproduction-detail-bird .eyebrow { margin: 0 0 .12rem; }
+.reproduction-detail-bird h3 { color: var(--ink); font-size: .95rem; margin: 0; overflow-wrap: anywhere; }
+.reproduction-detail-bird dl { display: grid; gap: .65rem .8rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: .95rem 0 0; }
+.reproduction-detail-bird dl div, .reproduction-detail-record div { min-width: 0; }
+.reproduction-detail-bird dt, .reproduction-detail-record dt { color: #718196; font-size: .62rem; font-weight: 700; }
+.reproduction-detail-bird dd, .reproduction-detail-record dd { color: var(--ink); font-size: .7rem; font-weight: 750; margin: .16rem 0 0; overflow-wrap: anywhere; }
+.reproduction-detail-record { border-block: 1px solid #e4eeee; display: grid; gap: .85rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; padding: .9rem 0; }
+.reproduction-detail-notes h3 { color: var(--ink); font-size: .8rem; margin: 0; }
+.reproduction-detail-notes p { color: #365f72; font-size: .72rem; line-height: 1.5; margin: .3rem 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.reproduction-detail-card .document-wizard-privacy-note { margin: 0; }
+.reproduction-detail-card .reproduction-status-badge { margin-top: .2rem; }
+
+@media (max-width: 48rem) {
+  .reproduction-history-item { align-items: start; }
+  .reproduction-history-item .document-history-item-actions { grid-column: 1 / -1; justify-content: stretch; }
+  .reproduction-history-item .document-history-item-actions > span { flex: 1 1 100%; }
+  .reproduction-history-pagination { gap: .45rem; }
+  .reproduction-detail-heading { align-items: flex-start; flex-direction: column; }
+  .reproduction-detail-pair { grid-template-columns: minmax(0, 1fr); }
+  .reproduction-detail-pair-mark { justify-self: center; }
+  .reproduction-detail-record { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 30rem) {
+  .reproduction-history-item .document-history-item-title { align-items: flex-start; flex-direction: column; }
+  .reproduction-detail-record { grid-template-columns: minmax(0, 1fr); }
+  .reproduction-detail-bird dl { grid-template-columns: minmax(0, 1fr); }
+}
