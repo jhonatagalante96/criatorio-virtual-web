@@ -37,6 +37,12 @@ function speciesResponse(): Response {
   }]), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
+function parentGenealogyResponse(hasKnownParents: boolean): Response {
+  return new Response(JSON.stringify({
+    edges: hasKnownParents ? [{ childNodeKey: "bird-parent", parentNodeKey: "external:ancestor", position: "father" }] : []
+  }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
 function tokenResponse(): Response {
   return new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 200 });
 }
@@ -123,6 +129,7 @@ describe("BirdRegistrationPage", () => {
         breedingFarmId: "farm-a",
         items: [{ birdId: "father-a", name: "Pai Azul", ringNumber: "930001", sex: "Male", birthDate: "2018-06-01" }]
       }), { headers: { "content-type": "application/json" }, status: 200 }))
+      .mockResolvedValueOnce(parentGenealogyResponse(true))
       .mockResolvedValueOnce(tokenResponse())
       .mockResolvedValueOnce(createdBirdResponse());
     vi.stubGlobal("fetch", fetchMock);
@@ -134,10 +141,11 @@ describe("BirdRegistrationPage", () => {
     fireEvent.change(screen.getByPlaceholderText(/Pai Azul ou 930001/), { target: { value: "Pai Azul" } });
     await waitFor(() => expect(screen.getByRole("option", { name: /Pai Azul/ })).toBeTruthy());
     fireEvent.click(screen.getByRole("option", { name: /Pai Azul/ }));
+    expect(await screen.findByText("A genealogia já cadastrada deste progenitor será aproveitada automaticamente na árvore do filhote.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar ave" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Aurora foi cadastrada." })).toBeTruthy());
-    const createRequest = fetchMock.mock.calls[5][1] as RequestInit;
+    const createRequest = fetchMock.mock.calls[6][1] as RequestInit;
     expect(JSON.parse(createRequest.body as string)).toMatchObject({
       fatherBirdId: "father-a",
       motherBirdId: null,
@@ -147,6 +155,7 @@ describe("BirdRegistrationPage", () => {
       speciesId: "species-a"
     });
     expect(screen.queryByText("Identificação pendente")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Completar árvore genealógica" })).toBeNull();
     expect(screen.getByRole("link", { name: "Voltar para o início" }).getAttribute("href")).toBe("/plantel/aves");
 
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar outra ave" }));
@@ -154,11 +163,16 @@ describe("BirdRegistrationPage", () => {
     expect(screen.queryByText("Espécie selecionada")).toBeNull();
   });
 
-  it("accepts an external parent name and reports identification pending", async () => {
+  it("offers continuity guidance for external and linked parents after registration", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(speciesResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        breedingFarmId: "farm-a",
+        items: [{ birdId: "mother-a", name: "Mãe Jade", ringNumber: null, sex: "Female", birthDate: null }]
+      }), { headers: { "content-type": "application/json" }, status: 200 }))
+      .mockResolvedValueOnce(parentGenealogyResponse(true))
       .mockResolvedValueOnce(tokenResponse())
       .mockResolvedValueOnce(createdBirdResponse(true));
     vi.stubGlobal("fetch", fetchMock);
@@ -169,15 +183,72 @@ describe("BirdRegistrationPage", () => {
     await chooseSpecies();
     fireEvent.click(screen.getByRole("button", { name: "Informar nome do pai sem cadastro" }));
     fireEvent.change(screen.getByLabelText("Nome do pai"), { target: { value: "Pai externo" } });
+    expect(screen.getByText("Este ancestral não será adicionado ao plantel. Depois, você poderá informar os pais dele na Genealogia.")).toBeTruthy();
+    fireEvent.change(screen.getByPlaceholderText(/Mãe Rubi ou 930002/), { target: { value: "Mãe Jade" } });
+    await waitFor(() => expect(screen.getByRole("option", { name: /Mãe Jade/ })).toBeTruthy());
+    fireEvent.click(screen.getByRole("option", { name: /Mãe Jade/ }));
+    expect(await screen.findByText("A genealogia já cadastrada deste progenitor será aproveitada automaticamente na árvore do filhote.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar ave" }));
 
     await waitFor(() => expect(screen.getByText("Identificação pendente")).toBeTruthy());
-    const createRequest = fetchMock.mock.calls[4][1] as RequestInit;
+    const createRequest = fetchMock.mock.calls[6][1] as RequestInit;
     expect(JSON.parse(createRequest.body as string)).toMatchObject({
       externalFatherName: "Pai externo",
       externalFatherSex: "Male",
+      motherBirdId: "mother-a",
       ringNumber: null
     });
+    expect(screen.getByRole("link", { name: "Completar árvore genealógica" }).getAttribute("href")).toBe("/plantel/aves/bird-a#genealogia");
+  });
+
+  it("leaves a linked parent without known ancestry valid and non-blocking", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(speciesResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        breedingFarmId: "farm-a",
+        items: [{ birdId: "father-a", name: "Pai Azul", ringNumber: null, sex: "Male", birthDate: null }]
+      }), { headers: { "content-type": "application/json" }, status: 200 }))
+      .mockResolvedValueOnce(parentGenealogyResponse(false));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openForm(fetchMock);
+    fillRequiredFields();
+    await chooseSpecies();
+    fireEvent.change(screen.getByPlaceholderText(/Pai Azul ou 930001/), { target: { value: "Pai Azul" } });
+    await waitFor(() => expect(screen.getByRole("option", { name: /Pai Azul/ })).toBeTruthy());
+    fireEvent.click(screen.getByRole("option", { name: /Pai Azul/ }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+    expect(screen.queryByText("A genealogia já cadastrada deste progenitor será aproveitada automaticamente na árvore do filhote.")).toBeNull();
+    expect(screen.getByRole("button", { name: "Cadastrar ave" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("keeps registration available and offers retry when a parent's genealogy cannot load", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(speciesResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        breedingFarmId: "farm-a",
+        items: [{ birdId: "father-a", name: "Pai Azul", ringNumber: null, sex: "Male", birthDate: null }]
+      }), { headers: { "content-type": "application/json" }, status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Service unavailable" }), { headers: { "content-type": "application/problem+json" }, status: 503 }))
+      .mockResolvedValueOnce(parentGenealogyResponse(true));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openForm(fetchMock);
+    fillRequiredFields();
+    await chooseSpecies();
+    fireEvent.change(screen.getByPlaceholderText(/Pai Azul ou 930001/), { target: { value: "Pai Azul" } });
+    await waitFor(() => expect(screen.getByRole("option", { name: /Pai Azul/ })).toBeTruthy());
+    fireEvent.click(screen.getByRole("option", { name: /Pai Azul/ }));
+
+    expect(await screen.findByText("Não foi possível consultar a genealogia deste progenitor. O cadastro continua disponível.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cadastrar ave" }).hasAttribute("disabled")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    expect(await screen.findByText("A genealogia já cadastrada deste progenitor será aproveitada automaticamente na árvore do filhote.")).toBeTruthy();
   });
 
   it("keeps the form available when the API rejects invalid data", async () => {

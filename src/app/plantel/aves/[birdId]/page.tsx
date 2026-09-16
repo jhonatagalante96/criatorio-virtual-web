@@ -396,17 +396,19 @@ function ParentCard({
 
 function GenealogyNodeCard({
   hasParents,
+  showAscendancyMissing,
   node,
   relationshipLabel,
   onEdit
 }: Readonly<{
   hasParents: boolean;
+  showAscendancyMissing: boolean;
   node: BirdGenealogyNode;
   relationshipLabel: string;
   onEdit?: (node: BirdGenealogyNode) => void;
 }>) {
   const isNavigable = node.generation > 0 && node.canNavigate && node.isAccessible && Boolean(node.birdId);
-  const canEdit = node.source === "External" && node.canEdit && Boolean(externalAncestorIdFromNodeKey(node.nodeKey)) && Boolean(onEdit);
+  const canEdit = node.source === "External" && node.canEdit && Boolean(externalAncestorIdFromNodeKey(node.nodeKey)) && Boolean(onEdit) && (hasParents || showAscendancyMissing);
   const className = [
     "bird-genealogy-node",
     node.generation === 0 ? "is-root" : "",
@@ -432,6 +434,7 @@ function GenealogyNodeCard({
   return (
     <div aria-label={`${node.name}, ${relationshipLabel}, ${genealogyNodeSummary(node)}`} className={className}>
       {content}
+      {showAscendancyMissing && <p className="bird-genealogy-node-guidance">Ascendência ainda não informada</p>}
       {canEdit && onEdit && (
         <button className="bird-genealogy-edit-action" onClick={() => onEdit(node)} type="button">
           {hasParents ? "Editar ascendência" : "Adicionar ascendência"}
@@ -450,6 +453,8 @@ function GenealogyBranch({
   onBranchToggle,
   expandedBranches,
   parentsByChild,
+  maxGenerations,
+  isTruncated,
   visited
 }: Readonly<{
   nodeKey: string;
@@ -460,6 +465,8 @@ function GenealogyBranch({
   onBranchToggle: (nodeKey: string, expanded: boolean) => void;
   expandedBranches: Readonly<Record<string, boolean>>;
   parentsByChild: ReadonlyMap<string, BirdGenealogyEdge[]>;
+  maxGenerations: number;
+  isTruncated: boolean;
   visited: ReadonlySet<string>;
 }>) {
   const node = nodesByKey.get(nodeKey);
@@ -475,7 +482,13 @@ function GenealogyBranch({
 
   return (
     <li className="bird-genealogy-branch">
-      <GenealogyNodeCard hasParents={parents.length > 0} node={node} onEdit={onEdit} relationshipLabel={relationshipLabel} />
+      <GenealogyNodeCard
+        hasParents={parents.length > 0}
+        node={node}
+        onEdit={onEdit}
+        relationshipLabel={relationshipLabel}
+        showAscendancyMissing={node.source === "External" && parents.length === 0 && (node.generation < maxGenerations || !isTruncated)}
+      />
       {parents.length > 0 && (
         <details
           className="bird-genealogy-branch-expansion"
@@ -496,6 +509,8 @@ function GenealogyBranch({
                 onEdit={onEdit}
                 parentsByChild={parentsByChild}
                 relationshipPosition={edge.position}
+                maxGenerations={maxGenerations}
+                isTruncated={isTruncated}
                 lineagePosition={node.generation === 0
                   ? edge.position === "father" || edge.position === "mother" ? edge.position : undefined
                   : lineagePosition}
@@ -606,6 +621,8 @@ function GenealogyNodes({
             onEdit={openEditor}
             parentsByChild={parentsByChild}
             relationshipPosition={root.position}
+            maxGenerations={genealogy.maxGenerations}
+            isTruncated={genealogy.isTruncated}
             visited={new Set()}
           />
         </ul>
@@ -1149,6 +1166,14 @@ function BirdDetailPage() {
     if (!birdId) return;
     void loadData();
   }, [birdId, loadData, reloadVersion]);
+
+  useEffect(() => {
+    if (detailState !== "ready" || window.location.hash !== "#genealogia") return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById("genealogia")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [birdId, detailState]);
 
   if (!session) {
     return <DetailStateView actionHref="/login" actionLabel="Ir para o login" heading="Entre para consultar a ficha" message="Faça login para visualizar os dados privados da ave." />;

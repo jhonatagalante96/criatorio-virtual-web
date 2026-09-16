@@ -34,6 +34,10 @@ interface ParentOptionsResponse {
   items: ParentOption[];
 }
 
+interface ParentGenealogyResponse {
+  edges: Array<{ parentNodeKey: string }>;
+}
+
 interface CreatedBirdResponse {
   birdId: string;
   identificationPending: boolean;
@@ -56,6 +60,7 @@ type ParentSelection =
   | undefined;
 
 type ParentSearchState = "empty" | "error" | "idle" | "loading" | "ready";
+type ParentAncestryState = "error" | "idle" | "known" | "loading" | "none";
 type FarmState = "blocked" | "error" | "loading" | "ready";
 
 const initialFields: BirdFields = {
@@ -218,6 +223,8 @@ function ParentPicker({
   const [options, setOptions] = useState<ParentOption[]>([]);
   const [query, setQuery] = useState("");
   const [searchState, setSearchState] = useState<ParentSearchState>("idle");
+  const [ancestryState, setAncestryState] = useState<ParentAncestryState>("idle");
+  const [ancestryRetryVersion, setAncestryRetryVersion] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [reloadVersion, setReloadVersion] = useState(0);
 
@@ -263,9 +270,38 @@ function ParentPicker({
     };
   }, [client, mode, onSessionExpired, query, reloadVersion, sex]);
 
+  const selectedLinked = selection?.kind === "linked" ? selection : undefined;
+
+  useEffect(() => {
+    if (!selectedLinked) {
+      setAncestryState("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+    setAncestryState("loading");
+    void client.request<ParentGenealogyResponse>(
+      `api/birds/${encodeURIComponent(selectedLinked.birdId)}/genealogy?maxGenerations=1`,
+      { signal: controller.signal }
+    ).then((genealogy) => {
+      if (!controller.signal.aborted) setAncestryState(genealogy.edges.length > 0 ? "known" : "none");
+    }).catch((error: unknown) => {
+      if (controller.signal.aborted) return;
+      if (error instanceof ApiError && error.status === 401) {
+        setAncestryState("idle");
+        onSessionExpired();
+        return;
+      }
+      setAncestryState("error");
+    });
+
+    return () => controller.abort();
+  }, [ancestryRetryVersion, client, onSessionExpired, selectedLinked?.birdId]);
+
   function switchToSearch() {
     setMode("search");
     setExternalName("");
+    setAncestryState("idle");
     onChange(undefined);
   }
 
@@ -274,6 +310,7 @@ function ParentPicker({
     setQuery("");
     setOptions([]);
     setSearchState("idle");
+    setAncestryState("idle");
     onChange(externalName.trim() ? { kind: "external", name: externalName.trim() } : undefined);
   }
 
@@ -285,7 +322,6 @@ function ParentPicker({
   const pickerId = sex === "Male" ? "father" : "mother";
   const parentName = sex === "Male" ? "pai" : "mãe";
   const parentGender = sex === "Male" ? "cadastrado" : "cadastrada";
-  const selectedLinked = selection?.kind === "linked" ? selection : undefined;
 
   return (
     <div className="bird-parent-picker">
@@ -300,24 +336,37 @@ function ParentPicker({
       </div>
 
       {mode === "external" ? (
-        <FormField
-          disabled={disabled}
-          id={`${pickerId}-external-name`}
-          label={`Nome do ${sex === "Male" ? "pai" : "mãe"}`}
-          maxLength={200}
-          name={`${pickerId}-external-name`}
-          onChange={(event) => updateExternalName(event.target.value)}
-          placeholder={`Ex.: ${sex === "Male" ? "Pai Azul" : "Mãe Rubi"}`}
-          value={externalName}
-        />
+        <>
+          <FormField
+            disabled={disabled}
+            id={`${pickerId}-external-name`}
+            label={`Nome do ${sex === "Male" ? "pai" : "mãe"}`}
+            maxLength={200}
+            name={`${pickerId}-external-name`}
+            onChange={(event) => updateExternalName(event.target.value)}
+            placeholder={`Ex.: ${sex === "Male" ? "Pai Azul" : "Mãe Rubi"}`}
+            value={externalName}
+          />
+          {externalName.trim() && <p className="bird-parent-external-help">Este ancestral não será adicionado ao plantel. Depois, você poderá informar os pais dele na Genealogia.</p>}
+        </>
       ) : selectedLinked ? (
-        <div className="bird-parent-selected" role="status">
-          <span className="bird-parent-selected-copy">
-            <strong>{selectedLinked.name}</strong>
-            <span>{selectedLinked.ringNumber ? `Anilha ${selectedLinked.ringNumber}` : "Sem anilha informada"}</span>
-          </span>
-          <button className="text-action" disabled={disabled} onClick={switchToSearch} type="button">Alterar {parentName}</button>
-        </div>
+        <>
+          <div className="bird-parent-selected" role="status">
+            <span className="bird-parent-selected-copy">
+              <strong>{selectedLinked.name}</strong>
+              <span>{selectedLinked.ringNumber ? `Anilha ${selectedLinked.ringNumber}` : "Sem anilha informada"}</span>
+            </span>
+            <button className="text-action" disabled={disabled} onClick={switchToSearch} type="button">Alterar {parentName}</button>
+          </div>
+          {ancestryState === "loading" && <p className="bird-parent-ancestry-note" role="status">Verificando a genealogia deste progenitor…</p>}
+          {ancestryState === "known" && <p className="bird-parent-ancestry-note" role="status">A genealogia já cadastrada deste progenitor será aproveitada automaticamente na árvore do filhote.</p>}
+          {ancestryState === "error" && (
+            <div className="bird-parent-error">
+              <p role="status">Não foi possível consultar a genealogia deste progenitor. O cadastro continua disponível.</p>
+              <button className="auth-secondary-action" disabled={disabled} onClick={() => setAncestryRetryVersion((value) => value + 1)} type="button">Tentar novamente</button>
+            </div>
+          )}
+        </>
       ) : (
         <>
           <div className="bird-parent-search-control">
@@ -417,7 +466,7 @@ function BirdRegistrationState({
   );
 }
 
-function RegistrationSuccess({ bird, onRegisterAnother }: Readonly<{ bird: CreatedBirdResponse; onRegisterAnother: () => void }>) {
+function RegistrationSuccess({ bird, hasExternalParent, onRegisterAnother }: Readonly<{ bird: CreatedBirdResponse; hasExternalParent: boolean; onRegisterAnother: () => void }>) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -436,7 +485,8 @@ function RegistrationSuccess({ bird, onRegisterAnother }: Readonly<{ bird: Creat
           <span>Informe uma anilha de seis dígitos quando essa identificação estiver disponível.</span>
         </div>
       )}
-      <button className="auth-primary-action" onClick={onRegisterAnother} type="button">Cadastrar outra ave</button>
+      {hasExternalParent && <Link className="auth-primary-action" href={`/plantel/aves/${encodeURIComponent(bird.birdId)}#genealogia`}>Completar árvore genealógica</Link>}
+      <button className={hasExternalParent ? "auth-secondary-action" : "auth-primary-action"} onClick={onRegisterAnother} type="button">Cadastrar outra ave</button>
       <Link className="text-action" href="/plantel/aves">Voltar para o início</Link>
     </div>
   );
@@ -610,7 +660,7 @@ function BirdRegistrationForm() {
   }
 
   if (createdBird) {
-    return <BirdRegistrationLayout email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"}><RegistrationSuccess bird={createdBird} onRegisterAnother={resetForm} /></BirdRegistrationLayout>;
+    return <BirdRegistrationLayout email={session?.email ?? ""} farmName={farmName ?? "Criatório selecionado"}><RegistrationSuccess bird={createdBird} hasExternalParent={father?.kind === "external" || mother?.kind === "external"} onRegisterAnother={resetForm} /></BirdRegistrationLayout>;
   }
 
   const fieldError = (field: string) => firstError(errors, field);
@@ -704,7 +754,7 @@ function BirdRegistrationForm() {
 
         <fieldset className="onboarding-fieldset bird-genealogy-fieldset">
           <legend>Genealogia <span>(opcional)</span></legend>
-          <p className="bird-section-help">Vincule aves já cadastradas ou informe o nome de um pai sem cadastro.</p>
+          <p className="bird-section-help">Cadastre aqui o pai e a mãe. Depois de salvar a ave, você poderá completar avós, bisavós e outras gerações pela árvore genealógica.</p>
           <ParentPicker client={client.current!} disabled={isSubmitting} key={`father-${formVersion}`} label="Pai" onChange={setFather} onSessionExpired={handleSessionExpired} selection={father} sex="Male" />
           <ParentPicker client={client.current!} disabled={isSubmitting} key={`mother-${formVersion}`} label="Mãe" onChange={setMother} onSessionExpired={handleSessionExpired} selection={mother} sex="Female" />
           {fieldError("parent") && <p className="field-error" role="alert">{fieldError("parent")}</p>}
