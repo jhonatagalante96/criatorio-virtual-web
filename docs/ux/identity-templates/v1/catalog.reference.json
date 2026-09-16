@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "canvas": {
+    "width": 1024,
+    "height": 1024,
+    "aspectRatio": "1:1",
+    "safeZone": 96
+  },
+  "templates": [
+    {
+      "id": "folhagem-classica",
+      "name": "Folhagem Clássica",
+      "version": "1.0.0",
+      "preview": "/assets/identity-templates/v1/folhagem-classica.svg",
+      "variants": ["brand", "forest"],
+      "defaultVariant": "brand",
+      "text": {
+        "maxLines": 2,
+        "minFontSize": 56,
+        "maxFontSize": 104,
+        "alignment": "center"
+      }
+    },
+    {
+      "id": "selo-criador",
+      "name": "Selo do Criador",
+      "version": "1.0.0",
+      "preview": "/assets/identity-templates/v1/selo-criador.svg",
+      "variants": ["brand", "jade"],
+      "defaultVariant": "brand",
+      "text": {
+        "maxLines": 2,
+        "minFontSize": 48,
+        "maxFontSize": 82,
+        "alignment": "center"
+      }
+    },
+    {
+      "id": "ramo-natural",
+      "name": "Ramo Natural",
+      "version": "1.0.0",
+      "preview": "/assets/identity-templates/v1/ramo-natural.svg",
+      "variants": ["natural", "brand"],
+      "defaultVariant": "natural",
+      "text": {
+        "maxLines": 2,
+        "minFontSize": 54,
+        "maxFontSize": 96,
+        "alignment": "left"
+      }
+    },
+    {
+      "id": "noturno-minimalista",
+      "name": "Noturno Minimalista",
+      "version": "1.0.0",
+      "preview": "/assets/identity-templates/v1/noturno-minimalista.svg",
+      "variants": ["navy", "forest-night"],
+      "defaultVariant": "navy",
+      "text": {
+        "maxLines": 2,
+        "minFontSize": 52,
+        "maxFontSize": 92,
+        "alignment": "center"
+      },
+      "derivedFields": ["monogram"]
+    }
+  ]
+}
