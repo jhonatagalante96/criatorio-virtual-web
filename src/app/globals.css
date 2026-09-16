@@ -512,6 +512,80 @@ h1, h2 { line-height: 1.08; }
   .settings-dialog-actions .settings-danger-action, .settings-dialog-actions .settings-cancel-action { width: 100%; }
 }
 
+/* Reproduction registration wizard */
+
+.reproduction-wizard-progress { grid-template-columns: repeat(4, minmax(4.2rem, 1fr)); }
+.reproduction-wizard-card { display: grid; gap: 1rem; }
+.reproduction-parent-grid { display: grid; gap: .9rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.reproduction-bird-selector { background: #fbfdfc; border: 1px solid #e1ece8; border-radius: .65rem; display: grid; gap: .7rem; min-width: 0; padding: .8rem; }
+.reproduction-selector-heading { align-items: center; display: flex; gap: .55rem; }
+.reproduction-selector-heading h3 { color: #173b53; font-size: .8rem; margin: 0; }
+.reproduction-selector-heading p { color: #78919a; font-size: .6rem; margin: .12rem 0 0; }
+.reproduction-selector-icon { align-items: center; background: #dff3e5; border-radius: .5rem; color: #1e7a4f; display: inline-flex; flex: 0 0 auto; height: 2rem; justify-content: center; width: 2rem; }
+.reproduction-selector-icon .dashboard-icon { height: 1.05rem; width: 1.05rem; }
+.reproduction-bird-list { display: grid; gap: .45rem; list-style: none; margin: 0; max-height: 20rem; overflow-y: auto; padding: 0; }
+.reproduction-bird-list li { min-width: 0; }
+.reproduction-bird-option { align-items: center; background: #fff; border: 1px solid #dce8e4; border-radius: .5rem; color: inherit; cursor: pointer; display: flex; gap: .55rem; min-height: 4.15rem; padding: .48rem; text-align: left; width: 100%; }
+.reproduction-bird-option:hover, .reproduction-bird-option:focus-visible { border-color: #73b695; outline: 0; }
+.reproduction-bird-option:focus-visible { box-shadow: 0 0 0 3px rgb(23 105 160 / 16%); }
+.reproduction-bird-option.is-selected { background: #f0fbf3; border-color: #32a66b; box-shadow: inset 0 0 0 1px #32a66b; }
+.reproduction-bird-option:disabled { cursor: not-allowed; opacity: .64; }
+.reproduction-bird-image { background: #edf4ef; border-radius: .4rem; flex: 0 0 auto; height: 2.55rem; object-fit: cover; width: 2.55rem; }
+.reproduction-bird-copy { display: grid; gap: .12rem; min-width: 0; }
+.reproduction-bird-copy strong { color: #173b53; font-size: .68rem; overflow-wrap: anywhere; }
+.reproduction-bird-copy span { color: #70828e; font-size: .56rem; line-height: 1.25; overflow-wrap: anywhere; }
+.reproduction-selection-mark { align-items: center; color: #2b9970; display: inline-flex; flex: 0 0 auto; font-size: .9rem; font-weight: 900; justify-content: center; margin-left: auto; width: 1rem; }
+.reproduction-bird-option:disabled .reproduction-selection-mark { color: #bd7a32; }
+.reproduction-rule-box, .reproduction-tip-box, .reproduction-confirmation-box { align-items: flex-start; border-radius: .55rem; display: flex; gap: .55rem; padding: .75rem .85rem; }
+.reproduction-rule-box { background: #eef7ff; border: 1px solid #d5e8f8; color: #185f91; grid-column: 1 / -1; }
+.reproduction-rule-box .dashboard-icon { height: .9rem; width: .9rem; }
+.reproduction-rule-box strong, .reproduction-confirmation-box strong { color: #174f75; display: block; font-size: .66rem; }
+.reproduction-rule-box p, .reproduction-tip-box p, .reproduction-confirmation-box p { color: #597589; font-size: .6rem; line-height: 1.45; margin: .18rem 0 0; }
+.reproduction-date-grid { display: grid; gap: .85rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.reproduction-field { display: grid; gap: .35rem; min-width: 0; }
+.reproduction-field > span, .reproduction-status-field > span { color: #365f72; font-size: .64rem; font-weight: 800; }
+.reproduction-field b { color: #ba4b4b; }
+.reproduction-field em { color: #78919a; font-size: .58rem; font-style: normal; font-weight: 500; }
+.reproduction-field input, .reproduction-field textarea { background: #fff; border: 1px solid #cfdde2; border-radius: .42rem; color: #173b53; font: inherit; font-size: .7rem; min-height: 2.55rem; padding: .55rem .65rem; width: 100%; }
+.reproduction-field textarea { min-height: 8.5rem; resize: vertical; }
+.reproduction-field input:focus, .reproduction-field textarea:focus { border-color: #4c9d78; box-shadow: 0 0 0 3px rgb(76 157 120 / 13%); outline: 0; }
+.reproduction-field [aria-invalid="true"] { border-color: #b84343; }
+.reproduction-field-error { color: #a53a32; font-size: .58rem; line-height: 1.35; }
+.reproduction-tip-box { background: #f6fbf7; border: 1px solid #d8ebdd; color: #2d855b; }
+.reproduction-tip-box > span { align-items: center; background: #dff3e5; border-radius: 50%; display: inline-flex; flex: 0 0 auto; font-size: .65rem; font-weight: 900; height: 1.05rem; justify-content: center; width: 1.05rem; }
+.reproduction-status-field { background: #f5f8fa; border: 1px solid #dfe9ec; border-radius: .55rem; display: grid; gap: .25rem; padding: .7rem .8rem; }
+.reproduction-status-field strong { align-items: center; color: #267a52; display: flex; font-size: .72rem; gap: .35rem; }
+.reproduction-status-field strong i { background: #32a66b; border-radius: 50%; display: inline-block; height: .5rem; width: .5rem; }
+.reproduction-status-field small, .reproduction-character-count { color: #78919a; font-size: .56rem; }
+.reproduction-notes-field { position: relative; }
+.reproduction-character-count { text-align: right; }
+.reproduction-review { margin-top: .1rem; }
+.reproduction-review-pair { align-items: center; display: flex; flex-wrap: wrap; gap: .45rem; }
+.reproduction-review-pair img { background: #edf4ef; border-radius: 50%; height: 2.15rem; object-fit: cover; width: 2.15rem; }
+.reproduction-review-pair > span { display: grid; gap: .08rem; min-width: 5rem; }
+.reproduction-review-pair strong { color: #173b53; font-size: .67rem; }
+.reproduction-review-pair small { color: #78919a; font-size: .56rem; }
+.reproduction-review-pair > b { color: #8ca09c; font-size: .8rem; }
+.reproduction-confirmation-box { background: #f0fbf3; border: 1px solid #cfe9d5; }
+.reproduction-confirmation-box > span { align-items: center; background: #32a66b; border-radius: 50%; color: #fff; display: inline-flex; flex: 0 0 auto; font-size: .7rem; font-weight: 900; height: 1.25rem; justify-content: center; width: 1.25rem; }
+.reproduction-confirmation-box strong { color: #1c7048; }
+.reproduction-success dl { display: grid; gap: .65rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: .35rem 0 0; }
+.reproduction-success dl div { background: #f8fbf9; border: 1px solid #e2eee5; border-radius: .45rem; padding: .65rem; }
+.reproduction-success dt { color: #78919a; font-size: .56rem; }
+.reproduction-success dd { color: #173b53; font-size: .68rem; font-weight: 800; margin: .2rem 0 0; overflow-wrap: anywhere; }
+.reproduction-success-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .55rem; justify-content: center; }
+.bird-detail-profile-actions .bird-detail-reproduction-action { background: #1e7a4f; border: 1px solid #1e7a4f; color: #fff; }
+.bird-detail-profile-actions .bird-detail-reproduction-action:hover, .bird-detail-profile-actions .bird-detail-reproduction-action:focus-visible { background: #17633f; border-color: #17633f; outline: 0; }
+
+@media (max-width: 47.99rem) {
+  .reproduction-parent-grid, .reproduction-date-grid { grid-template-columns: 1fr; }
+  .reproduction-rule-box { grid-column: auto; }
+  .reproduction-wizard-progress { gap: .35rem; }
+  .reproduction-wizard-progress button strong { font-size: .5rem; }
+  .reproduction-success dl { grid-template-columns: 1fr; }
+  .reproduction-review-pair { align-items: flex-start; }
+}
+
 .brand-panel { background: linear-gradient(180deg, #f4fbfa 0%, #e7f6f3 68%, #d3eee4 100%); grid-column: 2; grid-row: 1; min-height: 100%; overflow: hidden; position: relative; }
 .brand-panel::after { background: linear-gradient(180deg, transparent 0 72%, rgb(217 240 233 / 18%) 100%); content: ""; inset: 0; pointer-events: none; position: absolute; z-index: 2; }
 .brand-panel-leaves { background: #5dab4f; border-radius: 100% 0 100% 0; opacity: .52; position: absolute; z-index: 1; }
@@ -2691,3 +2765,6 @@ h1, h2 { line-height: 1.08; }
   .badge-batch-item-results li { align-items: start; grid-template-columns: 1.45rem minmax(0, 1fr); }
   .badge-batch-item-results li em { grid-column: 2; text-align: left; }
 }
+
+/* Keep the reproduction wizard's four-step layout after generic wizard rules. */
+.reproduction-wizard-progress { grid-template-columns: repeat(4, minmax(4.2rem, 1fr)); }

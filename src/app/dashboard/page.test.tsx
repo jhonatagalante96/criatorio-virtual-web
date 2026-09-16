@@ -238,7 +238,7 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Reprodução de setembro")).toBeTruthy();
     expect(screen.getByText(/Ave cadastrada/)).toBeTruthy();
     expect(document.querySelector('a[href="/plantel/aves/bird-a"]')).toBeTruthy();
-    expect(document.querySelector('a[href*="reproduction"]')).toBeNull();
+    expect(screen.getByRole("link", { name: /Registrar reprodução/ }).getAttribute("href")).toBe("/reproducao/novo");
 
     expect(screen.getByRole("heading", { name: "Atalhos rápidos" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Cadastrar ave/ }).getAttribute("href")).toBe("/plantel/aves/novo");

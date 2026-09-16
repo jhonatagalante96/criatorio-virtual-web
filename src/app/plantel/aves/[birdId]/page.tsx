@@ -931,7 +931,7 @@ function BirdDetailPage() {
             </div>
             <div className="bird-detail-profile-actions">
               <Link className="bird-detail-outline-action" href={`/plantel/aves/${encodeURIComponent(bird.birdId)}/editar`}><DashboardIcon name="edit" />Editar</Link>
-              <button disabled title="Módulo em desenvolvimento" type="button"><DashboardIcon name="heart" />Registrar reprodução</button>
+              <Link className="bird-detail-reproduction-action" href="/reproducao/novo"><DashboardIcon name="heart" />Registrar reprodução</Link>
               <BirdDetailActionMenu bird={bird} client={client.current!} onSessionExpired={refresh} onStatusChanged={handleStatusChanged} prepareStatusMutation={prepareStatusMutation} />
             </div>
           </div>
