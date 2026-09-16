@@ -74,4 +74,19 @@ describe("AuthenticatedShell", () => {
     expect(reproductionLinks.every((link) => link.getAttribute("href") === "/reproducao")).toBe(true);
     expect(reproductionLinks.some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
   });
+
+  it("opens the internal transfer request from the primary navigation", async () => {
+    render(
+      <AuthenticatedShell activeNav="transfers" email="jhonata@example.com" farmName="Criatório Aurora">
+        <div>Nova transferência</div>
+      </AuthenticatedShell>
+    );
+
+    await waitFor(() => expect(screen.getAllByText("Jhonata").length).toBeGreaterThan(0));
+
+    const transferLinks = screen.getAllByRole("link", { name: "Transferências" });
+    expect(transferLinks.length).toBeGreaterThan(0);
+    expect(transferLinks.every((link) => link.getAttribute("href") === "/transferencias/nova")).toBe(true);
+    expect(transferLinks.some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
+  });
 });

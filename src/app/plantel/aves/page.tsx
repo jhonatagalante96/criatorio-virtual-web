@@ -470,10 +470,10 @@ function BirdActionMenu({
           <span>Editar</span>
         </Link>
         <div aria-hidden="true" className="bird-row-action-divider" />
-        <button className="bird-row-action" disabled title="Módulo em desenvolvimento" type="button">
+        <Link className="bird-row-action" href={`/transferencias/nova?birdId=${encodeURIComponent(bird.birdId)}`}>
           <DashboardIcon name="transfer" />
           <span>Iniciar transferência</span>
-        </button>
+        </Link>
         <button className="bird-row-action" disabled title="Módulo em desenvolvimento" type="button">
           <DashboardIcon name="trophy" />
           <span>Registrar competição</span>

@@ -447,6 +447,7 @@ function QuickActionsSection() {
     },
     {
       description: "Registre entrada ou saída de aves",
+      href: "/transferencias/nova",
       icon: "transfer",
       title: "Nova transferência",
       tone: "blue"

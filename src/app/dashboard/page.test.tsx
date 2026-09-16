@@ -242,6 +242,7 @@ describe("DashboardPage", () => {
 
     expect(screen.getByRole("heading", { name: "Atalhos rápidos" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Cadastrar ave/ }).getAttribute("href")).toBe("/plantel/aves/novo");
+    expect(screen.getByRole("link", { name: /Nova transferência/ }).getAttribute("href")).toBe("/transferencias/nova");
     expect(screen.getByText("Registrar reprodução")).toBeTruthy();
     expect(screen.getByText("Nova transferência")).toBeTruthy();
     expect(screen.getByText("Registrar competição")).toBeTruthy();

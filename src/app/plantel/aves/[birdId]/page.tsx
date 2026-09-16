@@ -807,7 +807,7 @@ function BirdDetailActionMenu({
             variant="detail"
           />
         )}
-        <button disabled title="Módulo em desenvolvimento" type="button">Iniciar transferência</button>
+        <Link href={`/transferencias/nova?birdId=${encodeURIComponent(bird.birdId)}`}>Iniciar transferência</Link>
         <button disabled title="Módulo em desenvolvimento" type="button">Registrar competição</button>
         <button disabled title="Módulo em desenvolvimento" type="button">Baixar ficha</button>
       </div>
@@ -868,10 +868,10 @@ function BirdDetailMedia({ bird }: Readonly<{ bird: BirdDetailsResponse }>) {
   );
 }
 
-function BirdQuickActions() {
+function BirdQuickActions({ birdId }: Readonly<{ birdId: string }>) {
   const actions = [
     { icon: "heart" as const, label: "Registrar reprodução" },
-    { icon: "transfer" as const, label: "Iniciar transferência" },
+    { href: `/transferencias/nova?birdId=${encodeURIComponent(birdId)}`, icon: "transfer" as const, label: "Iniciar transferência" },
     { icon: "trophy" as const, label: "Registrar competição" },
     { icon: "document" as const, label: "Baixar ficha" }
   ];
@@ -884,7 +884,9 @@ function BirdQuickActions() {
       <ul>
         {actions.map((action) => (
           <li key={action.label}>
-            <button disabled title="Módulo em desenvolvimento" type="button"><DashboardIcon name={action.icon} /><span>{action.label}</span></button>
+            {action.href
+              ? <Link href={action.href}><DashboardIcon name={action.icon} /><span>{action.label}</span></Link>
+              : <button disabled title="Módulo em desenvolvimento" type="button"><DashboardIcon name={action.icon} /><span>{action.label}</span></button>}
           </li>
         ))}
       </ul>
@@ -1304,7 +1306,7 @@ function BirdDetailPage() {
 
         <aside aria-label="Recursos da ficha" className="bird-detail-side-column">
           <BirdDetailMedia bird={bird} />
-          <BirdQuickActions />
+          <BirdQuickActions birdId={bird.birdId} />
         </aside>
       </div>
 
