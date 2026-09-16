@@ -178,7 +178,8 @@ describe("BreedingFarmEditPage", () => {
       return new Response(null, { status: 404 });
     });
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubGlobal("URL", Object.assign(URL, {
+    const TestURL = class extends URL {};
+    vi.stubGlobal("URL", Object.assign(TestURL, {
       createObjectURL: vi.fn(() => "blob:visual-identity-preview"),
       revokeObjectURL: vi.fn()
     }));
@@ -227,6 +228,10 @@ describe("BreedingFarmEditPage", () => {
 
     expect(await screen.findByText("Escolha uma imagem PNG ou JPEG com extensão compatível.")).toBeTruthy();
     expect(screen.queryByText("Prévia da nova identidade")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Enviar minha imagem"), {
+      target: { files: [new File([new Uint8Array(10 * 1024 * 1024 + 1)], "logo.png", { type: "image/png" })] }
+    });
+    expect(await screen.findByText("A imagem deve ter no máximo 10 MB.")).toBeTruthy();
   });
 
   it("offers retry after the current identity request fails", async () => {

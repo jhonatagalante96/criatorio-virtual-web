@@ -130,6 +130,9 @@ export class ApiClient {
   async requestBlob(path: string, options: ApiRequestOptions = {}): Promise<Blob> {
     const method = options.method ?? "GET";
     const url = new URL(path, this.endpoint).toString();
+    if (new URL(url).origin !== new URL(this.endpoint).origin) {
+      throw new Error("Binary API requests must use the configured API origin.");
+    }
     const headers = new Headers(options.headers);
     headers.set("accept", options.accept ?? "application/pdf");
 

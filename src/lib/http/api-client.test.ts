@@ -140,5 +140,15 @@ describe("ApiClient", () => {
 
     expect(new Headers(fetchMock.mock.calls[0][1].headers).get("accept")).toBe("image/png");
   });
+
+  it("does not send credentialed blob requests to an origin outside the configured API", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("https://api.example.test");
+
+    await expect(client.requestBlob("https://untrusted.example/private-image"))
+      .rejects.toThrow("Binary API requests must use the configured API origin.");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
