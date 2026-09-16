@@ -440,6 +440,7 @@ function QuickActionsSection() {
     },
     {
       description: "Acompanhe seus cruzamentos",
+      href: "/reproducao/novo",
       icon: "heart",
       title: "Registrar reprodução",
       tone: "rose"
