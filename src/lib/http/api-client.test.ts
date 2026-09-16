@@ -129,5 +129,16 @@ describe("ApiClient", () => {
     expect(new Headers(fetchMock.mock.calls[0][1].headers).get("accept")).toBe("application/pdf");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("allows authenticated blob requests to declare the expected media type", async () => {
+    const image = new Blob(["png"], { type: "image/png" });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(image, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("http://localhost:5000");
+
+    await client.requestBlob("api/breeding-farms/visual-identity/content", { accept: "image/png" });
+
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get("accept")).toBe("image/png");
+  });
 });
 

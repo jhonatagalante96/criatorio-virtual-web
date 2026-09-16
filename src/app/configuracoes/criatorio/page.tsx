@@ -10,6 +10,7 @@ import { AppLoadingState } from "../../components/app-loading-state";
 import { AuthenticatedShell } from "../../components/authenticated-shell";
 import { DashboardIcon } from "../../components/dashboard-icons";
 import { postalCodeLookupMessage, usePostalCodeLookup } from "../../components/use-postal-code-lookup";
+import { VisualIdentityManager } from "./visual-identity-manager";
 
 interface AddressFields {
   city: string;
@@ -213,6 +214,8 @@ function FarmOverview({ email, settings }: Readonly<{ email: string; settings: B
           </div>
           <nav aria-label="Seções do criatório" className="farm-tabs"><a aria-current="page" href="#informacoes">Informações</a><span aria-disabled="true">Estatísticas</span><span aria-disabled="true">Galeria</span></nav>
         </section>
+
+        <VisualIdentityManager breedingFarmId={settings.breedingFarmId} farmName={settings.name} />
 
         <div className="farm-overview-grid" id="informacoes">
           <section aria-labelledby="titulo-dados-basicos" className="farm-info-card"><div className="farm-card-heading"><h2 id="titulo-dados-basicos">Dados básicos</h2></div><DetailList items={[["Nome", settings.name], ["Responsável", settings.responsibleName], ["Tipo de criatório", "Comercial"], ["Registro oficial", formatValue(settings.officialRegistrationNumber)]]} /></section>

@@ -5,6 +5,7 @@ export const ANTIFORGERY_HEADER = "X-XSRF-TOKEN";
 export type ValidationErrors = Record<string, string[]>;
 
 export interface ApiRequestOptions {
+  accept?: string;
   acceptedStatuses?: readonly number[];
   body?: BodyInit | null;
   headers?: HeadersInit;
@@ -130,7 +131,7 @@ export class ApiClient {
     const method = options.method ?? "GET";
     const url = new URL(path, this.endpoint).toString();
     const headers = new Headers(options.headers);
-    headers.set("accept", "application/pdf");
+    headers.set("accept", options.accept ?? "application/pdf");
 
     if (isMutation(method)) {
       const token = this.csrfToken();
