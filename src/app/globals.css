@@ -1286,16 +1286,25 @@ h1, h2 { line-height: 1.08; }
 .bird-genealogy-depth-control select { background: #fff; border: 1px solid #cfdde2; border-radius: .35rem; color: #173b53; font: inherit; font-size: .68rem; min-height: 2rem; padding: .35rem .5rem; }
 .bird-genealogy-depth-control select:focus-visible { border-color: #1769a0; outline: 3px solid rgb(23 105 160 / 18%); outline-offset: 1px; }
 .bird-genealogy-depth-control select:disabled { cursor: wait; opacity: .65; }
-.bird-genealogy-graph { overflow-x: auto; padding: .4rem .2rem .8rem; }
+.bird-genealogy-graph { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; padding: .4rem .2rem .8rem; scroll-padding-inline: 1rem; }
+.bird-genealogy-graph:focus-visible { border-radius: .3rem; outline: 3px solid rgb(23 105 160 / 28%); outline-offset: 2px; }
 .bird-genealogy-root, .bird-genealogy-children { align-items: center; display: flex; gap: 1.2rem; justify-content: center; list-style: none; margin: 0; min-width: max-content; padding: 0; }
 .bird-genealogy-root > .bird-genealogy-branch { align-items: center; display: flex; flex-direction: column; gap: .8rem; }
 .bird-genealogy-branch { align-items: center; display: flex; flex-direction: column; gap: .8rem; min-width: 11rem; position: relative; }
+.bird-genealogy-branch-expansion { align-items: center; display: grid; gap: .8rem; justify-items: center; }
+.bird-genealogy-expand-action { align-items: center; background: #fff; border: 1px solid #cfdde2; border-radius: .4rem; color: #17634a; cursor: pointer; display: flex; font: inherit; font-size: .62rem; font-weight: 800; gap: .3rem; justify-content: center; list-style: none; min-height: 2.75rem; padding: .4rem .55rem; text-align: center; }
+.bird-genealogy-expand-action::-webkit-details-marker { display: none; }
+.bird-genealogy-expand-action::marker { content: ""; }
+.bird-genealogy-expand-action:hover, .bird-genealogy-expand-action:focus-visible { background: #eef9f4; border-color: #72b98d; outline: 3px solid rgb(114 185 141 / 18%); outline-offset: 1px; }
 .bird-genealogy-children { align-items: flex-start; position: relative; }
 .bird-genealogy-children::before { border-top: 1px solid #cbdfe1; content: ""; left: 25%; position: absolute; right: 25%; top: -.4rem; }
 .bird-genealogy-children > .bird-genealogy-branch::before { border-left: 1px solid #cbdfe1; content: ""; height: .4rem; left: 50%; position: absolute; top: -.8rem; }
 .bird-genealogy-node { background: #f8fbfc; border: 1px solid #d9e8ea; border-radius: .6rem; color: inherit; display: grid; gap: .18rem; min-width: 11rem; padding: .65rem .7rem; text-decoration: none; }
 .bird-genealogy-node:hover, .bird-genealogy-node:focus-visible { border-color: #72b98d; box-shadow: 0 .2rem .6rem rgb(6 58 86 / 8%); outline: 0; }
 .bird-genealogy-node.is-root { background: #eef9f4; border-color: #b9dfc8; }
+.bird-genealogy-node.is-private { border-left: 4px solid #72b98d; }
+.bird-genealogy-node.is-snapshot { border-style: double; border-left-width: 4px; }
+.bird-genealogy-node.is-external { border-style: dashed; border-left-width: 4px; }
 .bird-genealogy-node.is-navigable strong { color: #1769a0; }
 .bird-genealogy-node.is-restricted { background: #fffaf0; border-color: #f0ddad; }
 .bird-genealogy-node-position { color: #557d6f; font-size: .57rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
@@ -1306,9 +1315,10 @@ h1, h2 { line-height: 1.08; }
 .bird-genealogy-edit-action:hover, .bird-genealogy-edit-action:focus-visible { background: #eef9f4; border-color: #72b98d; outline: 3px solid rgb(114 185 141 / 18%); outline-offset: 1px; }
 .bird-genealogy-legend { display: flex; flex-wrap: wrap; gap: .6rem 1rem; margin-top: .15rem; }
 .bird-genealogy-legend span { align-items: center; color: #78919a; display: inline-flex; font-size: .58rem; gap: .3rem; }
-.bird-genealogy-legend i { border-radius: 50%; display: inline-block; height: .45rem; width: .45rem; }
-.bird-genealogy-legend i.is-link { background: #72b98d; }
-.bird-genealogy-legend i.is-snapshot { background: #e1b860; }
+.bird-genealogy-legend i { display: inline-block; flex: 0 0 auto; height: .55rem; width: .55rem; }
+.bird-genealogy-legend i.is-private { background: #72b98d; border-radius: .1rem; }
+.bird-genealogy-legend i.is-snapshot { background: #fff4d8; border: 2px double #b58a37; border-radius: 50%; }
+.bird-genealogy-legend i.is-external { background: #fffaf0; border: 1px dashed #b58a37; border-radius: .1rem; }
 .external-ancestor-dialog { background: #fff; border: 1px solid #d7e5e4; border-radius: 1.1rem 1.1rem 0 0; box-shadow: 0 -.8rem 3rem rgb(5 29 42 / 20%); color: var(--ink); margin: auto 0 0; max-height: min(92dvh, 52rem); max-width: none; overflow: auto; overscroll-behavior: contain; padding: 0; width: 100%; }
 .external-ancestor-dialog::backdrop { background: rgb(4 27 39 / 52%); }
 .external-ancestor-dialog-content { display: grid; gap: 1rem; padding: 1rem; }

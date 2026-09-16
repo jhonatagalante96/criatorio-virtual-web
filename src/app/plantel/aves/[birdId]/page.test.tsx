@@ -115,6 +115,48 @@ function editableExternalGenealogyResponse(
   return genealogyResponse({ edges, nodes });
 }
 
+function recursiveGenealogyResponse(): Response {
+  const externalAncestors = [
+    { generation: 2, id: editableAncestorId, name: "Avô Externo" },
+    { generation: 3, id: "20000000-0000-4000-8000-000000000001", name: "Bisavô Externo" },
+    { generation: 4, id: "20000000-0000-4000-8000-000000000002", name: "Trisavô Externo" },
+    { generation: 5, id: "20000000-0000-4000-8000-000000000003", name: "Tetravô Externo" },
+    { generation: 6, id: "20000000-0000-4000-8000-000000000004", name: "Pentavô Externo" }
+  ];
+  const nodes = [
+    { birthDate: "2021-06-15", birdId: "bird-a", canEdit: false, canNavigate: true, generation: 0, isAccessible: true, isSnapshot: false, name: "Aurora", nodeKey: "bird:bird-a", position: "root", ringNumber: "123456", sex: "Female", source: "Private", status: "Active" },
+    { birthDate: "2018-04-10", birdId: "father-a", canEdit: false, canNavigate: true, generation: 1, isAccessible: true, isSnapshot: false, name: "Pai Azul", nodeKey: "bird:father-a", position: "father", ringNumber: "111111", sex: "Male", source: "Private", status: "Active" },
+    { birthDate: "2017-05-10", birdId: "mother-snapshot", canEdit: false, canNavigate: true, generation: 1, isAccessible: true, isSnapshot: true, name: "Mãe Vinculada", nodeKey: "snapshot:mother", position: "mother", ringNumber: "222222", sex: "Female", source: "Snapshot", status: "Archived" },
+    ...externalAncestors.map((ancestor) => ({
+      birthDate: null,
+      birdId: null,
+      canEdit: ancestor.id === editableAncestorId,
+      canNavigate: false,
+      generation: ancestor.generation,
+      isAccessible: false,
+      isSnapshot: true,
+      name: ancestor.name,
+      nodeKey: `external:${ancestor.id}`,
+      position: "father",
+      ringNumber: null,
+      sex: "Male",
+      source: "External",
+      status: null
+    }))
+  ];
+  const edges = [
+    { childNodeKey: "bird:bird-a", parentNodeKey: "snapshot:mother", position: "mother" },
+    { childNodeKey: "bird:bird-a", parentNodeKey: "bird:father-a", position: "father" },
+    { childNodeKey: "bird:father-a", parentNodeKey: `external:${externalAncestors[0].id}`, position: "father" },
+    ...externalAncestors.slice(0, -1).map((ancestor, index) => ({
+      childNodeKey: `external:${ancestor.id}`,
+      parentNodeKey: `external:${externalAncestors[index + 1].id}`,
+      position: "father"
+    }))
+  ];
+  return genealogyResponse({ edges, isTruncated: true, maxGenerations: 6, nodes });
+}
+
 function antiforgeryTokenResponse(): Response {
   return new Response(null, { headers: { "X-XSRF-TOKEN": "test-csrf-token" }, status: 204 });
 }
@@ -285,6 +327,49 @@ describe("BirdDetailPage", () => {
     expect(within(tree).getByRole("list", { name: "Pais de Pai Azul" })).toBeTruthy();
   });
 
+  it("shows recursive mixed ancestry through generation six with accessible branch expansion", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(eligibilityResponse())
+      .mockResolvedValueOnce(genealogyResponse())
+      .mockResolvedValueOnce(recursiveGenealogyResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openDetail(fetchMock);
+    fireEvent.change(screen.getByLabelText("Gerações exibidas"), { target: { value: "6" } });
+
+    await waitFor(() => expect(screen.getByText("Mãe Vinculada")).toBeTruthy());
+    const tree = screen.getByRole("region", { name: "Árvore genealógica" });
+    expect(tree.getAttribute("tabindex")).toBe("0");
+    expect(String(fetchMock.mock.calls[5][0])).toContain("/api/birds/bird-a/genealogy?maxGenerations=6");
+
+    const rootParents = within(tree).getByRole("list", { name: "Pais de Aurora" });
+    const rootParentNames = Array.from(rootParents.children).map((item) =>
+      within(item as HTMLElement).getByText(/Pai Azul|Mãe Vinculada/).textContent
+    );
+    expect(rootParentNames).toEqual(["Pai Azul", "Mãe Vinculada"]);
+    expect(within(tree).getByRole("link", { name: /Pai Azul/ }).className).toContain("is-private");
+    expect(within(tree).getByRole("link", { name: /Mãe Vinculada/ }).getAttribute("href")).toBe("/plantel/aves/mother-snapshot");
+    expect(within(tree).getByRole("link", { name: /Mãe Vinculada/ }).className).toContain("is-snapshot");
+    expect(within(tree).queryByRole("link", { name: /Avô Externo/ })).toBeNull();
+    expect(within(tree).getByRole("button", { name: "Editar ascendência" })).toBeTruthy();
+    expect(within(tree).getAllByText("Ancestral externo · sem cadastro")).toHaveLength(5);
+    expect(within(tree).getByText("Registro preservado · disponível para consulta")).toBeTruthy();
+    expect(screen.getByText("A árvore foi limitada a 6 gerações para manter a consulta rápida.")).toBeTruthy();
+
+    for (const [ancestorName, parentName] of [
+      ["Avô Externo", "Bisavô Externo"],
+      ["Bisavô Externo", "Trisavô Externo"],
+      ["Trisavô Externo", "Tetravô Externo"],
+      ["Tetravô Externo", "Pentavô Externo"]
+    ]) {
+      fireEvent.click(within(tree).getByLabelText(`Expandir pais de ${ancestorName}`));
+      await waitFor(() => expect(within(tree).getByText(parentName)).toBeTruthy());
+    }
+  });
+
   it("keeps ancestry editing hidden unless the API authorizes the external node", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
@@ -324,6 +409,9 @@ describe("BirdDetailPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await openDetail(fetchMock);
+    const initialTree = screen.getByRole("region", { name: "Árvore genealógica" });
+    Object.defineProperty(initialTree, "scrollLeft", { configurable: true, value: 180, writable: true });
+    fireEvent.scroll(initialTree);
     fireEvent.click(screen.getByRole("button", { name: "Adicionar ascendência" }));
     const dialog = await screen.findByRole("dialog", { name: "Adicionar ascendência" });
     fireEvent.change(within(dialog).getByLabelText("Posição"), { target: { value: "father" } });
@@ -341,6 +429,7 @@ describe("BirdDetailPage", () => {
     expect(new Headers(mutationOptions.headers).get("X-XSRF-TOKEN")).toBe("test-csrf-token");
     expect(String(fetchMock.mock.calls[7][0])).toContain("/api/birds/bird-a/genealogy?maxGenerations=2");
     await waitFor(() => expect(screen.getByText("Avô Azul")).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("region", { name: "Árvore genealógica" }).scrollLeft).toBe(180));
     expect(fetchMock.mock.calls.some(([, options]) => options?.method === "POST")).toBe(false);
   });
 
