@@ -75,7 +75,7 @@ describe("AuthenticatedShell", () => {
     expect(reproductionLinks.some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
   });
 
-  it("opens the internal transfer request from the primary navigation", async () => {
+  it("opens the transfer list from the primary navigation", async () => {
     render(
       <AuthenticatedShell activeNav="transfers" email="jhonata@example.com" farmName="Criatório Aurora">
         <div>Nova transferência</div>
@@ -86,7 +86,7 @@ describe("AuthenticatedShell", () => {
 
     const transferLinks = screen.getAllByRole("link", { name: "Transferências" });
     expect(transferLinks.length).toBeGreaterThan(0);
-    expect(transferLinks.every((link) => link.getAttribute("href") === "/transferencias/nova")).toBe(true);
+    expect(transferLinks.every((link) => link.getAttribute("href") === "/transferencias")).toBe(true);
     expect(transferLinks.some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
   });
 });
