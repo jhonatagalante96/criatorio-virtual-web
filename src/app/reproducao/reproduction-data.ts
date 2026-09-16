@@ -47,6 +47,19 @@ export interface ReproductionDetailsResponse extends ReproductionListItem {
   notes: string | null;
 }
 
+export interface ReproductionOriginBirdOption {
+  birthDate: string | null;
+  birdId: string;
+  name: string;
+  ringNumber: string | null;
+  sex: string;
+}
+
+export interface ReproductionOriginBirdOptionsResponse {
+  breedingFarmId: string;
+  items: ReproductionOriginBirdOption[];
+}
+
 export function normalizeFarmResponse(value: BreedingFarmSelectionResponse): BreedingFarmSelectionResponse {
   return {
     breedingFarms: Array.isArray(value.breedingFarms) ? value.breedingFarms : [],

@@ -54,6 +54,24 @@ function mutationResponse(overrides: Record<string, unknown> = {}): Response {
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
+function originOptionsResponse(items: Record<string, unknown>[]): Response {
+  return new Response(JSON.stringify({ breedingFarmId: "farm-a", items }), {
+    headers: { "content-type": "application/json" },
+    status: 200
+  });
+}
+
+function originBirdOption(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    birthDate: "2024-10-02",
+    birdId: "bird-child",
+    name: "Filhote Sol",
+    ringNumber: "987654",
+    sex: "Unknown",
+    ...overrides
+  };
+}
+
 describe("ReproductionDetailScreen", () => {
   it("renders origin bird snapshots and never requests current bird profiles", async () => {
     const fetchMock = vi.fn()
@@ -277,5 +295,163 @@ describe("ReproductionDetailScreen", () => {
     const notes = screen.getByRole("textbox", { name: /Observações/ });
     expect(document.getElementById(endDate.getAttribute("aria-describedby") ?? "")?.textContent).toBe("Confira a data de término informada.");
     expect(document.getElementById(notes.getAttribute("aria-describedby") ?? "")?.textContent).toBe("As observações não podem exceder 2.000 caracteres.");
+  });
+
+  it("searches eligible birds, reviews the pair, and links only after explicit confirmation", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(originOptionsResponse([
+        originBirdOption({ birdId: "bird-male", name: "Macho na origem", ringNumber: "123456", sex: "Male" }),
+        originBirdOption({ birdId: "bird-female", name: "Fêmea na origem", ringNumber: "234567", sex: "Female" }),
+        originBirdOption({ birdId: "bird-pending", name: "Sem anilha", ringNumber: null }),
+        originBirdOption({ birdId: "bird-invalid", name: "Anilha inválida", ringNumber: "12345x" }),
+        originBirdOption()
+      ]))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ birdId: "bird-child" }), {
+        headers: { "content-type": "application/json" },
+        status: 200
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReproductionDetailScreen reproductionId="reproduction-a" />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Vincular origem reprodutiva" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Vincular origem reprodutiva" }));
+    fireEvent.change(screen.getByLabelText("Buscar ave por nome ou anilha"), { target: { value: "Filhote Sol" } });
+
+    const option = await screen.findByRole("option", { name: /Filhote Sol/ });
+    expect(screen.queryByRole("option", { name: /Macho na origem/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /Fêmea na origem/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /Sem anilha/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /Anilha inválida/ })).toBeNull();
+    expect(String(fetchMock.mock.calls[2][0])).toContain("/api/birds/parent-options?search=Filhote%20Sol&limit=20");
+
+    fireEvent.click(option);
+    expect(screen.getByRole("heading", { name: "Revisar vínculo" })).toBeTruthy();
+    expect(screen.getAllByText("Filhote Sol").length).toBeGreaterThan(0);
+    expect(screen.getByText("Aurora na origem × Brisa na origem")).toBeTruthy();
+    const confirm = screen.getByRole("button", { name: "Confirmar vínculo" }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confirmo que esta ave é filha do casal desta reprodução." }));
+    expect(confirm.disabled).toBe(false);
+    fireEvent.click(confirm);
+
+    await waitFor(() => expect(screen.getByText("Origem reprodutiva vinculada a Filhote Sol.")).toBeTruthy());
+    expect(fetchMock.mock.calls[3][1]?.method).toBe("POST");
+    expect(String(fetchMock.mock.calls[3][0])).toContain("/api/reproductions/reproduction-a/origin");
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1]?.body))).toEqual({ birdId: "bird-child", confirmed: true });
+  });
+
+  it("refreshes an expired session and retries the origin link once", async () => {
+    const unauthorized = new Response(JSON.stringify({ status: 401, title: "Authentication is required." }), {
+      headers: { "content-type": "application/problem+json" },
+      status: 401
+    });
+    const linked = new Response(JSON.stringify({ birdId: "bird-child" }), {
+      headers: { "content-type": "application/json" },
+      status: 200
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(originOptionsResponse([originBirdOption()]))
+      .mockResolvedValueOnce(unauthorized)
+      .mockResolvedValueOnce(linked);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReproductionDetailScreen reproductionId="reproduction-a" />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Vincular origem reprodutiva" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Vincular origem reprodutiva" }));
+    fireEvent.change(screen.getByLabelText("Buscar ave por nome ou anilha"), { target: { value: "Filhote Sol" } });
+    fireEvent.click(await screen.findByRole("option", { name: /Filhote Sol/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confirmo que esta ave é filha do casal desta reprodução." }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar vínculo" }));
+
+    await waitFor(() => expect(screen.getByText("Origem reprodutiva vinculada a Filhote Sol.")).toBeTruthy());
+    expect(authState.refresh).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock.mock.calls[3][1]?.method).toBe("POST");
+    expect(fetchMock.mock.calls[4][1]?.method).toBe("POST");
+    expect(JSON.parse(String(fetchMock.mock.calls[4][1]?.body))).toEqual({ birdId: "bird-child", confirmed: true });
+  });
+
+  it("shows backend genealogy-cycle validation without losing the selected bird", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(originOptionsResponse([originBirdOption()]))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        status: 400,
+        title: "Reproduction origin data is invalid.",
+        errors: { BirdId: ["The selected bird would create a genealogy cycle."] }
+      }), {
+        headers: { "content-type": "application/problem+json" },
+        status: 400
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReproductionDetailScreen reproductionId="reproduction-a" />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Vincular origem reprodutiva" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Vincular origem reprodutiva" }));
+    fireEvent.change(screen.getByLabelText("Buscar ave por nome ou anilha"), { target: { value: "Filhote Sol" } });
+    fireEvent.click(await screen.findByRole("option", { name: /Filhote Sol/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confirmo que esta ave é filha do casal desta reprodução." }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar vínculo" }));
+
+    expect(await screen.findByText("Esse vínculo criaria um ciclo na genealogia. Escolha outra ave.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Revisar vínculo" })).toBeTruthy();
+    expect(screen.getAllByText("Filhote Sol").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Alterar seleção" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Atualizar reprodução" })).toBeNull();
+  });
+
+  it("explains when the selected bird already has a genealogy origin", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(originOptionsResponse([originBirdOption()]))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        status: 409,
+        title: "The selected bird already has another genealogy origin."
+      }), {
+        headers: { "content-type": "application/problem+json" },
+        status: 409
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReproductionDetailScreen reproductionId="reproduction-a" />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Vincular origem reprodutiva" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Vincular origem reprodutiva" }));
+    fireEvent.change(screen.getByLabelText("Buscar ave por nome ou anilha"), { target: { value: "Filhote Sol" } });
+    fireEvent.click(await screen.findByRole("option", { name: /Filhote Sol/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confirmo que esta ave é filha do casal desta reprodução." }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar vínculo" }));
+
+    expect(await screen.findByText("Esta ave já possui outra origem genealógica. Escolha outra ave para vincular.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Alterar seleção" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Atualizar reprodução" })).toBeNull();
+  });
+
+  it("shows a recoverable search error and retries loading eligible birds", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: 403, title: "Forbidden" }), {
+        headers: { "content-type": "application/problem+json" },
+        status: 403
+      }))
+      .mockResolvedValueOnce(originOptionsResponse([originBirdOption()]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReproductionDetailScreen reproductionId="reproduction-a" />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Vincular origem reprodutiva" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Vincular origem reprodutiva" }));
+    fireEvent.change(screen.getByLabelText("Buscar ave por nome ou anilha"), { target: { value: "Filhote Sol" } });
+
+    expect(await screen.findByText("Sua conta não tem permissão para buscar aves deste criatório.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+
+    expect(await screen.findByRole("option", { name: /Filhote Sol/ })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });
