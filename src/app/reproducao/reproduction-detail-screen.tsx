@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../lib/http/api-client";
@@ -17,12 +17,15 @@ import {
   reproductionStatusLabel,
   selectedFarmFromResponse,
   type BreedingFarmSelectionResponse,
+  type ReproductionOriginBirdOption,
+  type ReproductionOriginBirdOptionsResponse,
   type ReproductionDetailsResponse
 } from "./reproduction-data";
 
 type FarmState = "blocked" | "error" | "loading" | "ready";
 type DetailState = "error" | "loading" | "ready";
-type ReproductionDialogMode = "cancel" | "correct-notes" | "edit" | "finish";
+type OriginSearchState = "empty" | "error" | "idle" | "loading" | "ready";
+type ReproductionDialogMode = "cancel" | "correct-notes" | "edit" | "finish" | "link-origin";
 
 type ReproductionMutationResponse = Pick<
   ReproductionDetailsResponse,
@@ -65,6 +68,58 @@ function reproductionMutationErrorMessage(error: unknown): string {
   if (error instanceof StaleTenantResponseError) return "O criatório selecionado mudou. Atualize os dados antes de continuar.";
   if (error instanceof TypeError) return "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.";
   return "Não foi possível salvar as alterações. Tente novamente.";
+}
+
+function reproductionOriginSearchErrorMessage(error: unknown): string {
+  if (error instanceof StaleTenantResponseError) return "O criatório selecionado mudou. Atualize a reprodução antes de buscar aves.";
+  if (!(error instanceof ApiError)) return "Não foi possível buscar aves cadastradas. Verifique sua conexão e tente novamente.";
+  if (error.status === 401) return "Sua sessão expirou. Atualize a sessão e tente buscar novamente.";
+  if (error.status === 403) return "Sua conta não tem permissão para buscar aves deste criatório.";
+  if (error.status === 404) return "O criatório selecionado não está disponível.";
+  if (error.status === 409) return "Selecione novamente um criatório antes de buscar aves.";
+  if (error.status >= 500) return "A busca está indisponível no momento. Tente novamente em instantes.";
+  return "Não foi possível buscar aves cadastradas. Verifique sua conexão e tente novamente.";
+}
+
+function reproductionOriginMutationErrorMessage(error: unknown): string {
+  if (error instanceof StaleTenantResponseError) return "O criatório selecionado mudou. Atualize os dados antes de vincular a origem.";
+  if (!(error instanceof ApiError)) return "Não foi possível vincular a origem reprodutiva. Verifique sua conexão e tente novamente.";
+  if (error.status === 400) {
+    const birdError = firstFieldError(error.fields, "BirdId")?.toLowerCase() ?? "";
+    if (birdError.includes("own offspring")) return "Uma das aves do casal não pode ser vinculada como filhote desta reprodução.";
+    if (birdError.includes("cycle")) return "Esse vínculo criaria um ciclo na genealogia. Escolha outra ave.";
+    if (birdError.includes("six-digit")) return "Escolha uma ave ativa com anilha válida de seis dígitos.";
+    if (birdError.includes("not found")) return "A ave selecionada não está mais disponível. Busque outra ave.";
+    if (firstFieldError(error.fields, "Confirmed")) return "Confirme o vínculo antes de continuar.";
+    return "Revise a ave selecionada e tente confirmar o vínculo novamente.";
+  }
+  if (error.status === 401) return "Sua sessão expirou. Atualize a sessão e tente vincular novamente.";
+  if (error.status === 403) return "Sua conta não tem permissão para alterar esta reprodução.";
+  if (error.status === 404) return "Esta reprodução não está disponível no criatório selecionado. Atualize os dados antes de continuar.";
+  if (error.status === 409) {
+    const message = error.message.toLowerCase();
+    if (message.includes("already has another genealogy origin")) return "Esta ave já possui outra origem genealógica. Escolha outra ave para vincular.";
+    if (message.includes("changed by another request")) return "A ave foi alterada por outra solicitação. Atualize os dados e tente novamente.";
+    if (message.includes("breeding farm must be selected")) return "Selecione novamente um criatório antes de vincular a origem.";
+    return "O vínculo mudou desde a última consulta. Atualize os dados antes de tentar novamente.";
+  }
+  if (error.status >= 500) return "O serviço está indisponível no momento. Tente novamente em instantes.";
+  return "Não foi possível vincular a origem reprodutiva. Confira os dados e tente novamente.";
+}
+
+function isEligibleOriginBird(option: ReproductionOriginBirdOption, detail: ReproductionDetailsResponse): boolean {
+  return /^\d{6}$/.test(option.ringNumber ?? "") &&
+    option.birdId !== detail.maleBird.birdId &&
+    option.birdId !== detail.femaleBird.birdId;
+}
+
+function formatOriginBirdOption(option: ReproductionOriginBirdOption): string {
+  const details = [
+    "Anilha " + (option.ringNumber ?? "Não informada"),
+    birdSexLabel(option.sex),
+    option.birthDate ? "Nascimento " + formatReproductionDate(option.birthDate) : undefined
+  ].filter(Boolean);
+  return details.join(" · ");
 }
 
 function farmErrorMessage(error: unknown): string {
@@ -134,6 +189,13 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
   const [detail, setDetail] = useState<ReproductionDetailsResponse>();
   const [detailError, setDetailError] = useState<string>();
   const [detailState, setDetailState] = useState<DetailState>("loading");
+  const [originQuery, setOriginQuery] = useState("");
+  const [originOptions, setOriginOptions] = useState<ReproductionOriginBirdOption[]>([]);
+  const [selectedOriginBird, setSelectedOriginBird] = useState<ReproductionOriginBirdOption>();
+  const [originSearchState, setOriginSearchState] = useState<OriginSearchState>("idle");
+  const [originSearchError, setOriginSearchError] = useState<string>();
+  const [originSearchRetry, setOriginSearchRetry] = useState(0);
+  const [isOriginConfirmed, setIsOriginConfirmed] = useState(false);
   const [dialogMode, setDialogMode] = useState<ReproductionDialogMode>();
   const [actionError, setActionError] = useState<string>();
   const [actionNotice, setActionNotice] = useState<string>();
@@ -150,6 +212,8 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
   const firstTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const actionTriggerRef = useRef<HTMLButtonElement | null>(null);
   const actionNoticeRef = useRef<HTMLParagraphElement | null>(null);
+  const originSearchId = useId();
+  const originOptionsId = useId();
 
   if (!client.current) client.current = createApiClient();
 
@@ -228,6 +292,53 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
   }, [farmState, loadDetails, selectedFarmId, status]);
 
   useEffect(() => {
+    if (dialogMode !== "link-origin" || !selectedFarmId || !detail) return;
+    const query = originQuery.trim();
+    if (query.length < 2) {
+      setOriginOptions([]);
+      setOriginSearchError(undefined);
+      setOriginSearchState("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+    setOriginOptions([]);
+    setOriginSearchError(undefined);
+    setOriginSearchState("loading");
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await client.current!.request<ReproductionOriginBirdOptionsResponse>(
+          "api/birds/parent-options?search=" + encodeURIComponent(query) + "&limit=20",
+          { signal: controller.signal }
+        );
+        if (controller.signal.aborted) return;
+        const options = Array.isArray(response.items)
+          ? response.items.filter((option) => isEligibleOriginBird(option, detail))
+          : [];
+        setOriginOptions(options);
+        setOriginSearchState(options.length > 0 ? "ready" : "empty");
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiError && error.status === 401) {
+          const recovered = await refresh({ showLoading: false });
+          if (controller.signal.aborted) return;
+          if (recovered.ok) {
+            setOriginSearchRetry((value) => value + 1);
+            return;
+          }
+        }
+        setOriginSearchError(reproductionOriginSearchErrorMessage(error));
+        setOriginSearchState("error");
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [detail, dialogMode, originQuery, originSearchRetry, refresh, selectedFarmId]);
+
+  useEffect(() => {
     if (!dialogMode) return;
     (firstInputRef.current ?? firstTextAreaRef.current)?.focus();
   }, [dialogMode]);
@@ -240,6 +351,12 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
     setActionNotice(undefined);
     setRefreshAfterActionError(false);
     setIsConfirmed(false);
+    setOriginQuery("");
+    setOriginOptions([]);
+    setSelectedOriginBird(undefined);
+    setOriginSearchState("idle");
+    setOriginSearchError(undefined);
+    setIsOriginConfirmed(false);
     setEditStartDate(detail.startDate);
     setEditEndDate(detail.endDate ?? "");
     setEditNotes(detail.notes ?? "");
@@ -252,7 +369,29 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
     setDialogMode(undefined);
     setActionError(undefined);
     setFieldErrors({});
+    setOriginQuery("");
+    setOriginOptions([]);
+    setSelectedOriginBird(undefined);
+    setIsOriginConfirmed(false);
     window.setTimeout(() => actionTriggerRef.current?.focus(), 0);
+  }
+
+  function chooseOriginBird(option: ReproductionOriginBirdOption) {
+    setSelectedOriginBird(option);
+    setOriginQuery("");
+    setOriginOptions([]);
+    setOriginSearchState("idle");
+    setOriginSearchError(undefined);
+    setIsOriginConfirmed(false);
+    setActionError(undefined);
+    setFieldErrors({});
+  }
+
+  function changeOriginBird() {
+    setSelectedOriginBird(undefined);
+    setIsOriginConfirmed(false);
+    setActionError(undefined);
+    setFieldErrors({});
   }
 
   function handleDialogKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -296,6 +435,8 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
       else if (detail && finishEndDate < detail.startDate) errors.endDate = "A data de término não pode ser anterior ao início.";
       else if (finishEndDate > today) errors.endDate = "A data de término não pode ser futura.";
     }
+    if (dialogMode === "link-origin" && !selectedOriginBird) errors.birdId = "Busque e selecione uma ave elegível.";
+    if (dialogMode === "link-origin" && !isOriginConfirmed) errors.confirmed = "Confirme o vínculo antes de continuar.";
     if ((dialogMode === "finish" || dialogMode === "cancel") && !isConfirmed) {
       errors.confirmed = "Confirme a alteração antes de continuar.";
     }
@@ -321,6 +462,62 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
     }
   }
 
+  async function requestOriginMutation(birdId: string, recoverSession = true): Promise<void> {
+    try {
+      await client.current!.request<unknown>(
+        "api/reproductions/" + encodeURIComponent(reproductionId) + "/origin",
+        {
+          body: JSON.stringify({ birdId, confirmed: true }),
+          headers: { "content-type": "application/json" },
+          method: "POST"
+        }
+      );
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401 && recoverSession) {
+        const result = await refresh({ showLoading: false });
+        if (result.ok) return requestOriginMutation(birdId, false);
+      }
+      throw error;
+    }
+  }
+
+  async function submitOriginMutation() {
+    if (!selectedOriginBird) return;
+    setIsSubmitting(true);
+    setActionError(undefined);
+    setFieldErrors({});
+    setRefreshAfterActionError(false);
+    try {
+      await requestOriginMutation(selectedOriginBird.birdId);
+      setActionNotice("Origem reprodutiva vinculada a " + selectedOriginBird.name + ".");
+      setDialogMode(undefined);
+      window.setTimeout(() => actionNoticeRef.current?.focus(), 0);
+    } catch (error) {
+      const hasFieldValidation = error instanceof ApiError && error.status === 400 && (
+        Boolean(firstFieldError(error.fields, "BirdId")) || Boolean(firstFieldError(error.fields, "Confirmed"))
+      );
+      setActionError(hasFieldValidation ? "Revise os dados do vínculo destacados abaixo." : reproductionOriginMutationErrorMessage(error));
+      if (error instanceof ApiError) {
+        if (error.status === 400) {
+          const serverErrors: Record<string, string> = {};
+          if (firstFieldError(error.fields, "BirdId")) {
+            serverErrors.birdId = reproductionOriginMutationErrorMessage(error);
+          }
+          if (firstFieldError(error.fields, "Confirmed")) {
+            serverErrors.confirmed = "Confirme o vínculo antes de continuar.";
+          }
+          setFieldErrors(serverErrors);
+        }
+        const alreadyLinked = error.status === 409 && error.message.toLowerCase().includes("already has another genealogy origin");
+        setRefreshAfterActionError(error.status === 404 || (error.status === 409 && !alreadyLinked));
+      } else if (error instanceof StaleTenantResponseError) {
+        setRefreshAfterActionError(true);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function submitDialog(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!dialogMode || !detail || isSubmitting) return;
@@ -328,6 +525,11 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
     const nextErrors = validateDialog();
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors);
+      return;
+    }
+
+    if (dialogMode === "link-origin") {
+      await submitOriginMutation();
       return;
     }
 
@@ -429,21 +631,27 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
 
   const isActive = detail.status === "Active";
   const isTerminal = detail.status === "Finished" || detail.status === "Cancelled";
-  const dialogTitle = dialogMode === "finish"
+  const dialogTitle = dialogMode === "link-origin"
+    ? "Vincular ave como filhote"
+    : dialogMode === "finish"
     ? "Encerrar reprodução?"
     : dialogMode === "cancel"
       ? "Cancelar reprodução?"
       : dialogMode === "correct-notes"
         ? "Corrigir observações"
         : "Editar reprodução";
-  const dialogIntro = dialogMode === "finish"
+  const dialogIntro = dialogMode === "link-origin"
+    ? "Escolha uma ave ativa do criatório selecionado e confira a origem antes de confirmar o vínculo."
+    : dialogMode === "finish"
     ? "Informe a data de término. Depois do encerramento, o casal e o período ficam preservados e somente as observações podem ser corrigidas."
     : dialogMode === "cancel"
       ? "A reprodução será marcada como cancelada e permanecerá no histórico. Depois disso, somente as observações poderão ser corrigidas."
       : dialogMode === "correct-notes"
         ? "O casal e o período deste registro são preservados. O contrato permite corrigir somente as observações de uma reprodução encerrada ou cancelada."
         : "Ajuste o período e as observações. O casal registrado será mantido nesta edição.";
-  const canSubmitDialog = !isSubmitting && (!(dialogMode === "finish" || dialogMode === "cancel") || isConfirmed);
+  const canSubmitDialog = !isSubmitting && (dialogMode === "link-origin"
+    ? Boolean(selectedOriginBird && isOriginConfirmed)
+    : (!(dialogMode === "finish" || dialogMode === "cancel") || isConfirmed));
 
   return (
     <AuthenticatedShell activeNav="reproduction" email={session.email} farmName={farmName}>
@@ -459,14 +667,15 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
             <div><p className="eyebrow">Período da reprodução</p><h2 id="titulo-detalhes-reproducao">{formatReproductionDate(detail.startDate)}{detail.endDate ? ` — ${formatReproductionDate(detail.endDate)}` : " — em andamento"}</h2></div>
             <div className="reproduction-detail-heading-aside">
               <span className={`reproduction-status-badge ${reproductionStatusClass(detail.status)}`}>{reproductionStatusLabel(detail.status)}</span>
-              {isActive && <div aria-label="Ações da reprodução" className="reproduction-detail-actions">
-                <button className="auth-secondary-action" onClick={(event) => openDialog("edit", event)} type="button">Editar dados</button>
-                <button className="auth-primary-action" onClick={(event) => openDialog("finish", event)} type="button">Encerrar reprodução</button>
-                <button className="reproduction-cancel-action" onClick={(event) => openDialog("cancel", event)} type="button">Cancelar reprodução</button>
-              </div>}
-              {isTerminal && <div aria-label="Ações da reprodução" className="reproduction-detail-actions">
-                <button className="auth-secondary-action" onClick={(event) => openDialog("correct-notes", event)} type="button">Corrigir observações</button>
-              </div>}
+              <div aria-label="Ações da reprodução" className="reproduction-detail-actions">
+                {isActive && <>
+                  <button className="auth-secondary-action" onClick={(event) => openDialog("edit", event)} type="button">Editar dados</button>
+                  <button className="auth-primary-action" onClick={(event) => openDialog("finish", event)} type="button">Encerrar reprodução</button>
+                  <button className="reproduction-cancel-action" onClick={(event) => openDialog("cancel", event)} type="button">Cancelar reprodução</button>
+                </>}
+                {isTerminal && <button className="auth-secondary-action" onClick={(event) => openDialog("correct-notes", event)} type="button">Corrigir observações</button>}
+                <button className="auth-secondary-action" onClick={(event) => openDialog("link-origin", event)} type="button">Vincular origem reprodutiva</button>
+              </div>
             </div>
           </header>
 
@@ -524,6 +733,78 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
               noValidate
               onSubmit={(event) => void submitDialog(event)}
             >
+              {dialogMode === "link-origin" && <>
+                <section aria-label="Buscar ave elegível" className="reproduction-origin-search">
+                  <label className="bird-status-dialog-field" htmlFor={originSearchId}>
+                    <span>Buscar ave por nome ou anilha</span>
+                    <input
+                      aria-controls={originOptionsId}
+                      aria-describedby={originSearchId + "-help"}
+                      autoComplete="off"
+                      disabled={isSubmitting || Boolean(selectedOriginBird)}
+                      id={originSearchId}
+                      maxLength={100}
+                      onChange={(event) => {
+                        setOriginQuery(event.target.value);
+                        setSelectedOriginBird(undefined);
+                        setIsOriginConfirmed(false);
+                        setActionError(undefined);
+                        setFieldErrors({});
+                      }}
+                      placeholder="Ex.: Filhote Azul ou 930001"
+                      ref={firstInputRef}
+                      type="search"
+                      value={originQuery}
+                    />
+                  </label>
+                  <p className="external-ancestor-help" id={originSearchId + "-help"}>Digite ao menos dois caracteres. A busca considera aves ativas do criatório selecionado com anilha de seis dígitos.</p>
+                  {selectedOriginBird && <div className="external-ancestor-selected" role="status">
+                    <span><strong>{selectedOriginBird.name}</strong><small>{formatOriginBirdOption(selectedOriginBird)}</small></span>
+                    <button className="text-action" disabled={isSubmitting} onClick={changeOriginBird} type="button">Alterar seleção</button>
+                  </div>}
+                  <div aria-live="polite" className="external-ancestor-results" id={originOptionsId}>
+                    {originSearchState === "loading" && <p role="status">Buscando aves elegíveis…</p>}
+                    {originSearchState === "idle" && !selectedOriginBird && <p role="status">Digite ao menos dois caracteres para buscar.</p>}
+                    {originSearchState === "empty" && <p role="status">Nenhuma ave elegível encontrada. Confira o nome ou a anilha informada.</p>}
+                    {originSearchState === "error" && <div className="external-ancestor-search-error">
+                      <p role="alert">{originSearchError}</p>
+                      <button className="auth-secondary-action" disabled={isSubmitting} onClick={() => setOriginSearchRetry((value) => value + 1)} type="button">Tentar novamente</button>
+                    </div>}
+                    {originSearchState === "ready" && <ul aria-label="Aves elegíveis" className="external-ancestor-options" role="listbox">
+                      {originOptions.map((option) => <li key={option.birdId}>
+                        <button aria-selected={false} disabled={isSubmitting} onClick={() => chooseOriginBird(option)} role="option" type="button">
+                          <strong>{option.name}</strong>
+                          <span>{formatOriginBirdOption(option)}</span>
+                        </button>
+                      </li>)}
+                    </ul>}
+                  </div>
+                  {fieldErrors.birdId && <small className="reproduction-field-error" role="alert">{fieldErrors.birdId}</small>}
+                </section>
+
+                <section aria-labelledby="reproduction-origin-review-title" className="reproduction-origin-review">
+                  <h3 id="reproduction-origin-review-title">Revisar vínculo</h3>
+                  <dl>
+                    <div><dt>Ave vinculada</dt><dd>{selectedOriginBird?.name ?? "Selecione uma ave elegível"}</dd></div>
+                    <div><dt>Anilha</dt><dd>{selectedOriginBird?.ringNumber ?? "Não informada"}</dd></div>
+                    <div><dt>Sexo</dt><dd>{selectedOriginBird ? birdSexLabel(selectedOriginBird.sex) : "Não informado"}</dd></div>
+                    <div><dt>Origem reprodutiva</dt><dd>{detail.maleBird.name} × {detail.femaleBird.name}</dd></div>
+                  </dl>
+                </section>
+
+                <label className="bird-status-confirmation">
+                  <input
+                    aria-describedby={fieldErrors.confirmed ? "erro-confirmacao-origem" : undefined}
+                    checked={isOriginConfirmed}
+                    disabled={isSubmitting || !selectedOriginBird}
+                    onChange={(event) => { setIsOriginConfirmed(event.target.checked); setFieldErrors({}); setActionError(undefined); }}
+                    type="checkbox"
+                  />
+                  <span>Confirmo que esta ave é filha do casal desta reprodução.</span>
+                </label>
+                {fieldErrors.confirmed && <small className="reproduction-field-error" id="erro-confirmacao-origem">{fieldErrors.confirmed}</small>}
+              </>}
+
               {dialogMode === "edit" && <>
                 <div className="reproduction-edit-pair"><strong>Casal mantido</strong><span>{detail.maleBird.name} × {detail.femaleBird.name}</span></div>
                 <div className="reproduction-date-grid">
@@ -627,7 +908,7 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
                   disabled={!canSubmitDialog}
                   type="submit"
                 >
-                  {isSubmitting ? "Salvando…" : dialogMode === "finish" ? "Confirmar encerramento" : dialogMode === "cancel" ? "Confirmar cancelamento" : dialogMode === "correct-notes" ? "Salvar observações" : "Salvar alterações"}
+                {isSubmitting ? dialogMode === "link-origin" ? "Vinculando…" : "Salvando…" : dialogMode === "link-origin" ? "Confirmar vínculo" : dialogMode === "finish" ? "Confirmar encerramento" : dialogMode === "cancel" ? "Confirmar cancelamento" : dialogMode === "correct-notes" ? "Salvar observações" : "Salvar alterações"}
                 </button>
               </div>
             </form>
