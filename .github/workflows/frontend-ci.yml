@@ -2,8 +2,7 @@ name: Frontend CI
 
 on:
   pull_request:
-    branches: [develop]
-  push:
+    types: [closed]
     branches: [develop, main]
 
 permissions:
@@ -11,6 +10,7 @@ permissions:
 
 jobs:
   validate:
+    if: github.event.pull_request.merged == true
     name: Validate frontend
     runs-on: ubuntu-latest
     timeout-minutes: 10
