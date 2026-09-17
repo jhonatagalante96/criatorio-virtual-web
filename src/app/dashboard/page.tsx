@@ -102,13 +102,18 @@ function normalizeDashboard(value: unknown): DashboardData {
   const rawPending = Array.isArray(root.pending) ? root.pending : undefined;
   const rawActivities = Array.isArray(root.activities) ? root.activities : undefined;
 
-  const pending = (rawPending ?? []).filter(isRecord).map((item) => ({
-    code: stringValue(item.code, "Pending"),
-    count: countValue(item.count),
-    imageUrl: nullableString(item.imageUrl),
-    resourceType: stringValue(item.resourceType, ""),
-    title: stringValue(item.title, "Pendência no criatório")
-  }));
+  const pending = (rawPending ?? []).filter(isRecord).map((item) => {
+    const code = stringValue(item.code, "Pending");
+    return {
+      code,
+      count: countValue(item.count),
+      imageUrl: nullableString(item.imageUrl),
+      resourceType: stringValue(item.resourceType, ""),
+      title: code === "BirdIdentificationPending"
+        ? "Aves com identificação pendente"
+        : stringValue(item.title, "Pendência no criatório")
+    };
+  });
 
   const activities = (rawActivities ?? []).filter(isRecord).map((item) => ({
     activityType: stringValue(item.activityType, "ActivityRegistered"),
@@ -550,7 +555,7 @@ function DashboardContent({
       <section aria-labelledby="titulo-indicadores" className="dashboard-section">
         <h2 className="sr-only" id="titulo-indicadores">Indicadores principais</h2>
         <div className="dashboard-metrics-grid">
-          <DashboardMetric href="/plantel/aves" icon="bird" label="Aves cadastradas" value={activeBirdCount} />
+          <DashboardMetric href="/plantel/aves" icon="bird" label="Aves Ativas" value={activeBirdCount} />
           <DashboardMetric icon="heart" label="Reproduções registradas" tone="rose" value={activeReproductionCount} />
           <DashboardMetric icon="alert" label="Pendências" tone="orange" value={pendingIdentificationCount} />
           <DashboardMetric icon="transfer" label="Transferências" tone="blue" value={transferCount} />

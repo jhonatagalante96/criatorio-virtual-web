@@ -1701,7 +1701,6 @@ h1, h2 { line-height: 1.08; }
 .farm-profile-name-row { align-items: center; display: flex; flex-wrap: wrap; gap: .45rem; }
 .farm-profile-name-row h2 { color: var(--ink); font-size: 1.05rem; letter-spacing: -.035em; margin: 0; overflow-wrap: anywhere; }
 .farm-profile-identity p { color: #78919a; font-size: .62rem; margin: .15rem 0 .35rem; }
-.farm-profile-code { background: #dff3e7; border-radius: .24rem; color: #197044; font-size: .55rem; font-weight: 900; padding: .19rem .32rem; }
 .farm-active-badge { align-items: center; background: #e8f7e8; border-radius: 999px; color: #167242; display: inline-flex; font-size: .57rem; font-weight: 800; gap: .3rem; padding: .23rem .45rem; }
 .farm-active-badge span { background: #1e9951; border-radius: 50%; height: .38rem; width: .38rem; }
 .farm-profile-actions { align-items: center; display: flex; flex: 0 0 auto; gap: .45rem; }
@@ -2593,6 +2592,7 @@ h1, h2 { line-height: 1.08; }
 .document-history-state.is-error { background: #fff6f4; border-style: solid; border-color: #edccc5; }
 .document-history-state.is-error strong { color: #9b342c; }
 .document-history-state .auth-secondary-action { grid-column: 2; justify-self: start; margin-top: .25rem; min-height: 2.25rem; padding: .45rem .7rem; }
+.document-history-state > .auth-primary-action { grid-column: 2; justify-self: start; margin-top: .35rem; max-width: 100%; white-space: normal; }
 .document-preview-dialog-backdrop, .document-reissue-dialog-backdrop { align-items: center; background: rgb(17 43 55 / 46%); display: flex; inset: 0; overflow-y: auto; padding: 1rem; position: fixed; z-index: 30; }
 .document-preview-dialog, .document-reissue-dialog { background: #fff; border: 1px solid #d6e3e2; border-radius: .85rem; box-shadow: 0 1.2rem 3rem rgb(17 43 55 / 24%); margin: auto; max-height: calc(100svh - 2rem); overflow-y: auto; padding: 1.15rem; width: 100%; }
 .document-preview-dialog { max-width: 64rem; }
@@ -2912,7 +2912,8 @@ h1, h2 { line-height: 1.08; }
 .dashboard-empty-mark { align-items: center; background: #c4eccf; border-radius: 50%; color: var(--green-dark); display: inline-flex; flex: 0 0 auto; font-size: 1rem; font-weight: 900; height: 1.8rem; justify-content: center; width: 1.8rem; }
 .dashboard-empty-state strong { color: var(--ink); display: block; font-size: .72rem; }
 .dashboard-empty-state p { color: #78919a; font-size: .63rem; line-height: 1.4; margin: .2rem 0 0; }
-.dashboard-activity-list a, .dashboard-activity-item { align-items: center; border-bottom: 1px solid #edf3f3; border-radius: 0; padding: .55rem .2rem; }
+.dashboard-activity-list a, .dashboard-activity-item { align-items: center; border-bottom: 1px solid #edf3f3; border-radius: 0; display: grid; gap: .65rem; grid-template-columns: 1.75rem minmax(0, 1fr) auto auto; padding: .55rem .2rem; }
+.dashboard-activity-copy { grid-column: 2; }
 .dashboard-activity-list li:last-child a, .dashboard-activity-list li:last-child .dashboard-activity-item { border-bottom: 0; }
 .dashboard-activity-list a:hover, .dashboard-activity-list a:focus-visible { background: #f7fcfb; outline-offset: -2px; }
 .dashboard-activity-icon { align-items: center; border-radius: 50%; display: inline-flex; flex: 0 0 auto; height: 1.75rem; justify-content: center; width: 1.75rem; }
@@ -2920,7 +2921,8 @@ h1, h2 { line-height: 1.08; }
 .dashboard-activity-icon-green { background: #cef2bb; color: #14844b; }
 .dashboard-activity-icon-rose { background: #f6cfd1; color: #b8414d; }
 .dashboard-activity-icon-blue { background: #cbe4fa; color: #1769a0; }
-.dashboard-activity-list time { color: #738096; font-size: .58rem; margin-left: auto; white-space: nowrap; }
+.dashboard-activity-list time { color: #738096; font-size: .58rem; grid-column: 3; margin-left: 0; text-align: right; white-space: nowrap; }
+.dashboard-activity-list .dashboard-card-arrow { grid-column: 4; margin-left: 0; }
 .dashboard-partial-notice { background: #f0f8fa; border: 1px solid #cfe5eb; border-radius: .55rem; color: #4f7481; font-size: .68rem; line-height: 1.4; margin: -1rem 0 1.5rem; padding: .65rem .75rem; }
 .dashboard-inspiration { align-items: center; background: url("/assets/imagery/landscapes/dashboard-footer-final-cropped.png") center top / 101% 101% no-repeat; border: 0; border-radius: .75rem; display: flex; gap: 1rem; height: 7rem; margin-top: 1.35rem; min-height: 7rem; overflow: hidden; padding: 0 1.25rem 0 0; position: relative; }
 .dashboard-inspiration-image { display: none; }
@@ -3348,6 +3350,19 @@ h1, h2 { line-height: 1.08; }
 .statistics-legend-registered { background: #18875a; }
 .statistics-legend-births { background: #3186bf; }
 .statistics-line-chart { display: block; height: 12rem; overflow: visible; width: 100%; }
+.statistics-chart-plot { min-width: 0; position: relative; }
+.statistics-chart-hit-area { cursor: crosshair; fill: transparent; }
+.statistics-chart-hit-area:focus-visible { fill: rgb(23 105 160 / 5%); outline: none; stroke: #1769a0; stroke-dasharray: 3 3; stroke-width: 1.5; }
+.statistics-chart-focus-line { stroke: #8798a7; stroke-dasharray: 3 4; stroke-width: 1; }
+.statistics-chart-focus-registered { fill: #fff; stroke: #18875a; stroke-width: 2.5; }
+.statistics-chart-focus-births { fill: #fff; stroke: #3186bf; stroke-width: 2.5; }
+.statistics-chart-tooltip { background: #fff; border: 1px solid #dce7e8; border-radius: .45rem; box-shadow: 0 .25rem .75rem rgb(35 52 73 / 12%); display: grid; gap: .2rem; padding: .45rem .55rem; pointer-events: none; position: absolute; top: .35rem; transform: translateX(-50%); z-index: 1; }
+.statistics-chart-tooltip.is-start { transform: none; }
+.statistics-chart-tooltip.is-end { transform: translateX(-100%); }
+.statistics-chart-tooltip strong { color: var(--ink); font-size: .63rem; }
+.statistics-chart-tooltip span { align-items: center; color: #586d7a; display: flex; font-size: .58rem; gap: .3rem; white-space: nowrap; }
+.statistics-chart-tooltip i { border-radius: 99px; display: inline-block; flex: 0 0 auto; height: .2rem; width: .7rem; }
+.statistics-chart-hint { color: #718096; font-size: .6rem; margin: -.25rem 0 0; }
 .statistics-chart-gridline { stroke: #e6eeee; stroke-dasharray: 3 5; stroke-width: 1; }
 .statistics-chart-registered, .statistics-chart-births { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
 .statistics-chart-registered { stroke: #18875a; }

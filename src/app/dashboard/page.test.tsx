@@ -81,7 +81,7 @@ function dashboardResponse(overrides: Record<string, unknown> = {}): Response {
       code: "BirdIdentificationPending",
       count: 1,
       resourceType: "bird",
-      title: "Aves aguardando identificação"
+      title: "Birds pending identification"
     }],
     ...overrides
   }), { headers: { "content-type": "application/json" }, status: 200 });
@@ -238,17 +238,18 @@ describe("DashboardPage", () => {
     await screen.findByText("Nascimentos · 30 dias");
     expect(screen.getByText("Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.")).toBeTruthy();
 
-    const activeBirdMetric = screen.getByText("Aves cadastradas", { selector: ".dashboard-metric-label" }).closest("article");
-    if (!activeBirdMetric) throw new Error("Indicador de aves cadastradas não encontrado.");
+    const activeBirdMetric = screen.getByText("Aves Ativas", { selector: ".dashboard-metric-label" }).closest("article");
+    if (!activeBirdMetric) throw new Error("Indicador de aves ativas não encontrado.");
     expect(within(activeBirdMetric).getByText("3")).toBeTruthy();
     expect(document.querySelectorAll(".dashboard-metric-trend")).toHaveLength(0);
-    expect(screen.getByRole("link", { name: "Ver aves cadastradas" }).getAttribute("href")).toBe("/plantel/aves");
+    expect(screen.getByRole("link", { name: "Ver aves ativas" }).getAttribute("href")).toBe("/plantel/aves");
 
     const pendingMetric = screen.getByText("Pendências", { selector: ".dashboard-metric-label" }).parentElement;
     if (!pendingMetric) throw new Error("Indicador de pendências não encontrado.");
     expect(within(pendingMetric).getByText("1")).toBeTruthy();
-    expect(screen.getByText("Aves aguardando identificação")).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Aves aguardando identificação/ }).getAttribute("href"))
+    expect(screen.getByText("Aves com identificação pendente")).toBeTruthy();
+    expect(screen.queryByText("Birds pending identification")).toBeNull();
+    expect(screen.getByRole("link", { name: /Aves com identificação pendente/ }).getAttribute("href"))
       .toBe("/plantel/aves?identificationPending=true");
 
     expect(screen.getByText("Reprodução de setembro")).toBeTruthy();
@@ -388,7 +389,7 @@ describe("DashboardPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
     expect(screen.getByRole("heading", { name: "Atividades recentes" })).toBeTruthy();
     expect(document.querySelector(".dashboard-activity-icon-green .dashboard-icon")).toBeTruthy();
-    expect(screen.getByText("Aves aguardando identificação")).toBeTruthy();
+    expect(screen.getByText("Aves com identificação pendente")).toBeTruthy();
   });
 
   it("shows a recoverable failure and reloads the dashboard", async () => {

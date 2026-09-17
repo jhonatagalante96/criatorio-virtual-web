@@ -130,7 +130,9 @@ describe("ReproductionListPage", () => {
     render(<ReproductionListPage />);
 
     await waitFor(() => expect(screen.getByText("Nenhuma reprodução registrada")).toBeTruthy());
-    expect(screen.getByRole("link", { name: "Registrar primeira reprodução" }).getAttribute("href")).toBe("/reproducao/novo");
+    const firstRegistrationLink = screen.getByRole("link", { name: "Registrar primeira reprodução" });
+    expect(firstRegistrationLink.getAttribute("href")).toBe("/reproducao/novo");
+    expect(firstRegistrationLink.className).toContain("auth-primary-action");
   });
 
   it("refreshes an expired session once while loading reproduction history", async () => {
