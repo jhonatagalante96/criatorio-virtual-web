@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../../../lib/http/api-client";
 import { AppLoadingState } from "../../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../../components/brand";
+import { VisualIdentityManager } from "../../../configuracoes/criatorio/visual-identity-manager";
 
 interface BreedingFarmSummary {
   breedingFarmId: string;
@@ -25,6 +26,7 @@ type SelectionView =
   | { kind: "blocked"; message: string }
   | { kind: "empty" }
   | { kind: "list"; selection: BreedingFarmSelectionResponse }
+  | { kind: "identity"; farm: BreedingFarmSummary }
   | { kind: "success"; farm: BreedingFarmSummary };
 
 function BackIcon() {
@@ -127,6 +129,28 @@ function SelectionSuccess({ farm }: Readonly<{ farm: BreedingFarmSummary }>) {
   );
 }
 
+function VisualIdentityOnboarding({ farm }: Readonly<{ farm: BreedingFarmSummary }>) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const actionRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
+  return (
+    <div className="farm-selection-card farm-selection-success farm-identity-onboarding">
+      <p className="eyebrow">Etapa opcional</p>
+      <h1 id="titulo-selecao-criatorio" ref={headingRef} tabIndex={-1}>Identidade do criatório</h1>
+      <p className="lede">Personalize a imagem de {farm.name} com uma foto sua ou um modelo. A identidade atual será mantida até você confirmar uma nova opção.</p>
+      <div className="farm-identity-onboarding-preview">
+        <VisualIdentityManager actionRef={actionRef} breedingFarmId={farm.breedingFarmId} farmName={farm.name} />
+      </div>
+      <p className="farm-identity-onboarding-note">Use o botão sobre a imagem para enviar uma foto ou escolher um modelo. Você pode configurar isso depois.</p>
+      <Link className="auth-primary-action" href="/dashboard">Configurar depois e ir para o painel</Link>
+    </div>
+  );
+}
+
 function FarmSelectionForm({
   selection,
   onSelected,
@@ -198,12 +222,19 @@ function BreedingFarmSelection() {
   const { refresh } = useAuth();
   const [view, setView] = useState<SelectionView>({ kind: "loading" });
   const [selectedId, setSelectedId] = useState<string>();
+  const [identityFarmId, setIdentityFarmId] = useState<string>();
+  const [searchReady, setSearchReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string>();
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
+
+  useEffect(() => {
+    setIdentityFarmId(new URLSearchParams(window.location.search).get("identityFarmId") ?? undefined);
+    setSearchReady(true);
+  }, []);
 
   const loadSelection = useCallback(async (recoverSession = true) => {
     setView({ kind: "loading" });
@@ -213,7 +244,13 @@ function BreedingFarmSelection() {
       const selection = await client.current!.request<BreedingFarmSelectionResponse>("api/breeding-farms");
       client.current!.setTenant(selection.selectedBreedingFarmId ?? undefined);
       const persistedFarm = selection.breedingFarms.find((farm) => farm.breedingFarmId === selection.selectedBreedingFarmId);
-      setSelectedId(persistedFarm?.breedingFarmId ?? (selection.breedingFarms.length === 1 ? selection.breedingFarms[0].breedingFarmId : undefined));
+      const identityFarm = selection.breedingFarms.find((farm) => farm.breedingFarmId === identityFarmId);
+      if (identityFarm && selection.selectedBreedingFarmId === identityFarm.breedingFarmId) {
+        setSelectedId(identityFarm.breedingFarmId);
+        setView({ kind: "identity", farm: identityFarm });
+        return;
+      }
+      setSelectedId(identityFarm?.breedingFarmId ?? persistedFarm?.breedingFarmId ?? (selection.breedingFarms.length === 1 ? selection.breedingFarms[0].breedingFarmId : undefined));
       setView(selection.breedingFarms.length === 0 ? { kind: "empty" } : { kind: "list", selection });
     } catch (error) {
       if (error instanceof ApiError && error.status === 401 && recoverSession) {
@@ -234,11 +271,11 @@ function BreedingFarmSelection() {
           : "Verifique sua conexão e tente novamente."
       });
     }
-  }, [refresh]);
+  }, [identityFarmId, refresh]);
 
   useEffect(() => {
-    void loadSelection();
-  }, [loadSelection]);
+    if (searchReady) void loadSelection();
+  }, [loadSelection, searchReady]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -257,7 +294,11 @@ function BreedingFarmSelection() {
       });
       client.current!.setTenant(nextSelection.selectedBreedingFarmId ?? selectedId);
       const selectedFarm = nextSelection.breedingFarms.find((farm) => farm.breedingFarmId === selectedId) ?? view.selection.breedingFarms.find((farm) => farm.breedingFarmId === selectedId);
-      if (selectedFarm) setView({ kind: "success", farm: selectedFarm });
+      if (selectedFarm) {
+        setView(identityFarmId === selectedFarm.breedingFarmId
+          ? { kind: "identity", farm: selectedFarm }
+          : { kind: "success", farm: selectedFarm });
+      }
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         await refresh();
@@ -289,6 +330,7 @@ function BreedingFarmSelection() {
   if (view.kind === "error") return <SelectionPanelState heading="Não foi possível carregar seus criatórios" message={view.message} onRetry={() => void loadSelection()} />;
   if (view.kind === "blocked") return <SelectionPanelState heading="Acesso bloqueado" message={view.message} onRetry={() => void loadSelection()} retryLabel="Verificar novamente" />;
   if (view.kind === "empty") return <EmptySelection onRetry={() => void loadSelection()} />;
+  if (view.kind === "identity") return <VisualIdentityOnboarding farm={view.farm} />;
   if (view.kind === "success") return <SelectionSuccess farm={view.farm} />;
 
   return (

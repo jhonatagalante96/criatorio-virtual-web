@@ -84,6 +84,8 @@ describe("BreedingFarmOnboardingPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Criar criatório" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Seu criatório foi criado." })).toBeTruthy());
+    expect(screen.getByRole("link", { name: "Continuar onboarding" }).getAttribute("href"))
+      .toBe("/onboarding/criatorio/selecionar?identityFarmId=farm-id");
     expect(fetchMock).toHaveBeenCalledTimes(3);
     const [, createRequest] = fetchMock.mock.calls[2];
     expect(new Headers(createRequest.headers).get("x-xsrf-token")).toBe("csrf-token");
