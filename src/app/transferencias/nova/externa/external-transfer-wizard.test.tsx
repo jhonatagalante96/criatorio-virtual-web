@@ -92,7 +92,7 @@ async function selectBird(fetchMock: ReturnType<typeof apiFetch>, isEligible = t
   await waitFor(() => expect(screen.getByRole("button", { name: /Aurora/ })).toBeTruthy());
   fireEvent.click(screen.getByRole("button", { name: /Aurora/ }));
   await waitFor(() => expect(screen.getByText(isEligible
-    ? /critérios para transferência externa/
+    ? /pode ser transferida para outro criatório/
     : "Esta ave não pode ser transferida agora.")).toBeTruthy());
   return fetchMock;
 }

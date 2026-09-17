@@ -138,7 +138,7 @@ function birdStatusLabel(status: BirdStatus): string {
 function eligibilityIssueTitle(code: string): string {
   if (code === "MissingRingNumber") return "Anilha não informada";
   if (code === "InactiveStatus") return "Ave inativa";
-  return "Pendência de elegibilidade";
+  return "Confira estes dados antes de transferir";
 }
 
 function eligibilityIssueMessage(issue: BirdEligibilityIssue): string {
@@ -159,10 +159,10 @@ function farmErrorMessage(error: unknown): string {
 function eligibilityErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 403) return "Sua conta não tem permissão para consultar esta ave.";
   if (error instanceof ApiError && error.status === 404) return "A ave não está disponível no criatório selecionado.";
-  if (error instanceof ApiError && error.status === 409) return "Selecione novamente um criatório para consultar a elegibilidade da ave.";
+  if (error instanceof ApiError && error.status === 409) return "Selecione novamente um criatório para conferir se a ave pode ser transferida.";
   if (error instanceof ApiError && error.status >= 500) return "O serviço está indisponível no momento. Tente novamente em instantes.";
   if (error instanceof TypeError) return "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.";
-  return "Não foi possível verificar a elegibilidade desta ave.";
+  return "Não foi possível confirmar se esta ave pode ser transferida.";
 }
 
 function destinationErrorMessage(error: unknown): string {
@@ -185,7 +185,7 @@ function transferErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 400) {
     const fields = Object.keys(error.fields).join(" ").toLowerCase();
     if (fields.includes("destination")) return "Escolha outro criatório de destino e confira a revisão.";
-    if (fields.includes("bird")) return "A ave deixou de atender aos critérios. Verifique a elegibilidade antes de tentar novamente.";
+    if (fields.includes("bird")) return "A ave não pode mais ser transferida. Confira os dados e tente novamente.";
     if (fields.includes("confirmed")) return "Confirme a solicitação antes de continuar.";
     return "Revise os dados da solicitação antes de tentar novamente.";
   }
@@ -547,7 +547,7 @@ function InternalTransferWizard() {
         return;
       }
       if (eligibilityState !== "ready" || !eligibility?.isEligible) {
-        setNotice({ kind: "error", text: eligibilityError ?? "A ave precisa estar elegível para solicitar a transferência." });
+        setNotice({ kind: "error", text: eligibilityError ?? "Confira se a ave pode ser transferida antes de continuar." });
         return;
       }
     }
@@ -654,8 +654,8 @@ function InternalTransferWizard() {
               <dl>
                 <div><dt>Ave</dt><dd>{selectedBird?.name}</dd></div>
                 <div><dt>Destino</dt><dd>{selectedDestination?.name}<small>{selectedDestination?.responsibleName}</small></dd></div>
-                <div><dt>Status</dt><dd>{createdTransfer.status === "Pending" ? "Pendente" : createdTransfer.status}</dd></div>
-                <div><dt>Protocolo</dt><dd>{createdTransfer.transferRequestId}</dd></div>
+                <div><dt>Situação</dt><dd>{createdTransfer.status === "Pending" ? "Pendente" : "Em análise"}</dd></div>
+                <div><dt>Número da solicitação</dt><dd>{createdTransfer.transferRequestId}</dd></div>
               </dl>
               <div className="internal-transfer-success-actions">
                 {selectedBird && <Link className="auth-primary-action" href={`/plantel/aves/${encodeURIComponent(selectedBird.birdId)}`}>Ver ficha da ave</Link>}
@@ -673,7 +673,7 @@ function InternalTransferWizard() {
                 {step === 0 && (
                   <section aria-labelledby="titulo-etapa-ave">
                     <div className="document-wizard-section-heading">
-                      <div><p className="eyebrow">Etapa 1 de 3</p><h2 id="titulo-etapa-ave">Selecione a ave</h2><p>Escolha uma ave ativa. A API confirma a elegibilidade antes de aceitar a solicitação.</p></div>
+                      <div><p className="eyebrow">Etapa 1 de 3</p><h2 id="titulo-etapa-ave">Selecione a ave</h2><p>Escolha uma ave ativa. Antes de aceitar o pedido, o sistema verifica se ela pode ser transferida.</p></div>
                     </div>
                     {selectedBird ? (
                       <div className="internal-transfer-selected-card">
@@ -751,7 +751,7 @@ function InternalTransferWizard() {
                       <input checked={confirmed} id="confirmar-transferencia" onChange={(event) => setConfirmed(event.target.checked)} type="checkbox" />
                       <span>Confirmo que desejo solicitar a transferência desta ave para o criatório de destino.</span>
                     </label>
-                    <p className="internal-transfer-security-note"><span aria-hidden="true">i</span>A API confirma novamente o criatório, a elegibilidade da ave e a ausência de outra transferência pendente antes de registrar o pedido.</p>
+                    <p className="internal-transfer-security-note"><span aria-hidden="true">i</span>Antes de registrar o pedido, conferimos se o criatório está correto, se a ave pode ser transferida e se não há outro pedido pendente.</p>
                   </section>
                 )}
 
@@ -765,8 +765,8 @@ function InternalTransferWizard() {
 
               <aside aria-label="Resumo da transferência" className="internal-transfer-aside">
                 <div className="internal-transfer-aside-heading"><DashboardIcon name="bird" /><div><strong>{selectedBird ? "Ave selecionada" : "Origem da transferência"}</strong><span>{farmName}</span></div></div>
-                {selectedBird ? <BirdSummaryCard bird={selectedBird} /> : <p>Selecione uma ave ativa para conferir sua identificação e elegibilidade.</p>}
-                {selectedBird && eligibilityState === "ready" && eligibility && <span className={`internal-transfer-eligibility-badge${eligibility.isEligible ? " is-eligible" : " is-blocked"}`}>{eligibility.isEligible ? "Elegível" : "Requer atenção"}</span>}
+                {selectedBird ? <BirdSummaryCard bird={selectedBird} /> : <p>Selecione uma ave ativa para conferir se ela pode ser transferida.</p>}
+                {selectedBird && eligibilityState === "ready" && eligibility && <span className={`internal-transfer-eligibility-badge${eligibility.isEligible ? " is-eligible" : " is-blocked"}`}>{eligibility.isEligible ? "Pode ser transferida" : "Não pode ser transferida"}</span>}
                 {selectedDestination && <div className="internal-transfer-aside-destination"><span>Destino escolhido</span><strong>{selectedDestination.name}</strong><small>{selectedDestination.responsibleName}</small></div>}
               </aside>
             </div>
@@ -817,9 +817,9 @@ function EligibilityPanel({
   response,
   state
 }: Readonly<{ birdId: string; error?: string; onRetry: () => void; response?: BirdEligibilityResponse; state: EligibilityState }>) {
-  if (state === "loading") return <p className="internal-transfer-eligibility is-loading" role="status">Verificando a elegibilidade da ave…</p>;
+  if (state === "loading") return <p className="internal-transfer-eligibility is-loading" role="status">Conferindo se a ave pode ser transferida…</p>;
   if (state === "error") return <div className="internal-transfer-eligibility is-blocked" role="alert"><p>{error}</p><button className="internal-transfer-text-action" onClick={onRetry} type="button">Tentar novamente</button></div>;
-  if (response?.isEligible) return <p className="internal-transfer-eligibility is-eligible" role="status">Esta ave atende aos critérios para solicitar uma transferência.</p>;
+  if (response?.isEligible) return <p className="internal-transfer-eligibility is-eligible" role="status">Esta ave pode ser transferida.</p>;
   return (
     <div className="internal-transfer-eligibility is-blocked" role="status">
       <strong>Esta ave não pode ser transferida agora.</strong>

@@ -113,7 +113,7 @@ async function selectBird(fetchMock: ReturnType<typeof apiFetch>, isEligible = t
   await waitFor(() => expect(screen.getByRole("button", { name: /Aurora/ })).toBeTruthy());
   fireEvent.click(screen.getByRole("button", { name: /Aurora/ }));
   await waitFor(() => expect(screen.getByText(isEligible
-    ? "Esta ave atende aos critérios para solicitar uma transferência."
+    ? "Esta ave pode ser transferida."
     : "Esta ave não pode ser transferida agora.")).toBeTruthy());
 }
 
@@ -192,7 +192,7 @@ describe("NewInternalTransferPage", () => {
 
     render(<NewInternalTransferPage />);
 
-    await waitFor(() => expect(screen.getByText("Esta ave atende aos critérios para solicitar uma transferência.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Esta ave pode ser transferida.")).toBeTruthy());
     expect(screen.getAllByText("Aurora").length).toBeGreaterThan(0);
     expect(screen.queryByLabelText("Buscar por nome, anilha ou espécie")).toBeNull();
     expect(fetchMock.mock.calls.some(([input]) => new URL(String(input)).pathname.endsWith("/api/birds/bird-aurora"))).toBe(true);

@@ -32,7 +32,7 @@ function detailsResponse(overrides: Record<string, unknown> = {}): Response {
     breedingFarmId: "farm-a",
     createdAtUtc: "2026-09-10T12:00:00Z",
     endDate: null,
-    femaleBird: { birthDate: null, birdId: "bird-female", name: "Brisa na origem", ringNumber: "234567", sex: "Female", status: "Active" },
+    femaleBird: { birthDate: null, birdId: "bird-female", name: "Brisa na origem", ringNumber: "234567", sex: "Female", status: "Transferred" },
     maleBird: { birthDate: "2021-06-15", birdId: "bird-male", name: "Aurora na origem", ringNumber: "123456", sex: "Male", status: "Transferred" },
     notes: "Histórico mantido no criatório de origem.",
     reproductionId: "reproduction-a",
@@ -41,6 +41,13 @@ function detailsResponse(overrides: Record<string, unknown> = {}): Response {
     updatedAtUtc: "2026-09-12T12:00:00Z",
     ...overrides
   }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
+function birdProfileResponse(birdId: string, imageUrl: string): Response {
+  return new Response(JSON.stringify({ birdId, breedingFarmId: "farm-a", imageUrl }), {
+    headers: { "content-type": "application/json" },
+    status: 200
+  });
 }
 
 function mutationResponse(overrides: Record<string, unknown> = {}): Response {
@@ -84,12 +91,33 @@ describe("ReproductionDetailScreen", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Detalhes da reprodução" })).toBeTruthy());
     expect(screen.getByRole("heading", { name: "Aurora na origem" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Brisa na origem" })).toBeTruthy();
-    expect(screen.getByText("Transferida")).toBeTruthy();
+    expect(screen.getAllByText("Transferida")).toHaveLength(2);
     expect(screen.getByText("Histórico mantido no criatório de origem.")).toBeTruthy();
-    expect(screen.getByText(/não consulta fichas atuais de aves transferidas/i)).toBeTruthy();
+    expect(screen.getByText(/não mostra a ficha atual/i)).toBeTruthy();
     expect(String(fetchMock.mock.calls[1][0])).toContain("/api/reproductions/reproduction-a");
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls.every(([url]) => !String(url).includes("/api/birds/"))).toBe(true);
+  });
+
+  it("shows the birds' photos when their profiles remain available in the selected farm", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse({
+        maleBird: { birthDate: "2021-06-15", birdId: "bird-male", name: "Aurora", ringNumber: "123456", sex: "Male", status: "Active" },
+        femaleBird: { birthDate: null, birdId: "bird-female", name: "Brisa", ringNumber: "234567", sex: "Female", status: "Active" }
+      }))
+      .mockResolvedValueOnce(birdProfileResponse("bird-male", "/api/birds/bird-male/attachments/photo-male/content"))
+      .mockResolvedValueOnce(birdProfileResponse("bird-female", "/api/birds/bird-female/attachments/photo-female/content"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReproductionDetailScreen reproductionId="reproduction-a" />);
+
+    await waitFor(() => {
+      expect(document.querySelector('img[src="https://localhost:58016/api/birds/bird-male/attachments/photo-male/content"]')).toBeTruthy();
+      expect(document.querySelector('img[src="https://localhost:58016/api/birds/bird-female/attachments/photo-female/content"]')).toBeTruthy();
+    });
+    expect(String(fetchMock.mock.calls[2][0])).toContain("/api/birds/bird-male");
+    expect(String(fetchMock.mock.calls[3][0])).toContain("/api/birds/bird-female");
   });
 
   it("does not reveal whether a reproduction exists outside the selected farm", async () => {

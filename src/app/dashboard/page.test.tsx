@@ -68,7 +68,7 @@ function dashboardResponse(overrides: Record<string, unknown> = {}): Response {
         occurredAtUtc: "2026-09-09T12:00:00Z",
         resourceId: "reproduction-a",
         resourceType: "reproduction",
-        title: "Reprodução de setembro"
+        title: "Reproduction registered"
       }
     ],
     breedingFarmId: "farm-a",
@@ -252,7 +252,8 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("link", { name: /Aves com identificação pendente/ }).getAttribute("href"))
       .toBe("/plantel/aves?identificationPending=true");
 
-    expect(screen.getByText("Reprodução de setembro")).toBeTruthy();
+    expect(screen.getByText("Reprodução registrada")).toBeTruthy();
+    expect(screen.queryByText("Reproduction registered")).toBeNull();
     expect(screen.getByText(/Ave cadastrada/)).toBeTruthy();
     expect(document.querySelector('a[href="/plantel/aves/bird-a"]')).toBeTruthy();
     expect(screen.getByRole("link", { name: /Registrar reprodução/ }).getAttribute("href")).toBe("/reproducao/novo");

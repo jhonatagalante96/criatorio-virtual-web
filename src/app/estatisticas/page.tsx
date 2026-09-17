@@ -278,7 +278,7 @@ function StatisticsScreen() {
         return;
       }
       if (requestError instanceof ApiError && requestError.status === 400) {
-        setRangeError("A API não aceitou este intervalo. Revise as datas e tente novamente.");
+        setRangeError("Não foi possível consultar esse período. Revise as datas e tente novamente.");
         setView({ kind: "error", message: "O período informado não pôde ser consultado." });
         return;
       }
