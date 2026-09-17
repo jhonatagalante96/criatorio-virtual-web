@@ -214,7 +214,7 @@ function FarmOverview({ email, settings }: Readonly<{ email: string; settings: B
             <div className="farm-profile-identity"><VisualIdentityManager actionRef={openIdentityActionRef} breedingFarmId={settings.breedingFarmId} farmName={settings.name} /><div><div className="farm-profile-name-row"><h2 id="titulo-perfil-criatorio">{settings.name}</h2><span className="farm-profile-code">CV</span></div><p>Criatório Virtual</p><span className="farm-active-badge"><span aria-hidden="true" /> Ativo</span></div></div>
             <div className="farm-profile-actions"><Link className="farm-outline-action" href={`/configuracoes/criatorio?breedingFarmId=${encodeURIComponent(settings.breedingFarmId)}`}><DashboardIcon name="edit" /> Editar criatório</Link><details className="farm-more-actions"><summary aria-label="Mais ações" className="farm-more-action">⋮</summary><div className="farm-profile-action-menu"><button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openIdentityActionRef.current(); }} type="button">Alterar identidade visual</button></div></details></div>
           </div>
-          <nav aria-label="Seções do criatório" className="farm-tabs"><a aria-current="page" href="#informacoes">Informações</a><span aria-disabled="true">Galeria</span></nav>
+          <nav aria-label="Seções do criatório" className="farm-tabs"><a aria-current="page" href="#informacoes">Informações</a><Link href="/configuracoes/criatorio/galeria">Galeria</Link></nav>
         </section>
 
         <div className="farm-overview-grid" id="informacoes">
