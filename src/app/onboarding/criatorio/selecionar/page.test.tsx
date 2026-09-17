@@ -3,11 +3,25 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import BreedingFarmSelectionPage from "./page";
 
+const routerReplace = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: routerReplace }) }));
+
+const urlDescriptors = {
+  createObjectURL: Object.getOwnPropertyDescriptor(URL, "createObjectURL"),
+  revokeObjectURL: Object.getOwnPropertyDescriptor(URL, "revokeObjectURL")
+};
+
 afterEach(() => {
   cleanup();
+  if (urlDescriptors.createObjectURL) Object.defineProperty(URL, "createObjectURL", urlDescriptors.createObjectURL);
+  else Reflect.deleteProperty(URL, "createObjectURL");
+  if (urlDescriptors.revokeObjectURL) Object.defineProperty(URL, "revokeObjectURL", urlDescriptors.revokeObjectURL);
+  else Reflect.deleteProperty(URL, "revokeObjectURL");
   window.history.replaceState({}, "", "/");
   window.sessionStorage.clear();
   vi.unstubAllGlobals();
+  routerReplace.mockReset();
 });
 
 function authenticatedSession(): Response {
@@ -166,6 +180,95 @@ describe("BreedingFarmSelectionPage", () => {
     expect(screen.getByRole("button", { name: "Alterar imagem do criatório" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Configurar depois e ir para o painel" })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([, request]) => request.method === "PUT")).toBe(false);
+  });
+
+  it("advances to the dashboard after the identity upload succeeds", async () => {
+    window.history.replaceState({}, "", "/onboarding/criatorio/selecionar?identityFarmId=farm-a");
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:identity-preview", writable: true });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn(), writable: true });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(singleSelectionResponse("farm-a"))
+      .mockResolvedValueOnce(visualIdentityResponse())
+      .mockResolvedValueOnce(antiforgeryResponse())
+      .mockResolvedValueOnce(visualIdentityResponse())
+      .mockResolvedValueOnce(visualIdentityResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BreedingFarmSelectionPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Identidade do criatório" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Alterar imagem do criatório" }));
+    fireEvent.change(screen.getByLabelText("Enviar minha imagem"), {
+      target: { files: [new File(["image"], "criatorio.png", { type: "image/png" })] }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação" }));
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
+    const applyRequest = fetchMock.mock.calls.find(([, request]) => request.method === "PUT");
+    expect(applyRequest).toBeTruthy();
+    expect(new Headers(applyRequest![1].headers).get("x-xsrf-token")).toBe("csrf-token");
+  });
+
+  it("advances to the dashboard after a visual identity template is applied", async () => {
+    window.history.replaceState({}, "", "/onboarding/criatorio/selecionar?identityFarmId=farm-a");
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:identity-template-preview", writable: true });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn(), writable: true });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(singleSelectionResponse("farm-a"))
+      .mockResolvedValueOnce(visualIdentityResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify([{
+        aspectRatio: "1:1",
+        id: "natural",
+        name: "Natural",
+        options: [],
+        previewUrl: "/api/templates/natural/preview",
+        version: "1"
+      }]), { headers: { "content-type": "application/json" }, status: 200 }))
+      .mockResolvedValueOnce(antiforgeryResponse())
+      .mockResolvedValueOnce(new Response(new Blob(["preview"]), { headers: { "content-type": "image/png" }, status: 200 }))
+      .mockResolvedValueOnce(visualIdentityResponse())
+      .mockResolvedValueOnce(visualIdentityResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BreedingFarmSelectionPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Identidade do criatório" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Alterar imagem do criatório" }));
+    fireEvent.click(screen.getByRole("button", { name: /Escolher um modelo/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Natural/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar prévia" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Aplicar modelo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação do modelo" }));
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
+    const applyRequest = fetchMock.mock.calls.find(([, request]) => request.method === "PUT");
+    expect(applyRequest).toBeTruthy();
+    expect(new Headers(applyRequest![1].headers).get("x-xsrf-token")).toBe("csrf-token");
+  });
+
+  it("does not advance when the identity upload is rejected", async () => {
+    window.history.replaceState({}, "", "/onboarding/criatorio/selecionar?identityFarmId=farm-a");
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:identity-preview", writable: true });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn(), writable: true });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(singleSelectionResponse("farm-a"))
+      .mockResolvedValueOnce(visualIdentityResponse())
+      .mockResolvedValueOnce(antiforgeryResponse())
+      .mockResolvedValueOnce(new Response(null, { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BreedingFarmSelectionPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Identidade do criatório" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Alterar imagem do criatório" }));
+    fireEvent.change(screen.getByLabelText("Enviar minha imagem"), {
+      target: { files: [new File(["image"], "criatorio.png", { type: "image/png" })] }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação" }));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("não tem permissão"));
+    expect(routerReplace).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Identidade do criatório" })).toBeTruthy();
   });
 
   it("shows a recoverable loading failure and retries the list", async () => {

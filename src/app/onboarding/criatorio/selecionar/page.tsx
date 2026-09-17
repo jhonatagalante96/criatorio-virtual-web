@@ -2,6 +2,7 @@
 
 import React, { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../../../lib/http/api-client";
 import { AppLoadingState } from "../../../components/app-loading-state";
@@ -130,6 +131,7 @@ function SelectionSuccess({ farm }: Readonly<{ farm: BreedingFarmSummary }>) {
 }
 
 function VisualIdentityOnboarding({ farm }: Readonly<{ farm: BreedingFarmSummary }>) {
+  const router = useRouter();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const actionRef = useRef<() => void>(() => {});
 
@@ -143,7 +145,7 @@ function VisualIdentityOnboarding({ farm }: Readonly<{ farm: BreedingFarmSummary
       <h1 id="titulo-selecao-criatorio" ref={headingRef} tabIndex={-1}>Identidade do criatório</h1>
       <p className="lede">Personalize a imagem de {farm.name} com uma foto sua ou um modelo. A identidade atual será mantida até você confirmar uma nova opção.</p>
       <div className="farm-identity-onboarding-preview">
-        <VisualIdentityManager actionRef={actionRef} breedingFarmId={farm.breedingFarmId} farmName={farm.name} />
+        <VisualIdentityManager actionRef={actionRef} breedingFarmId={farm.breedingFarmId} farmName={farm.name} onApplied={() => router.replace("/dashboard")} />
       </div>
       <p className="farm-identity-onboarding-note">Use o botão sobre a imagem para enviar uma foto ou escolher um modelo. Você pode configurar isso depois.</p>
       <Link className="auth-primary-action" href="/dashboard">Configurar depois e ir para o painel</Link>
