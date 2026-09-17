@@ -190,7 +190,7 @@ function OnboardingState({
   );
 }
 
-function CreationSuccess() {
+function CreationSuccess({ breedingFarmId }: Readonly<{ breedingFarmId: string }>) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -203,7 +203,7 @@ function CreationSuccess() {
       <p className="eyebrow">Etapa concluída</p>
       <h1 id="titulo-onboarding" ref={headingRef} tabIndex={-1}>Seu criatório foi criado.</h1>
       <p className="lede">O vínculo de responsável foi configurado com segurança. Você já pode continuar para o Criatório Virtual.</p>
-      <Link className="auth-primary-action" href="/onboarding/criatorio/selecionar">Continuar onboarding</Link>
+      <Link className="auth-primary-action" href={`/onboarding/criatorio/selecionar?identityFarmId=${encodeURIComponent(breedingFarmId)}`}>Continuar onboarding</Link>
       <Link className="text-action" href="/login">Voltar para a conta</Link>
     </div>
   );
@@ -317,7 +317,7 @@ function CreateBreedingFarmForm() {
     }
   }
 
-  if (creation) return <CreationSuccess />;
+  if (creation) return <CreationSuccess breedingFarmId={creation.breedingFarmId} />;
 
   const fieldError = (field: string) => firstError(errors, field);
 

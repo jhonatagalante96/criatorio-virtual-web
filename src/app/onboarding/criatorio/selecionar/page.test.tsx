@@ -5,6 +5,7 @@ import BreedingFarmSelectionPage from "./page";
 
 afterEach(() => {
   cleanup();
+  window.history.replaceState({}, "", "/");
   window.sessionStorage.clear();
   vi.unstubAllGlobals();
 });
@@ -51,6 +52,13 @@ function singleSelectionResponse(selectedBreedingFarmId: string | null = null): 
     }],
     selectedBreedingFarmId
   }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
+function visualIdentityResponse(identity: Record<string, unknown> | null = null): Response {
+  return new Response(JSON.stringify({ breedingFarmId: "farm-a", identity }), {
+    headers: { "content-type": "application/json" },
+    status: 200
+  });
 }
 
 describe("BreedingFarmSelectionPage", () => {
@@ -112,6 +120,52 @@ describe("BreedingFarmSelectionPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha onde continuar" })).toBeTruthy());
     expect((screen.getByRole("radio", { name: /Sítio Aurora/ }) as HTMLInputElement).checked).toBe(true);
     expect(screen.getByText(/Encontramos um criatório vinculado à sua conta/)).toBeTruthy();
+  });
+
+  it("opens the optional identity step after selecting the newly created farm", async () => {
+    window.history.replaceState({}, "", "/onboarding/criatorio/selecionar?identityFarmId=farm-a");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(singleSelectionResponse())
+      .mockResolvedValueOnce(antiforgeryResponse())
+      .mockResolvedValueOnce(singleSelectionResponse("farm-a"))
+      .mockResolvedValueOnce(visualIdentityResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BreedingFarmSelectionPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha onde continuar" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Continuar com este criatório" }));
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Identidade do criatório" })).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Alterar imagem do criatório" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Configurar depois e ir para o painel" }).getAttribute("href")).toBe("/dashboard");
+    const [, selectionRequest] = fetchMock.mock.calls[3];
+    expect(new Headers(selectionRequest.headers).get("x-xsrf-token")).toBe("csrf-token");
+    expect(JSON.parse(selectionRequest.body as string)).toEqual({ breedingFarmId: "farm-a" });
+  });
+
+  it("resumes the identity step for the persisted farm without reapplying an existing identity", async () => {
+    window.history.replaceState({}, "", "/onboarding/criatorio/selecionar?identityFarmId=farm-a");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(singleSelectionResponse("farm-a"))
+      .mockResolvedValueOnce(visualIdentityResponse({
+        contentType: null,
+        contentUrl: null,
+        fileName: null,
+        length: null,
+        modelId: "natural",
+        source: "Template",
+        updatedAtUtc: "2026-09-17T00:00:00Z",
+        version: "1"
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BreedingFarmSelectionPage />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Identidade do criatório" })).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Alterar imagem do criatório" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Configurar depois e ir para o painel" })).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([, request]) => request.method === "PUT")).toBe(false);
   });
 
   it("shows a recoverable loading failure and retries the list", async () => {
