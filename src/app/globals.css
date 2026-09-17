@@ -2347,6 +2347,11 @@ h1, h2 { line-height: 1.08; }
 .authenticated-sidebar .authenticated-farm-context { border-bottom: 1px solid rgb(219 240 228 / 18%); margin: 2rem .2rem 1.15rem; padding-bottom: 1.15rem; }
 .authenticated-context-label { color: rgb(230 245 237 / 62%); font-size: .58rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .authenticated-farm-context strong { color: #fff; font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.authenticated-sidebar-navigation { display: flex; flex: 1 1 0; flex-direction: column; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-color: rgb(219 240 228 / 32%) transparent; scrollbar-width: thin; }
+.authenticated-sidebar-navigation::-webkit-scrollbar { width: .35rem; }
+.authenticated-sidebar-navigation::-webkit-scrollbar-thumb { background: rgb(219 240 228 / 32%); border-radius: 999px; }
+.authenticated-sidebar-navigation::-webkit-scrollbar-track { background: transparent; }
+.authenticated-sidebar-navigation > nav { flex: 0 0 auto; }
 .authenticated-nav-list { display: grid; gap: .35rem; list-style: none; margin: 0; padding: 0; }
 .authenticated-nav-link { align-items: center; border-radius: .5rem; color: rgb(239 251 244 / 82%); display: flex; font-size: .76rem; font-weight: 500; gap: .65rem; min-height: 2.7rem; padding: .55rem .65rem; text-decoration: none; transition: background .18s ease, color .18s ease; }
 .authenticated-nav-link:hover { background: rgb(255 255 255 / 10%); color: #fff; }
@@ -2359,7 +2364,7 @@ h1, h2 { line-height: 1.08; }
 .authenticated-sidebar-secondary-nav { border-top: 1px solid rgb(219 240 228 / 18%); margin-top: 1.5rem; padding: 1rem .2rem 0; }
 .authenticated-mobile-menu-links a { color: #d9eee0; font-size: .66rem; font-weight: 800; text-decoration: none; }
 .authenticated-mobile-menu-links a:hover { color: #fff; text-decoration: underline; }
-.authenticated-sidebar-inspiration { margin-top: auto; padding: 1.25rem 1rem 1.3rem; }
+.authenticated-sidebar-inspiration { flex: 0 0 auto; padding: 1.25rem 1rem 1.5rem; }
 .authenticated-sidebar-inspiration p { color: rgb(246 253 247 / 88%); font-size: .85rem; line-height: 1.55; margin: 0 0 .75rem; }
 .authenticated-sidebar-inspiration img { display: block; height: 1.55rem; object-fit: contain; object-position: left center; width: 1.55rem; }
 .authenticated-sidebar-inspiration small { color: rgb(226 244 231 / 62%); font-size: .63rem; }

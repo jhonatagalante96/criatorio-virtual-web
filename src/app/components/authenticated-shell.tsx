@@ -133,12 +133,14 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
           <Link aria-label="Ir para o painel" className="authenticated-brand" href="/dashboard">
             <BrandLockup />
           </Link>
-          <nav aria-label="Módulos disponíveis" className="authenticated-desktop-nav">
-            <NavigationLinks activeNav={activeNav} />
-          </nav>
-          <nav aria-label="Conta e configurações" className="authenticated-sidebar-secondary-nav">
-            <NavigationLinks activeNav={activeNav} items={secondaryNavigation} />
-          </nav>
+          <div className="authenticated-sidebar-navigation">
+            <nav aria-label="Módulos disponíveis" className="authenticated-desktop-nav">
+              <NavigationLinks activeNav={activeNav} />
+            </nav>
+            <nav aria-label="Conta e configurações" className="authenticated-sidebar-secondary-nav">
+              <NavigationLinks activeNav={activeNav} items={secondaryNavigation} />
+            </nav>
+          </div>
           <div className="authenticated-sidebar-inspiration" aria-label="Mensagem inspiradora">
             <p>“Grandes criatórios começam com boas histórias.”</p>
             <img alt="" aria-hidden="true" src="/assets/brand/png/criatorio-virtual-symbol.png" />

@@ -60,6 +60,24 @@ describe("AuthenticatedShell", () => {
     expect(container.querySelector(".authenticated-account-menu-panel a[href='/configuracoes']")).not.toBeNull();
   });
 
+  it("keeps both desktop navigation groups in a separate scroll region above the inspiration footer", async () => {
+    const { container } = render(
+      <AuthenticatedShell activeNav="dashboard" email="jhonata@example.com" farmName="Criatório Aurora">
+        <div>Conteúdo carregado</div>
+      </AuthenticatedShell>
+    );
+
+    await waitFor(() => expect(screen.getAllByText("Jhonata").length).toBeGreaterThan(0));
+
+    const sidebar = container.querySelector(".authenticated-sidebar");
+    const navigationRegion = container.querySelector(".authenticated-sidebar-navigation");
+    const inspirationFooter = container.querySelector(".authenticated-sidebar-inspiration");
+
+    expect(navigationRegion?.querySelectorAll("nav")).toHaveLength(2);
+    expect(navigationRegion?.contains(inspirationFooter)).toBe(false);
+    expect(inspirationFooter?.parentElement).toBe(sidebar);
+  });
+
   it("opens the reproduction history from the primary navigation", async () => {
     render(
       <AuthenticatedShell activeNav="reproduction" email="jhonata@example.com" farmName="Criatório Aurora">
