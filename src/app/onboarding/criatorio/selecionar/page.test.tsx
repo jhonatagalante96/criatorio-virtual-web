@@ -179,6 +179,9 @@ describe("BreedingFarmSelectionPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Identidade do criatório" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Alterar imagem do criatório" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Configurar depois e ir para o painel" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Alterar imagem do criatório" }));
+    expect(screen.getByRole("button", { name: "Fechar" }).querySelector("svg")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Remover imagem/ }).querySelector("svg")).toBeTruthy();
     expect(fetchMock.mock.calls.some(([, request]) => request.method === "PUT")).toBe(false);
   });
 
