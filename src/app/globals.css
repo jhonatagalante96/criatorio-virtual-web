@@ -1866,6 +1866,10 @@ h1, h2 { line-height: 1.08; }
 .farm-gallery-field input:focus-visible, .farm-gallery-field select:focus-visible, .farm-gallery-caption-form input:focus-visible, .farm-gallery-filters select:focus-visible { border-color: #1b9a61; outline: 2px solid rgb(27 154 97 / 22%); outline-offset: 1px; }
 .farm-gallery-field input:disabled, .farm-gallery-field select:disabled { background: #f5f7f8; color: #8190a3; }
 .farm-gallery-field small { color: #718198; font-size: .58rem; line-height: 1.4; overflow-wrap: anywhere; }
+.farm-gallery-file-field input[type="file"]:not(:disabled) { cursor: pointer; }
+.farm-gallery-file-field input[type="file"]::file-selector-button { background: #145f4f; border: 1px solid #145f4f; border-radius: .35rem; color: #fff; cursor: pointer; font: inherit; font-size: .62rem; font-weight: 800; margin-right: .65rem; min-height: 1.9rem; padding: .3rem .65rem; }
+.farm-gallery-file-field input[type="file"]::file-selector-button:hover { background: #0e4e40; border-color: #0e4e40; }
+.farm-gallery-file-field input[type="file"]:disabled::file-selector-button { cursor: not-allowed; opacity: .58; }
 .farm-gallery-upload-actions { display: flex; justify-content: flex-end; }
 .farm-gallery-primary-action, .farm-gallery-secondary-action, .farm-gallery-danger-action { align-items: center; border-radius: .4rem; cursor: pointer; display: inline-flex; font: inherit; font-size: .62rem; font-weight: 800; justify-content: center; min-height: 2.2rem; padding: .4rem .7rem; text-align: center; text-decoration: none; }
 .farm-gallery-primary-action { background: #145f4f; border: 1px solid #145f4f; color: #fff; }
