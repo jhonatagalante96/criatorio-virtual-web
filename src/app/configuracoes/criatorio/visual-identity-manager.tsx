@@ -68,7 +68,7 @@ function identityTemplateLoadError(error: unknown): string {
   return "Não foi possível carregar os modelos de identidade. Tente novamente.";
 }
 
-export function VisualIdentityManager({ actionRef, breedingFarmId, farmName }: Readonly<{ actionRef: React.MutableRefObject<() => void>; breedingFarmId: string; farmName: string }>) {
+export function VisualIdentityManager({ actionRef, breedingFarmId, farmName, onApplied }: Readonly<{ actionRef: React.MutableRefObject<() => void>; breedingFarmId: string; farmName: string; onApplied?: () => void }>) {
   const { refresh } = useAuth();
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [identity, setIdentity] = useState<VisualIdentityItem | null>(null);
@@ -386,6 +386,7 @@ export function VisualIdentityManager({ actionRef, breedingFarmId, farmName }: R
       closeIdentityDialog();
       setSuccessMessage("Modelo de identidade visual aplicado com sucesso.");
       setReloadNonce((current) => current + 1);
+      onApplied?.();
     } catch (error) {
       await handleMutationError(error, "apply");
     } finally {
@@ -434,6 +435,7 @@ export function VisualIdentityManager({ actionRef, breedingFarmId, farmName }: R
       setSelectedPreviewUrl(undefined);
       setSuccessMessage("Identidade visual atualizada com sucesso.");
       setReloadNonce((current) => current + 1);
+      onApplied?.();
     } catch (error) {
       await handleMutationError(error, "upload");
     } finally {
