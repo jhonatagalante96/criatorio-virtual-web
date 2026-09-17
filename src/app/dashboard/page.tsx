@@ -10,6 +10,7 @@ import { BrandLockup, BrandPanel } from "../components/brand";
 import { DashboardIcon } from "../components/dashboard-icons";
 import { PasskeyActivationPrompt } from "../components/passkey-activation-prompt";
 import { SessionRecovery } from "../components/session-recovery";
+import { DashboardStatisticsSummary } from "../components/dashboard-statistics-summary";
 import type { DashboardIconName } from "../components/dashboard-icons";
 import { resolveBirdImageUrl } from "../plantel/aves/bird-image";
 
@@ -556,6 +557,7 @@ function DashboardContent({
         </div>
       </section>
 
+      <DashboardStatisticsSummary farmId={farm.breedingFarmId} />
       <QuickActionsSection />
       <div className="dashboard-secondary-grid">
         <PendingSection pending={dashboard.pending} />

@@ -101,6 +101,19 @@ function birdImagesResponse(items: Array<{ birdId: string; imageUrl: string | nu
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
+function statisticsResponse(): Response {
+  return new Response(JSON.stringify({
+    breedingFarmId: "farm-a",
+    from: "2026-08-19",
+    to: "2026-09-17",
+    birdsByStatus: [{ status: "Active", count: 3 }],
+    birdsBySex: [{ sex: "Male", count: 2 }, { sex: "Female", count: 1 }],
+    birdsBySpecies: [{ speciesId: "species-a", popularName: "Canário-da-terra", scientificName: "Sicalis flaveola", count: 3 }],
+    daily: [{ date: "2026-09-17", birdsRegisteredCount: 1, birthsRecordedCount: 2, reproductionsStartedCount: 1, reproductionsCompletedCount: 0, internalTransfersInCount: 0, internalTransfersOutCount: 1, externalTransfersOutCount: 0 }],
+    transfers: { internalTransfersInCount: 0, internalTransfersOutCount: 1, externalTransfersOutCount: 0, incomingRequestsByStatus: [], outgoingRequestsByStatus: [] }
+  }), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
 function responseWithStatus(status: number): Response {
   return new Response(null, { status });
 }
@@ -166,7 +179,8 @@ describe("DashboardPage", () => {
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(dashboardResponse())
       .mockResolvedValueOnce(birdImagesResponse())
-      .mockResolvedValueOnce(birdImagesResponse());
+      .mockResolvedValueOnce(birdImagesResponse())
+      .mockResolvedValueOnce(statisticsResponse());
     vi.stubGlobal("fetch", fetchMock);
 
     render(<DashboardPage />);
@@ -214,15 +228,17 @@ describe("DashboardPage", () => {
       .mockResolvedValueOnce(birdImagesResponse([{
         birdId: "bird-pending",
         imageUrl: "/api/birds/bird-pending/attachments/photo-a/content"
-      }]));
+      }]))
+      .mockResolvedValueOnce(statisticsResponse());
     vi.stubGlobal("fetch", fetchMock);
 
     render(<DashboardPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
+    await screen.findByText("Nascimentos · 30 dias");
     expect(screen.getByText("Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.")).toBeTruthy();
 
-    const activeBirdMetric = screen.getByText("Aves cadastradas").closest("article");
+    const activeBirdMetric = screen.getByText("Aves cadastradas", { selector: ".dashboard-metric-label" }).closest("article");
     if (!activeBirdMetric) throw new Error("Indicador de aves cadastradas não encontrado.");
     expect(within(activeBirdMetric).getByText("3")).toBeTruthy();
     expect(document.querySelectorAll(".dashboard-metric-trend")).toHaveLength(0);
@@ -253,6 +269,7 @@ describe("DashboardPage", () => {
     expect(document.querySelector('img[src="https://localhost:58016/api/birds/bird-pending/attachments/photo-a/content"]')).toBeTruthy();
     expect(String(fetchMock.mock.calls[3][0])).toContain("api/birds?sortBy=createdAt&sortDirection=desc&page=1&pageSize=10");
     expect(String(fetchMock.mock.calls[4][0])).toContain("api/birds?identificationPending=true&sortBy=createdAt&sortDirection=desc&page=1&pageSize=1");
+    expect(String(fetchMock.mock.calls[5][0])).toContain("api/breeding-farms/current/statistics?from=");
     fireEvent.click(screen.getAllByLabelText("Abrir menu de Owner")[0]);
     expect(screen.getAllByRole("link", { name: "Meu Criatório" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
     expect(screen.getAllByRole("link", { name: "Configurações" }).filter((element) => element.closest("details[open]"))).toHaveLength(1);
@@ -264,6 +281,8 @@ describe("DashboardPage", () => {
     expect(screen.getAllByText("Transferências").filter((element) => element.closest(".authenticated-nav-link"))).toHaveLength(2);
     expect(screen.getAllByText("Competições")).toHaveLength(2);
     expect(screen.getAllByText("Documentos")).toHaveLength(2);
+    expect(screen.getAllByText("Estatísticas").filter((element) => element.closest(".authenticated-nav-link"))).toHaveLength(2);
+    expect(screen.getByRole("link", { name: /Ver estatísticas/ }).getAttribute("href")).toBe("/estatisticas");
     expect(screen.queryByLabelText("Notificações")).toBeNull();
     expect(screen.queryByText("Relatórios")).toBeNull();
     expect(String(fetchMock.mock.calls[2][0])).toContain("api/dashboard");
@@ -271,20 +290,51 @@ describe("DashboardPage", () => {
 
   it("offers passkey activation after the authenticated dashboard confirms an empty account", async () => {
     setBrowserSupport();
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(selectedFarmResponse())
-      .mockResolvedValueOnce(dashboardResponse())
-      .mockResolvedValueOnce(birdImagesResponse())
-      .mockResolvedValueOnce(birdImagesResponse())
-      .mockResolvedValueOnce(new Response(JSON.stringify({ passkeys: [] }), { headers: { "content-type": "application/json" }, status: 200 }));
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api/auth/session")) return authenticatedSession();
+      if (url.includes("api/breeding-farms/current/statistics")) return statisticsResponse();
+      if (url.includes("api/breeding-farms")) return selectedFarmResponse();
+      if (url.includes("api/dashboard")) return dashboardResponse();
+      if (url.includes("api/birds?")) return birdImagesResponse();
+      if (url.includes("api/auth/passkeys")) return new Response(JSON.stringify({ passkeys: [] }), { headers: { "content-type": "application/json" }, status: 200 });
+      return responseWithStatus(404);
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<DashboardPage />);
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Ativar login rápido" })).toBeTruthy());
     expect(screen.getByRole("heading", { name: "Ative o login rápido" })).toBeTruthy();
-    expect(String(fetchMock.mock.calls[5][0])).toContain("api/auth/passkeys");
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("api/auth/passkeys"))).toBe(true);
+  });
+
+  it("retries the statistics request from its own dashboard summary", async () => {
+    let statisticsFailures = 1;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api/auth/session")) return authenticatedSession();
+      if (url.includes("api/breeding-farms/current/statistics")) {
+        if (statisticsFailures > 0) {
+          statisticsFailures -= 1;
+          return responseWithStatus(503);
+        }
+        return statisticsResponse();
+      }
+      if (url.includes("api/breeding-farms")) return selectedFarmResponse();
+      if (url.includes("api/dashboard")) return dashboardResponse();
+      if (url.includes("api/birds?")) return birdImagesResponse();
+      return responseWithStatus(404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DashboardPage />);
+
+    await screen.findByText("Não foi possível carregar o resumo agora.");
+    const summary = screen.getByRole("region", { name: "Resumo do criatório" });
+    fireEvent.click(within(summary).getByRole("button", { name: "Tentar novamente" }));
+    await within(summary).findByText("Nascimentos · 30 dias");
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes("current/statistics"))).toHaveLength(2);
   });
 
   it("renders a useful empty state for a dashboard with no records", async () => {
@@ -318,7 +368,7 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("Alguns dados do painel"));
+    await screen.findByText(/Alguns dados do painel/);
     expect(screen.getByText("Tudo em dia por aqui.")).toBeTruthy();
     expect(screen.getByText("Seu histórico começa aqui.")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
@@ -349,7 +399,8 @@ describe("DashboardPage", () => {
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(dashboardResponse())
       .mockResolvedValueOnce(birdImagesResponse())
-      .mockResolvedValueOnce(birdImagesResponse());
+      .mockResolvedValueOnce(birdImagesResponse())
+      .mockResolvedValueOnce(statisticsResponse());
     vi.stubGlobal("fetch", fetchMock);
 
     render(<DashboardPage />);
@@ -359,7 +410,8 @@ describe("DashboardPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
-    expect(fetchMock).toHaveBeenCalledTimes(7);
+    await screen.findByText("Nascimentos · 30 dias");
+    expect(fetchMock).toHaveBeenCalledTimes(8);
   });
 
   it("recovers once when the dashboard session expires", async () => {
@@ -370,13 +422,15 @@ describe("DashboardPage", () => {
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(dashboardResponse())
       .mockResolvedValueOnce(birdImagesResponse())
-      .mockResolvedValueOnce(birdImagesResponse());
+      .mockResolvedValueOnce(birdImagesResponse())
+      .mockResolvedValueOnce(statisticsResponse());
     vi.stubGlobal("fetch", fetchMock);
 
     render(<DashboardPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Painel" })).toBeTruthy());
-    expect(fetchMock).toHaveBeenCalledTimes(7);
+    await screen.findByText("Nascimentos · 30 dias");
+    expect(fetchMock).toHaveBeenCalledTimes(8);
   });
 
   it("maps a selected-farm conflict to the farm selection flow", async () => {

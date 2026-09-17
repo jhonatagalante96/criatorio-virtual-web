@@ -1,5 +1,5 @@
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import BreedingFarmEditPage from "./page";
 
@@ -129,6 +129,7 @@ describe("BreedingFarmEditPage", () => {
     expect(screen.getByRole("heading", { name: "Endereço" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Contato" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Editar criatório/ }).getAttribute("href")).toContain("breedingFarmId=farm-id");
+    expect(within(screen.getByRole("navigation", { name: "Seções do criatório" })).queryByText("Estatísticas")).toBeNull();
     expect(screen.getAllByRole("link", { name: "Meu Criatório" }).length).toBeGreaterThan(0);
     expect(await screen.findByRole("button", { name: "Alterar imagem do criatório" })).toBeTruthy();
   });
