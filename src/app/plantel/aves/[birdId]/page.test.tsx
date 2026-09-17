@@ -3,6 +3,13 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 import BirdDetailPage from "./page";
 
+vi.mock("./bird-media-section", () => ({
+  BirdMediaSection: () => React.createElement("section", null,
+    React.createElement("h2", null, "Arquivos da ave"),
+    React.createElement("p", null, "Nenhuma foto ou anexo cadastrado.")
+  )
+}));
+
 const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
 
 afterEach(() => {
@@ -889,8 +896,8 @@ describe("BirdDetailPage", () => {
     expect(screen.getByText("Pai não cadastrado")).toBeTruthy();
     expect(screen.getByText("Identificação pendente")).toBeTruthy();
     expect(screen.getByText("Nenhuma observação registrada.")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Fotos" })).toBeTruthy();
-    expect(screen.getByText("Nenhuma foto cadastrada.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Arquivos da ave" })).toBeTruthy();
+    expect(screen.getByText("Nenhuma foto ou anexo cadastrado.")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Código de identificação da ave" })).toBeTruthy();
     expect(screen.getByText(/geração de documentos for liberada/)).toBeTruthy();
   });

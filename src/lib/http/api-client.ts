@@ -127,6 +127,103 @@ export class ApiClient {
     return data;
   }
 
+  async upload<T>(
+    path: string,
+    body: FormData,
+    onProgress?: (percent: number) => void,
+    options: Omit<ApiRequestOptions, "body"> = {}
+  ): Promise<T> {
+    const method = options.method ?? "POST";
+    const url = new URL(path, this.endpoint).toString();
+    if (new URL(url).origin !== new URL(this.endpoint).origin) {
+      throw new Error("File uploads must use the configured API origin.");
+    }
+    const headers = new Headers(options.headers);
+    headers.set("accept", "application/json");
+
+    if (isMutation(method)) {
+      const token = this.csrfToken();
+      if (token) headers.set(ANTIFORGERY_HEADER, token);
+    }
+
+    if (options.signal?.aborted) {
+      throw options.signal.reason ?? new DOMException("A solicitação foi cancelada.", "AbortError");
+    }
+
+    const requestVersion = this.tenantVersion;
+    return new Promise<T>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      let settled = false;
+
+      const cleanup = () => options.signal?.removeEventListener("abort", abortRequest);
+      const fail = (error: unknown) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(error);
+      };
+      const abortRequest = () => request.abort();
+
+      request.open(method, url, true);
+      request.withCredentials = true;
+      headers.forEach((value, name) => request.setRequestHeader(name, value));
+      request.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          onProgress?.(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+        }
+      });
+      request.addEventListener("load", async () => {
+        if (requestVersion !== this.tenantVersion) {
+          fail(new StaleTenantResponseError());
+          return;
+        }
+
+        if (request.status === 0) {
+          fail(new Error("Não foi possível enviar o arquivo. Verifique sua conexão e tente novamente."));
+          return;
+        }
+
+        const response = new Response(request.status === 204 ? null : request.responseText, {
+          headers: { "content-type": request.getResponseHeader("content-type") ?? "" },
+          status: request.status
+        });
+        if (!response.ok && !options.acceptedStatuses?.includes(response.status)) {
+          try {
+            fail(await toApiError(response));
+          } catch (error) {
+            fail(error);
+          }
+          return;
+        }
+        if (request.status === 204) {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          resolve(undefined as T);
+          return;
+        }
+
+        try {
+          const data = JSON.parse(request.responseText) as T;
+          if (requestVersion !== this.tenantVersion) {
+            fail(new StaleTenantResponseError());
+            return;
+          }
+          if (settled) return;
+          settled = true;
+          cleanup();
+          resolve(data);
+        } catch (error) {
+          fail(error);
+        }
+      });
+      request.addEventListener("error", () => fail(new Error("Não foi possível enviar o arquivo. Verifique sua conexão e tente novamente.")));
+      request.addEventListener("abort", () => fail(options.signal?.reason ?? new DOMException("A solicitação foi cancelada.", "AbortError")));
+      options.signal?.addEventListener("abort", abortRequest, { once: true });
+      request.send(body);
+    });
+  }
+
   async requestBlob(path: string, options: ApiRequestOptions = {}): Promise<Blob> {
     const method = options.method ?? "GET";
     const url = new URL(path, this.endpoint).toString();
