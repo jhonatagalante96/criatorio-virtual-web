@@ -63,6 +63,57 @@ describe("BirdMediaSection", () => {
     expect(screen.queryByRole("img", { name: "registro.pdf" })).toBeNull();
   });
 
+  it("sets a different image as primary and refreshes the bird profile", async () => {
+    const replacement = {
+      ...photo,
+      attachmentId: "photo-b",
+      fileName: "pardal-substituto.jpg",
+      downloadUrl: "/api/birds/bird-a/attachments/photo-b/content",
+      isPrimary: false
+    };
+    const client = createClient([photo, replacement]);
+    const onBirdUpdated = vi.fn();
+
+    render(
+      <BirdMediaSection
+        bird={bird}
+        client={client}
+        onBirdUpdated={onBirdUpdated}
+        onSessionExpired={vi.fn()}
+        prepareMutation={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Definir como principal" }));
+
+    expect(await screen.findByText("A foto principal da ave foi atualizada.")).toBeTruthy();
+    expect(client.request).toHaveBeenNthCalledWith(2, "api/birds/bird-a/primary-photo", {
+      body: JSON.stringify({ attachmentId: "photo-b" }),
+      headers: { "content-type": "application/json" },
+      method: "PUT"
+    });
+    expect(screen.getAllByRole("button", { name: "Definir como principal" })).toHaveLength(1);
+    expect(screen.getAllByText("Foto principal", { exact: true })).toHaveLength(1);
+    expect(client.clearCache).toHaveBeenCalledOnce();
+    expect(onBirdUpdated).toHaveBeenCalledOnce();
+  });
+
+  it("blocks further photo changes after the API reports a pending transfer", async () => {
+    const candidate = { ...photo, attachmentId: "photo-b", isPrimary: false };
+    const client = createClient([candidate]);
+    vi.mocked(client.request)
+      .mockResolvedValueOnce({ breedingFarmId: bird.breedingFarmId, birdId: bird.birdId, items: [candidate] })
+      .mockRejectedValueOnce(new ApiError(409, "The primary photo cannot be changed while a transfer is pending."));
+
+    renderSection(client);
+    fireEvent.click(await screen.findByRole("button", { name: "Definir como principal" }));
+
+    const error = await screen.findByRole("alert");
+    expect(error.textContent).toContain("transferência pendente");
+    expect(screen.getByRole("button", { name: "Definir como principal" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("status").textContent).toContain("transferência pendente");
+  });
+
   it("validates unsupported files before sending and announces upload progress", async () => {
     let finishUpload: ((attachment: typeof photo) => void) | undefined;
     const client = createClient([]);
