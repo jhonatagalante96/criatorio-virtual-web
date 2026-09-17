@@ -3,6 +3,7 @@
 import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient, getApiUrl } from "../../../lib/http/api-client";
+import { IdentityTemplate, IdentityTemplateLoadState, IdentityTemplateOption, VisualIdentityTemplatePicker, optionLabel } from "./visual-identity-template-picker";
 
 const visualIdentityPath = "api/breeding-farms/visual-identity";
 const visualIdentityTemplatesPath = `${visualIdentityPath}/templates`;
@@ -26,24 +27,6 @@ interface VisualIdentityResponse {
 }
 
 type LoadState = "error" | "loading" | "ready";
-type IdentityTemplateLoadState = "error" | "loading" | "ready";
-
-interface IdentityTemplateOption {
-  key: string;
-  type: string;
-  required: boolean;
-  default: string;
-  values: string[];
-}
-
-interface IdentityTemplate {
-  id: string;
-  name: string;
-  version: string;
-  previewUrl: string;
-  aspectRatio: string;
-  options: IdentityTemplateOption[];
-}
 
 function validateFile(file: File): string | undefined {
   if (file.size <= 0) return "O arquivo selecionado está vazio.";
@@ -64,7 +47,9 @@ function requestErrorMessage(error: unknown, action: "load" | "remove" | "upload
     : "A imagem não foi aceita. Escolha um arquivo PNG ou JPEG válido de até 10 MB.";
   if (error.status === 401) return "Sua sessão expirou. Entre novamente para continuar.";
   if (error.status === 403) return "Sua conta não tem permissão para alterar esta identidade.";
-  if (error.status === 404) return action === "load" ? "Não foi possível localizar a identidade deste criatório." : "O criatório ou a identidade não foi encontrada.";
+  if (error.status === 404) return action === "load" ? "Não foi possível localizar a identidade deste criatório." : action === "preview" || action === "apply"
+    ? "Este modelo não está mais disponível. Escolha um modelo atual e gere uma nova prévia."
+    : "O criatório ou a identidade não foi encontrada.";
   if (error.status === 409) return (action === "preview" || action === "apply") && /template|version/i.test(error.message)
     ? "Este modelo ou versão não está mais disponível. Escolha outro modelo e gere uma nova prévia."
     : "Selecione ou atualize o criatório antes de continuar.";
@@ -77,25 +62,13 @@ function requestErrorMessage(error: unknown, action: "load" | "remove" | "upload
   return "Não foi possível concluir esta ação. Tente novamente.";
 }
 
-function optionLabel(key: string): string {
-  if (key === "subtitle") return "Subtítulo";
-  if (key === "tagline") return "Frase de apoio";
-  return key;
-}
-
 function identityTemplateLoadError(error: unknown): string {
   if (error instanceof ApiError && error.status === 401) return "Sua sessão expirou. Entre novamente para ver os modelos.";
   if (error instanceof ApiError && error.status === 403) return "Sua conta não tem permissão para ver os modelos de identidade.";
   return "Não foi possível carregar os modelos de identidade. Tente novamente.";
 }
 
-function sourceLabel(source: string): string {
-  if (source === "Upload") return "Imagem enviada";
-  if (source === "Template") return "Modelo da plataforma";
-  return "Identidade configurada";
-}
-
-export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ breedingFarmId: string; farmName: string }>) {
+export function VisualIdentityManager({ actionRef, breedingFarmId, farmName }: Readonly<{ actionRef: React.MutableRefObject<() => void>; breedingFarmId: string; farmName: string }>) {
   const { refresh } = useAuth();
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [identity, setIdentity] = useState<VisualIdentityItem | null>(null);
@@ -117,6 +90,8 @@ export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ b
   const [templatePreviewSignature, setTemplatePreviewSignature] = useState<string>();
   const [isMutating, setIsMutating] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [identityDialogOpen, setIdentityDialogOpen] = useState(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [confirmApply, setConfirmApply] = useState(false);
   const [confirmApplyTemplate, setConfirmApplyTemplate] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -124,8 +99,22 @@ export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ b
   const csrfToken = useRef<string | undefined>(undefined);
   const requestVersion = useRef(0);
   const currentImageObjectUrl = useRef<string | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
+
+  useEffect(() => {
+    const openAction = () => {
+      setMutationError(undefined);
+      setFileError(undefined);
+      setIdentityDialogOpen(true);
+      setShowTemplatePicker(false);
+    };
+    actionRef.current = openAction;
+    return () => {
+      if (actionRef.current === openAction) actionRef.current = () => {};
+    };
+  }, [actionRef]);
 
   useEffect(() => {
     const currentRequest = requestVersion.current + 1;
@@ -185,6 +174,7 @@ export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ b
   }, [breedingFarmId, refresh, reloadNonce]);
 
   useEffect(() => {
+    if (!identityDialogOpen || !showTemplatePicker) return;
     let cancelled = false;
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 15000);
@@ -223,7 +213,7 @@ export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ b
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [breedingFarmId, refresh, templateReloadNonce]);
+  }, [breedingFarmId, identityDialogOpen, refresh, showTemplatePicker, templateReloadNonce]);
 
   useEffect(() => () => {
     if (selectedPreviewUrl) URL.revokeObjectURL(selectedPreviewUrl);
@@ -234,17 +224,19 @@ export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ b
   }, [templatePreviewUrl]);
 
   useEffect(() => {
-    if (!confirmApply && !confirmApplyTemplate && !confirmRemove) return;
+    if (!identityDialogOpen && !confirmApply && !confirmApplyTemplate && !confirmRemove) return;
     function closeOnEscape(event: KeyboardEvent): void {
       if (event.key === "Escape" && !isMutating) {
+        setIdentityDialogOpen(false);
+        setShowTemplatePicker(false);
         setConfirmApply(false);
         setConfirmApplyTemplate(false);
         setConfirmRemove(false);
         return;
       }
       if (event.key !== "Tab") return;
-      const dialog = document.querySelector<HTMLElement>(".farm-identity-dialog");
-      const controls = dialog?.querySelectorAll<HTMLElement>("button:not(:disabled)");
+      const dialog = document.querySelector<HTMLElement>(".farm-identity-dialog-backdrop");
+      const controls = dialog?.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex='-1'])");
       if (!controls?.length) return;
       const first = controls[0];
       const last = controls[controls.length - 1];
@@ -258,15 +250,13 @@ export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ b
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [confirmApply, confirmApplyTemplate, confirmRemove, isMutating]);
+  }, [confirmApply, confirmApplyTemplate, confirmRemove, identityDialogOpen, isMutating]);
 
   async function ensureAntiforgeryToken(): Promise<void> {
     if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
   }
 
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
-  const appliedTemplate = identity?.modelId ? templates.find((template) => template.id === identity.modelId) : undefined;
-
   function templatePayload(template: IdentityTemplate, values: Record<string, string>): Record<string, string> {
     return Object.fromEntries(template.options.map((option) => [option.key, values[option.key]?.trim() || option.default]));
   }
@@ -292,6 +282,19 @@ export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ b
     setSuccessMessage(undefined);
   }
 
+  function openIdentityDialog(): void {
+    setMutationError(undefined);
+    setFileError(undefined);
+    setIdentityDialogOpen(true);
+    setShowTemplatePicker(false);
+  }
+
+  function closeIdentityDialog(): void {
+    setIdentityDialogOpen(false);
+    setShowTemplatePicker(false);
+    setConfirmApplyTemplate(false);
+  }
+
   function changeTemplateOption(option: IdentityTemplateOption, value: string): void {
     setTemplateConfiguration((current) => ({ ...current, [option.key]: value }));
     setTemplatePreviewUrl(undefined);
@@ -301,7 +304,9 @@ export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ b
   }
 
   async function handleMutationError(error: unknown, action: "remove" | "upload" | "preview" | "apply"): Promise<void> {
-    if (error instanceof ApiError && error.status === 409 && (action === "preview" || action === "apply") && /template|version/i.test(error.message)) {
+    const staleTemplate = error instanceof ApiError && (action === "preview" || action === "apply") &&
+      (error.status === 404 || (error.status === 409 && /template|version/i.test(error.message)));
+    if (staleTemplate) {
       setConfirmApplyTemplate(false);
       setSelectedTemplateId(undefined);
       setTemplateConfiguration({});
@@ -378,6 +383,7 @@ export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ b
       setTemplateConfiguration({});
       setTemplatePreviewUrl(undefined);
       setTemplatePreviewSignature(undefined);
+      closeIdentityDialog();
       setSuccessMessage("Modelo de identidade visual aplicado com sucesso.");
       setReloadNonce((current) => current + 1);
     } catch (error) {
@@ -409,6 +415,8 @@ export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ b
     setFileError(undefined);
     setSelectedFile(file);
     setSelectedPreviewUrl(URL.createObjectURL(file));
+    closeIdentityDialog();
+    setConfirmApply(true);
   }
 
   async function applyIdentity(): Promise<void> {
@@ -451,155 +459,88 @@ export function VisualIdentityManager({ breedingFarmId, farmName }: Readonly<{ b
   }
 
   return (
-    <section aria-labelledby="titulo-identidade-criatorio" className="farm-info-card farm-identity-card">
-      <div className="farm-card-heading"><div><h2 id="titulo-identidade-criatorio">Identidade visual</h2><p>Personalize o símbolo exibido para o seu criatório.</p></div></div>
-      {successMessage && <p className="confirmation-feedback" role="status">{successMessage}</p>}
-      {mutationError && <p className="form-error" role="alert">{mutationError}</p>}
-      {fileError && <p className="form-error" role="alert">{fileError}</p>}
-
-      {loadState === "loading" && <p aria-live="polite" className="farm-identity-feedback">Carregando identidade visual…</p>}
-      {loadState === "error" && <div className="farm-identity-feedback"><p role="alert">{loadError}</p><button className="farm-identity-secondary-action" onClick={() => setReloadNonce((current) => current + 1)} type="button">Tentar novamente</button></div>}
-      {loadState === "ready" && (
-        <>
-          <div className="farm-identity-current">
-            {currentImageUrl
-              ? <img alt={`Identidade visual atual do ${farmName}`} className="farm-identity-preview" src={currentImageUrl} />
-              : identity
-                ? <div aria-label="Prévia da identidade não disponível" className="farm-identity-placeholder"><span aria-hidden="true">CV</span><small>Prévia indisponível</small></div>
-                : <div className="farm-identity-placeholder"><img alt="" src="/assets/brand/png/criatorio-virtual-symbol.png" /><small>Símbolo padrão</small></div>}
-            <div className="farm-identity-details">
-              <strong>{identity ? sourceLabel(identity.source) : "Nenhuma imagem personalizada"}</strong>
-              <p>{identity?.source === "Template"
-                ? `${appliedTemplate?.name ?? identity.modelId ?? "Modelo aplicado"}${identity.version ? ` · versão ${identity.version}` : ""}`
-                : identity?.fileName ?? "O símbolo padrão do Criatório Virtual será usado até você enviar uma imagem."}</p>
-              {identity?.updatedAtUtc && <small>Atualizada em {new Date(identity.updatedAtUtc).toLocaleDateString("pt-BR")}</small>}
-            </div>
-          </div>
-
-          <div className="farm-identity-actions">
-            <label className="farm-identity-primary-action" htmlFor="farm-identity-file">{identity ? "Substituir imagem" : "Enviar minha imagem"}</label>
-            <input accept="image/png,image/jpeg" aria-describedby="farm-identity-file-help" className="farm-identity-file-input" id="farm-identity-file" onChange={handleFileChange} type="file" />
-            {identity && <button className="farm-identity-secondary-action" disabled={isMutating} onClick={() => { setMutationError(undefined); setConfirmRemove(true); }} type="button">Remover imagem</button>}
-          </div>
-          <p className="farm-identity-help" id="farm-identity-file-help">PNG ou JPEG, até 10 MB. A imagem só será aplicada após você conferir a prévia e confirmar.</p>
-
-          {selectedFile && selectedPreviewUrl && (
-            <div className="farm-identity-pending">
-              <div><p className="eyebrow">Prévia da nova identidade</p><img alt={`Prévia de ${selectedFile.name}`} className="farm-identity-preview" src={selectedPreviewUrl} /><p>{selectedFile.name}</p></div>
-              <div className="farm-identity-actions"><button className="farm-identity-primary-action" disabled={isMutating} onClick={() => { setMutationError(undefined); setConfirmApply(true); }} type="button">Aplicar identidade</button><button className="farm-identity-secondary-action" disabled={isMutating} onClick={() => { setSelectedFile(undefined); setSelectedPreviewUrl(undefined); setFileError(undefined); }} type="button">Cancelar prévia</button></div>
-            </div>
-          )}
-        </>
-      )}
-
-      <section aria-labelledby="farm-identity-templates-title" className="farm-identity-templates">
-        <div>
-          <h3 id="farm-identity-templates-title">Escolher um modelo</h3>
-          <p>Veja as opções disponíveis e gere uma prévia com os dados do seu criatório antes de aplicar.</p>
+    <>
+      <div className="farm-identity-avatar-wrap">
+        <div className="farm-profile-symbol farm-identity-profile-symbol">
+          <img alt={currentImageUrl ? `Identidade visual atual do ${farmName}` : ""} className="farm-identity-profile-image" src={currentImageUrl ?? "/assets/brand/png/criatorio-virtual-symbol.png"} />
         </div>
-        {templateLoadState === "loading" && <p aria-live="polite" className="farm-identity-feedback">Carregando modelos…</p>}
-        {templateLoadState === "error" && (
-          <div className="farm-identity-feedback">
-            <p role="alert">{templateLoadError}</p>
-            <button className="farm-identity-secondary-action" disabled={isMutating || isPreviewing} onClick={() => setTemplateReloadNonce((current) => current + 1)} type="button">Tentar novamente</button>
-          </div>
-        )}
-        {templateLoadState === "ready" && templates.length === 0 && <p className="farm-identity-feedback">Nenhum modelo está disponível no momento.</p>}
-        {templateLoadState === "ready" && templates.length > 0 && (
-          <div aria-label="Modelos de identidade visual" className="farm-identity-template-gallery" role="group">
-            {templates.map((template) => (
-              <button
-                aria-pressed={selectedTemplateId === template.id}
-                className="farm-identity-template-option"
-                disabled={isMutating || isPreviewing}
-                key={`${template.id}-${template.version}`}
-                onClick={() => selectTemplate(template)}
-                type="button"
-              >
-                <img alt={`Prévia ilustrativa do modelo ${template.name}, com texto demonstrativo`} src={getApiUrl(template.previewUrl)} />
-                <span className="farm-identity-template-name">{template.name}</span>
-                <span className="farm-identity-template-version">Versão {template.version} · {template.aspectRatio}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        <button aria-label="Alterar imagem do criatório" className="farm-identity-camera-action" onClick={openIdentityDialog} type="button">
+          <svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="M4 8.5h3l1.4-2h7.2l1.4 2h3v10H4v-10Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8"/><circle cx="12" cy="13.2" r="3.1" stroke="currentColor" strokeWidth="1.8"/></svg>
+        </button>
+        <input accept="image/png,image/jpeg" aria-label="Enviar minha imagem" className="farm-identity-file-input" onChange={handleFileChange} ref={fileInputRef} tabIndex={-1} type="file" />
+      </div>
+      {successMessage && <span className="sr-only" role="status">{successMessage}</span>}
 
-        {selectedTemplate && (
-          <div className="farm-identity-template-configuration">
-            <h4>Personalizar {selectedTemplate.name}</h4>
-            <p className="farm-identity-help">Os controles abaixo correspondem às opções declaradas por este modelo. O padrão do modelo aparece preenchido.</p>
-            {selectedTemplate.options.length > 0 && (
-              <fieldset className="farm-identity-template-fields">
-                <legend>Opções deste modelo</legend>
-                {selectedTemplate.options.map((option) => (
-                  <div className="farm-identity-template-field" key={option.key}>
-                    {option.type === "enum" ? (
-                      <label htmlFor={`farm-identity-option-${option.key}`}>
-                        {optionLabel(option.key)}
-                        <select
-                          id={`farm-identity-option-${option.key}`}
-                          disabled={isMutating || isPreviewing}
-                          onChange={(event) => changeTemplateOption(option, event.currentTarget.value)}
-                          required={option.required}
-                          value={templateConfiguration[option.key] ?? option.default}
-                        >
-                          {option.values.map((value) => <option key={value} value={value}>{value}</option>)}
-                        </select>
-                      </label>
-                    ) : option.type === "text" ? (
-                      <label htmlFor={`farm-identity-option-${option.key}`}>
-                        {optionLabel(option.key)}
-                        <input
-                          autoComplete="off"
-                          id={`farm-identity-option-${option.key}`}
-                          maxLength={120}
-                          disabled={isMutating || isPreviewing}
-                          onChange={(event) => changeTemplateOption(option, event.currentTarget.value)}
-                          required={option.required}
-                          value={templateConfiguration[option.key] ?? option.default}
-                        />
-                      </label>
-                    ) : (
-                      <p className="farm-identity-help">{optionLabel(option.key)} é definida pelo modelo.</p>
-                    )}
-                  </div>
-                ))}
-              </fieldset>
-            )}
-            <div className="farm-identity-template-actions">
-              <button className="farm-identity-secondary-action" disabled={isPreviewing || isMutating} onClick={() => void generateTemplatePreview()} type="button">
-                {isPreviewing ? "Gerando prévia…" : templatePreviewUrl ? "Atualizar prévia" : "Gerar prévia"}
-              </button>
-              {templatePreviewUrl && templatePreviewSignature === currentTemplateSignature() && (
-                <>
-                  <img alt={`Prévia de ${selectedTemplate.name} com as opções escolhidas`} className="farm-identity-template-render" src={templatePreviewUrl} />
-                  <button className="farm-identity-primary-action" disabled={isMutating || isPreviewing} onClick={() => { setMutationError(undefined); setConfirmApplyTemplate(true); }} type="button">Aplicar modelo</button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </section>
-
-      {confirmApply && selectedFile && (
-        <div className="farm-identity-dialog-backdrop"><section aria-labelledby="titulo-confirmar-identidade" aria-modal="true" className="farm-identity-dialog" role="dialog"><h3 id="titulo-confirmar-identidade">Aplicar nova identidade?</h3><p>A imagem será usada como identidade visual de {farmName}.</p><div className="farm-identity-dialog-actions"><button autoFocus className="farm-identity-secondary-action" disabled={isMutating} onClick={() => setConfirmApply(false)} type="button">Voltar à prévia</button><button className="farm-identity-primary-action" disabled={isMutating} onClick={() => void applyIdentity()} type="button">{isMutating ? "Aplicando…" : "Confirmar aplicação"}</button></div></section></div>
-      )}
-      {confirmApplyTemplate && selectedTemplate && templatePreviewUrl && templatePreviewSignature === currentTemplateSignature() && (
+      {identityDialogOpen && (
         <div className="farm-identity-dialog-backdrop">
-          <section aria-labelledby="titulo-confirmar-modelo" aria-modal="true" className="farm-identity-dialog" role="dialog">
-            <h3 id="titulo-confirmar-modelo">Aplicar este modelo?</h3>
-            <p>O modelo {selectedTemplate.name} será aplicado à identidade visual de {farmName}, usando a prévia e as opções exibidas.</p>
-            <img alt={`Prévia de ${selectedTemplate.name} que será aplicada`} className="farm-identity-template-render" src={templatePreviewUrl} />
-            <div className="farm-identity-dialog-actions">
-              <button autoFocus className="farm-identity-secondary-action" disabled={isMutating} onClick={() => setConfirmApplyTemplate(false)} type="button">Voltar à prévia</button>
-              <button className="farm-identity-primary-action" disabled={isMutating} onClick={() => void applyTemplate()} type="button">{isMutating ? "Aplicando…" : "Confirmar aplicação do modelo"}</button>
-            </div>
+          <section aria-labelledby={confirmApplyTemplate ? "titulo-confirmar-modelo" : "farm-identity-chooser-title"} aria-modal="true" className="farm-identity-dialog farm-identity-chooser-dialog" role="dialog">
+            <header className="farm-identity-dialog-heading">
+              <div>{confirmApplyTemplate
+                ? <><h3 id="titulo-confirmar-modelo">Aplicar este modelo?</h3><p>Confira o resultado antes de atualizar o perfil do seu criatório.</p></>
+                : <><h3 id="farm-identity-chooser-title">Alterar identidade visual</h3><p>Escolha como deseja atualizar a imagem do seu criatório.</p></>}</div>
+              <button aria-label="Fechar" className="farm-identity-dialog-close" onClick={closeIdentityDialog} type="button">×</button>
+            </header>
+            {mutationError && !showTemplatePicker && <p className="form-error" role="alert">{mutationError}</p>}
+            {fileError && <p className="form-error" role="alert">{fileError}</p>}
+            {loadState === "error" && <div className="farm-identity-feedback"><p role="alert">{loadError}</p><button className="farm-identity-secondary-action" onClick={() => setReloadNonce((current) => current + 1)} type="button">Tentar novamente</button></div>}
+            {!showTemplatePicker ? (
+              <div className="farm-identity-chooser-options">
+                <button autoFocus className="farm-identity-chooser-option" onClick={() => fileInputRef.current?.click()} type="button">
+                  <span aria-hidden="true" className="farm-identity-chooser-icon"><svg fill="none" viewBox="0 0 24 24"><path d="M4 8.5h3l1.4-2h7.2l1.4 2h3v10H4v-10Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8"/><circle cx="12" cy="13.2" r="3.1" stroke="currentColor" strokeWidth="1.8"/></svg></span>
+                  <span><strong>Enviar minha imagem</strong><small>Use um arquivo PNG ou JPEG do seu dispositivo.</small></span>
+                </button>
+                <button className="farm-identity-chooser-option" onClick={() => setShowTemplatePicker(true)} type="button">
+                  <span aria-hidden="true" className="farm-identity-chooser-icon"><svg fill="none" viewBox="0 0 24 24"><rect height="15" rx="2" stroke="currentColor" strokeWidth="1.8" width="17" x="3.5" y="4.5"/><circle cx="9" cy="10" r="1.5" stroke="currentColor" strokeWidth="1.6"/><path d="m5 18 5-5 3 3 2.5-2.5L19 17" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8"/></svg></span>
+                  <span><strong>Escolher um modelo</strong><small>Veja os modelos disponíveis e personalize uma prévia.</small></span>
+                </button>
+                {identity && <button className="farm-identity-chooser-option" disabled={isMutating} onClick={() => { setMutationError(undefined); setConfirmRemove(true); closeIdentityDialog(); }} type="button"><span aria-hidden="true" className="farm-identity-chooser-icon">×</span><span><strong>Remover imagem</strong><small>Voltar a usar o símbolo padrão do Criatório Virtual.</small></span></button>}
+              </div>
+            ) : confirmApplyTemplate && selectedTemplate && templatePreviewUrl && templatePreviewSignature === currentTemplateSignature() ? (
+              <div className="farm-identity-template-confirmation">
+                <p>O modelo {selectedTemplate.name} será aplicado à identidade visual de {farmName}, usando a prévia e as opções exibidas.</p>
+                <img alt={`Prévia de ${selectedTemplate.name} que será aplicada`} className="farm-identity-template-render" src={templatePreviewUrl} />
+                <div className="farm-identity-dialog-actions">
+                  <button autoFocus className="farm-identity-secondary-action" disabled={isMutating} onClick={() => setConfirmApplyTemplate(false)} type="button">Voltar à prévia</button>
+                  <button className="farm-identity-primary-action" disabled={isMutating} onClick={() => void applyTemplate()} type="button">{isMutating ? "Aplicando…" : "Confirmar aplicação do modelo"}</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="farm-identity-template-picker-heading">
+                  <button className="farm-identity-secondary-action" onClick={() => setShowTemplatePicker(false)} type="button">Voltar</button>
+                  <div><h4>Escolher um modelo</h4><p>Gere uma prévia com os dados do criatório antes de aplicar.</p></div>
+                </div>
+                <VisualIdentityTemplatePicker
+                  error={mutationError}
+                  getPreviewUrl={getApiUrl}
+                  isMutating={isMutating}
+                  isPreviewing={isPreviewing}
+                  loadError={templateLoadError}
+                  loadState={templateLoadState}
+                  onApply={() => { setMutationError(undefined); setConfirmApplyTemplate(true); }}
+                  onChangeOption={changeTemplateOption}
+                  onGeneratePreview={() => void generateTemplatePreview()}
+                  onRetry={() => setTemplateReloadNonce((current) => current + 1)}
+                  onSelect={selectTemplate}
+                  previewIsCurrent={Boolean(templatePreviewUrl && templatePreviewSignature === currentTemplateSignature())}
+                  previewUrl={templatePreviewUrl}
+                  selectedTemplate={selectedTemplate}
+                  selectedTemplateId={selectedTemplateId}
+                  templateConfiguration={templateConfiguration}
+                  templates={templates}
+                />
+              </>
+            )}
           </section>
         </div>
       )}
-      {confirmRemove && (
-        <div className="farm-identity-dialog-backdrop"><section aria-labelledby="titulo-remover-identidade" aria-modal="true" className="farm-identity-dialog" role="dialog"><h3 id="titulo-remover-identidade">Remover identidade visual?</h3><p>O símbolo padrão será exibido no lugar da imagem atual.</p><div className="farm-identity-dialog-actions"><button autoFocus className="farm-identity-secondary-action" disabled={isMutating} onClick={() => setConfirmRemove(false)} type="button">Cancelar</button><button className="farm-identity-danger-action" disabled={isMutating} onClick={() => void removeIdentity()} type="button">{isMutating ? "Removendo…" : "Confirmar remoção"}</button></div></section></div>
+
+      {confirmApply && selectedFile && (
+        <div className="farm-identity-dialog-backdrop"><section aria-labelledby="titulo-confirmar-identidade" aria-modal="true" className="farm-identity-dialog" role="dialog"><h3 id="titulo-confirmar-identidade">Conferir nova identidade</h3><p>Esta imagem será usada no perfil de {farmName}.</p><img alt={`Prévia de ${selectedFile.name}`} className="farm-identity-upload-preview" src={selectedPreviewUrl} /><p className="farm-identity-upload-file-name">{selectedFile.name}</p>{mutationError && <p className="form-error" role="alert">{mutationError}</p>}<div className="farm-identity-dialog-actions"><button autoFocus className="farm-identity-secondary-action" disabled={isMutating} onClick={() => { setConfirmApply(false); setSelectedFile(undefined); setSelectedPreviewUrl(undefined); }} type="button">Cancelar</button><button className="farm-identity-secondary-action" disabled={isMutating} onClick={() => { setConfirmApply(false); setSelectedFile(undefined); setSelectedPreviewUrl(undefined); openIdentityDialog(); }} type="button">Escolher outra imagem</button><button className="farm-identity-primary-action" disabled={isMutating} onClick={() => void applyIdentity()} type="button">{isMutating ? "Aplicando…" : "Confirmar aplicação"}</button></div></section></div>
       )}
-    </section>
+      {confirmRemove && (
+        <div className="farm-identity-dialog-backdrop"><section aria-labelledby="titulo-remover-identidade" aria-modal="true" className="farm-identity-dialog" role="dialog"><h3 id="titulo-remover-identidade">Remover identidade visual?</h3><p>O símbolo padrão será exibido no lugar da imagem atual.</p>{mutationError && <p className="form-error" role="alert">{mutationError}</p>}<div className="farm-identity-dialog-actions"><button autoFocus className="farm-identity-secondary-action" disabled={isMutating} onClick={() => setConfirmRemove(false)} type="button">Cancelar</button><button className="farm-identity-danger-action" disabled={isMutating} onClick={() => void removeIdentity()} type="button">{isMutating ? "Removendo…" : "Confirmar remoção"}</button></div></section></div>
+      )}
+    </>
   );
 }

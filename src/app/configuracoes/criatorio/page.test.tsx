@@ -120,8 +120,7 @@ describe("BreedingFarmEditPage", () => {
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectionResponse())
       .mockResolvedValueOnce(settingsResponse())
-      .mockResolvedValueOnce(visualIdentityResponse())
-      .mockResolvedValueOnce(visualIdentityTemplatesResponse());
+      .mockResolvedValueOnce(visualIdentityResponse());
     vi.stubGlobal("fetch", fetchMock);
     render(<BreedingFarmEditPage />);
 
@@ -131,7 +130,7 @@ describe("BreedingFarmEditPage", () => {
     expect(screen.getByRole("heading", { name: "Contato" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Editar criatório/ }).getAttribute("href")).toContain("breedingFarmId=farm-id");
     expect(screen.getAllByRole("link", { name: "Meu Criatório" }).length).toBeGreaterThan(0);
-    expect(await screen.findByText("Nenhuma imagem personalizada")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Alterar imagem do criatório" })).toBeTruthy();
   });
 
   it("switches from the overview to the edit screen when the farm query changes", async () => {
@@ -140,7 +139,6 @@ describe("BreedingFarmEditPage", () => {
       .mockResolvedValueOnce(selectionResponse())
       .mockResolvedValueOnce(settingsResponse())
       .mockResolvedValueOnce(visualIdentityResponse())
-      .mockResolvedValueOnce(visualIdentityTemplatesResponse())
       .mockResolvedValueOnce(settingsResponse());
     vi.stubGlobal("fetch", fetchMock);
     const view = render(<BreedingFarmEditPage />);
@@ -151,7 +149,7 @@ describe("BreedingFarmEditPage", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Editar criatório" })).toBeTruthy());
     expect(screen.getByLabelText("Nome do criatório")).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it("previews, confirms, uploads, and explicitly removes a visual identity", async () => {
@@ -198,18 +196,24 @@ describe("BreedingFarmEditPage", () => {
     }));
     render(<BreedingFarmEditPage />);
 
-    await screen.findByText("Nenhuma imagem personalizada");
+    await screen.findByRole("button", { name: "Alterar imagem do criatório" });
+    expect(screen.queryByRole("heading", { name: "Escolher um modelo" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Identidade visual" })).toBeNull();
+    expect(fetchMock.mock.calls.some(([input]) => new URL(String(input)).pathname.endsWith("/api/breeding-farms/visual-identity/templates"))).toBe(false);
+    fireEvent.click(screen.getByLabelText("Mais ações"));
+    fireEvent.click(screen.getByRole("button", { name: "Alterar identidade visual" }));
+    expect(screen.getByRole("dialog", { name: "Alterar identidade visual" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Enviar minha imagem/ }));
     const image = new File(["png"], "logo.png", { type: "image/png" });
     fireEvent.change(screen.getByLabelText("Enviar minha imagem"), { target: { files: [image] } });
     expect(await screen.findByRole("img", { name: "Prévia de logo.png" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Aplicar identidade" }));
+    expect(screen.getByRole("dialog", { name: "Conferir nova identidade" })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([, options]) => (options as RequestInit | undefined)?.method === "PUT")).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação" }));
     expect(await screen.findByText("O armazenamento está indisponível no momento. Tente novamente em instantes.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Confirmar aplicação" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação" }));
 
-    expect(await screen.findByText("Imagem enviada")).toBeTruthy();
     expect(await screen.findByRole("img", { name: "Identidade visual atual do Sítio Aurora" })).toBeTruthy();
     const uploadCall = fetchMock.mock.calls.find(([, options]) => (options as RequestInit | undefined)?.method === "PUT");
     expect(uploadCall).toBeTruthy();
@@ -217,11 +221,12 @@ describe("BreedingFarmEditPage", () => {
     expect(new Headers((uploadCall?.[1] as RequestInit).headers).get("x-xsrf-token")).toBe("csrf-token");
     expect(new Headers((uploadCall?.[1] as RequestInit).headers).get("content-type")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Remover imagem" }));
+    fireEvent.click(screen.getByRole("button", { name: "Alterar imagem do criatório" }));
+    fireEvent.click(screen.getByRole("button", { name: /Remover imagem/ }));
     expect(fetchMock.mock.calls.some(([, options]) => (options as RequestInit | undefined)?.method === "DELETE")).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Confirmar remoção" }));
-    expect(await screen.findByText("Nenhuma imagem personalizada")).toBeTruthy();
     expect(await screen.findByText("Identidade visual removida. O símbolo padrão será usado.")).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("img", { name: "Identidade visual atual do Sítio Aurora" })).toBeNull());
     expect(fetchMock.mock.calls.some(([, options]) => (options as RequestInit | undefined)?.method === "DELETE")).toBe(true);
   });
 
@@ -267,6 +272,8 @@ describe("BreedingFarmEditPage", () => {
     }));
     render(<BreedingFarmEditPage />);
 
+    fireEvent.click(await screen.findByRole("button", { name: "Alterar imagem do criatório" }));
+    fireEvent.click(screen.getByRole("button", { name: /Escolher um modelo/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Premium/ }));
     fireEvent.change(screen.getByLabelText("Subtítulo"), { target: { value: "Criatório de aves" } });
     fireEvent.click(screen.getByRole("button", { name: "Gerar prévia" }));
@@ -274,6 +281,7 @@ describe("BreedingFarmEditPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Aplicar modelo" }));
     expect(screen.getByRole("dialog", { name: "Aplicar este modelo?" })).toBeTruthy();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(fetchMock.mock.calls.some(([input, options]) =>
       new URL(String(input)).pathname.endsWith("/api/breeding-farms/visual-identity/template") &&
       (options as RequestInit | undefined)?.method === "PUT"
@@ -281,8 +289,7 @@ describe("BreedingFarmEditPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação do modelo" }));
     expect(await screen.findByText("Modelo de identidade visual aplicado com sucesso.")).toBeTruthy();
-    expect(await screen.findByText("Modelo da plataforma")).toBeTruthy();
-    expect(await screen.findByText("Premium · versão 1.0.0")).toBeTruthy();
+    expect(await screen.findByRole("img", { name: "Identidade visual atual do Sítio Aurora" })).toBeTruthy();
 
     const previewCall = fetchMock.mock.calls.find(([input, options]) =>
       new URL(String(input)).pathname.endsWith("/api/breeding-farms/visual-identity/templates/preview") &&
@@ -326,6 +333,8 @@ describe("BreedingFarmEditPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<BreedingFarmEditPage />);
 
+    fireEvent.click(await screen.findByRole("button", { name: "Alterar imagem do criatório" }));
+    fireEvent.click(screen.getByRole("button", { name: /Escolher um modelo/ }));
     expect(await screen.findByText("Carregando modelos…")).toBeTruthy();
     resolveFirstCatalog?.(new Response(JSON.stringify({ status: 503, title: "Unavailable" }), {
       headers: { "content-type": "application/problem+json" },
@@ -337,7 +346,7 @@ describe("BreedingFarmEditPage", () => {
     expect(catalogRequests).toBe(2);
   });
 
-  it("asks the user to choose a current model when the selected version becomes unavailable", async () => {
+  it.each([404, 409])("asks the user to choose a current model when it becomes unavailable (HTTP %s)", async (statusCode) => {
     let failApplication = true;
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input));
@@ -350,7 +359,7 @@ describe("BreedingFarmEditPage", () => {
       }
       if (url.pathname.endsWith("/api/breeding-farms/visual-identity/template") && init?.method === "PUT" && failApplication) {
         failApplication = false;
-        return Promise.resolve(new Response(JSON.stringify({ status: 409, title: "Template unavailable" }), {
+        return Promise.resolve(new Response(JSON.stringify({ status: statusCode, title: "Template unavailable" }), {
           headers: { "content-type": "application/problem+json" },
           status: 409
         }));
@@ -367,6 +376,8 @@ describe("BreedingFarmEditPage", () => {
     }));
     render(<BreedingFarmEditPage />);
 
+    fireEvent.click(await screen.findByRole("button", { name: "Alterar imagem do criatório" }));
+    fireEvent.click(screen.getByRole("button", { name: /Escolher um modelo/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Premium/ }));
     fireEvent.click(screen.getByRole("button", { name: "Gerar prévia" }));
     fireEvent.click(await screen.findByRole("button", { name: "Aplicar modelo" }));
@@ -385,13 +396,16 @@ describe("BreedingFarmEditPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<BreedingFarmEditPage />);
 
-    await screen.findByText("Nenhuma imagem personalizada");
+    await screen.findByRole("button", { name: "Alterar imagem do criatório" });
+    fireEvent.click(screen.getByRole("button", { name: "Alterar imagem do criatório" }));
+    fireEvent.click(screen.getByRole("button", { name: /Enviar minha imagem/ }));
     fireEvent.change(screen.getByLabelText("Enviar minha imagem"), {
       target: { files: [new File(["text"], "logo.gif", { type: "image/gif" })] }
     });
 
     expect(await screen.findByText("Escolha uma imagem PNG ou JPEG com extensão compatível.")).toBeTruthy();
     expect(screen.queryByText("Prévia da nova identidade")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Enviar minha imagem/ }));
     fireEvent.change(screen.getByLabelText("Enviar minha imagem"), {
       target: { files: [new File([new Uint8Array(10 * 1024 * 1024 + 1)], "logo.png", { type: "image/png" })] }
     });
@@ -416,9 +430,10 @@ describe("BreedingFarmEditPage", () => {
     render(<BreedingFarmEditPage />);
 
     await waitFor(() => expect(identityRequests).toBe(1));
-    expect(screen.getByText("O armazenamento está indisponível no momento. Tente novamente em instantes.")).toBeTruthy();
-    fireEvent.click(screen.getAllByRole("button", { name: "Tentar novamente" })[0]);
-    expect(await screen.findByText("Nenhuma imagem personalizada")).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "Alterar imagem do criatório" }));
+    expect(await screen.findByText("O armazenamento está indisponível no momento. Tente novamente em instantes.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    await waitFor(() => expect(identityRequests).toBe(2));
   });
 
   it("loads the selected farm settings into an editable form", async () => {
