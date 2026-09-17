@@ -200,6 +200,8 @@ function DetailList({ items }: Readonly<{ items: Array<[string, string]> }>) {
 }
 
 function FarmOverview({ email, settings }: Readonly<{ email: string; settings: BreedingFarmSettingsResponse }>) {
+  const openIdentityActionRef = useRef<() => void>(() => {});
+
   return (
     <AuthenticatedShell activeNav="farm" email={email} farmName={settings.name}>
       <div className="farm-view">
@@ -209,13 +211,11 @@ function FarmOverview({ email, settings }: Readonly<{ email: string; settings: B
         <section aria-labelledby="titulo-perfil-criatorio" className="farm-profile">
           <div className="farm-profile-cover"><img src="/assets/imagery/birds/bird-flock-hd.webp" alt="Aves em um galho" /><button className="farm-cover-action" disabled type="button">Alterar foto de capa</button></div>
           <div className="farm-profile-body">
-            <div className="farm-profile-identity"><div className="farm-profile-symbol"><img src="/assets/brand/png/criatorio-virtual-symbol.png" alt="" /></div><div><div className="farm-profile-name-row"><h2 id="titulo-perfil-criatorio">{settings.name}</h2><span className="farm-profile-code">CV</span></div><p>Criatório Virtual</p><span className="farm-active-badge"><span aria-hidden="true" /> Ativo</span></div></div>
-            <div className="farm-profile-actions"><Link className="farm-outline-action" href={`/configuracoes/criatorio?breedingFarmId=${encodeURIComponent(settings.breedingFarmId)}`}><DashboardIcon name="edit" /> Editar criatório</Link><button aria-label="Mais ações" className="farm-more-action" disabled type="button">⋮</button></div>
+            <div className="farm-profile-identity"><VisualIdentityManager actionRef={openIdentityActionRef} breedingFarmId={settings.breedingFarmId} farmName={settings.name} /><div><div className="farm-profile-name-row"><h2 id="titulo-perfil-criatorio">{settings.name}</h2><span className="farm-profile-code">CV</span></div><p>Criatório Virtual</p><span className="farm-active-badge"><span aria-hidden="true" /> Ativo</span></div></div>
+            <div className="farm-profile-actions"><Link className="farm-outline-action" href={`/configuracoes/criatorio?breedingFarmId=${encodeURIComponent(settings.breedingFarmId)}`}><DashboardIcon name="edit" /> Editar criatório</Link><details className="farm-more-actions"><summary aria-label="Mais ações" className="farm-more-action">⋮</summary><div className="farm-profile-action-menu"><button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openIdentityActionRef.current(); }} type="button">Alterar identidade visual</button></div></details></div>
           </div>
           <nav aria-label="Seções do criatório" className="farm-tabs"><a aria-current="page" href="#informacoes">Informações</a><span aria-disabled="true">Estatísticas</span><span aria-disabled="true">Galeria</span></nav>
         </section>
-
-        <VisualIdentityManager breedingFarmId={settings.breedingFarmId} farmName={settings.name} />
 
         <div className="farm-overview-grid" id="informacoes">
           <section aria-labelledby="titulo-dados-basicos" className="farm-info-card"><div className="farm-card-heading"><h2 id="titulo-dados-basicos">Dados básicos</h2></div><DetailList items={[["Nome", settings.name], ["Responsável", settings.responsibleName], ["Tipo de criatório", "Comercial"], ["Registro oficial", formatValue(settings.officialRegistrationNumber)]]} /></section>
