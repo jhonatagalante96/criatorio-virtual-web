@@ -104,9 +104,7 @@ function getTemplateConfiguration(template: CoverTemplate, farmName: string): Co
     else if (key === "accentColor") configuration[key] = "#48643A";
     else configuration[key] = "";
   }
-  if (template.supportedOptions.includes("name") && (typeof configuration.name !== "string" || !configuration.name.trim())) {
-    configuration.name = farmName;
-  }
+  if (template.supportedOptions.includes("name")) configuration.name = farmName;
   return configuration;
 }
 

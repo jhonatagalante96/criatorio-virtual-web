@@ -88,13 +88,14 @@ describe("BreedingFarmCoverManager", () => {
     const objectUrl = vi.fn(() => "blob:cover-preview");
     Object.defineProperty(URL, "createObjectURL", { configurable: true, value: objectUrl, writable: true });
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn(), writable: true });
-    render(<BreedingFarmCoverManager breedingFarmId="farm-id" farmName="Sítio Aurora" />);
+    render(<BreedingFarmCoverManager breedingFarmId="farm-id" farmName="Criatório Galante" />);
 
-    expect(await screen.findByAltText("Imagem padrão de capa para Sítio Aurora")).toBeTruthy();
+    expect(await screen.findByAltText("Imagem padrão de capa para Criatório Galante")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Configurar capa" }));
     fireEvent.click(screen.getByRole("button", { name: /Escolher um modelo/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Natureza clássica/ }));
     expect(await screen.findByLabelText("Frase de apoio")).toBeTruthy();
+    expect((screen.getByLabelText("Nome do criatório") as HTMLInputElement).value).toBe("Criatório Galante");
     expect(screen.queryByLabelText("Cor de destaque")).toBeNull();
     await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) =>
       new URL(String(input)).pathname.endsWith("/natureza_classica/preview") && init?.method === "POST"
@@ -116,7 +117,7 @@ describe("BreedingFarmCoverManager", () => {
     )).toBe(true));
     const applyRequest = fetchMock.mock.calls.find(([input, init]) => new URL(String(input)).pathname.endsWith("/api/breeding-farms/farm-id/cover/template") && init?.method === "PUT");
     expect(JSON.parse(String(applyRequest?.[1]?.body))).toEqual({
-      config: { name: "Sítio Aurora", showLogo: true, tagline: "Criados com cuidado" },
+      config: { name: "Criatório Galante", showLogo: true, tagline: "Criados com cuidado" },
       modelId: "natureza_classica",
       version: 1
     });

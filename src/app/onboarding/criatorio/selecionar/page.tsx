@@ -132,7 +132,7 @@ function SelectionSuccess({ farm }: Readonly<{ farm: BreedingFarmSummary }>) {
   );
 }
 
-function VisualIdentityOnboarding({ farm }: Readonly<{ farm: BreedingFarmSummary }>) {
+function VisualIdentityOnboarding({ farm, onContinue }: Readonly<{ farm: BreedingFarmSummary; onContinue: () => void }>) {
   const router = useRouter();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const actionRef = useRef<() => void>(() => {});
@@ -142,6 +142,11 @@ function VisualIdentityOnboarding({ farm }: Readonly<{ farm: BreedingFarmSummary
     headingRef.current?.focus();
   }, []);
 
+  function continueToCover(): void {
+    router.replace(coverStepUrl);
+    onContinue();
+  }
+
   return (
     <div className="farm-selection-card farm-selection-success farm-identity-onboarding">
       <p className="eyebrow">Etapa opcional</p>
@@ -149,10 +154,13 @@ function VisualIdentityOnboarding({ farm }: Readonly<{ farm: BreedingFarmSummary
       <p className="lede">Personalize a imagem de {farm.name} com uma foto sua ou um modelo. A identidade atual será mantida até você confirmar uma nova opção.</p>
       <div aria-label="Etapa 1 de 2" className="onboarding-progress"><span aria-hidden="true">1</span><span>Identidade visual</span></div>
       <div className="farm-identity-onboarding-preview">
-        <VisualIdentityManager actionRef={actionRef} breedingFarmId={farm.breedingFarmId} farmName={farm.name} onApplied={() => router.replace(coverStepUrl)} />
+        <VisualIdentityManager actionRef={actionRef} breedingFarmId={farm.breedingFarmId} farmName={farm.name} onApplied={continueToCover} />
       </div>
       <p className="farm-identity-onboarding-note">Use o botão sobre a imagem para enviar uma foto ou escolher um modelo. Você pode configurar isso depois.</p>
-      <Link className="auth-primary-action" href={coverStepUrl}>Pular identidade visual e continuar</Link>
+      <Link className="auth-primary-action" href={coverStepUrl} onClick={(event) => {
+        event.preventDefault();
+        continueToCover();
+      }}>Pular identidade visual e continuar</Link>
     </div>
   );
 }
@@ -376,7 +384,7 @@ function BreedingFarmSelection() {
   if (view.kind === "error") return <SelectionPanelState heading="Não foi possível carregar seus criatórios" message={view.message} onRetry={() => void loadSelection()} />;
   if (view.kind === "blocked") return <SelectionPanelState heading="Acesso bloqueado" message={view.message} onRetry={() => void loadSelection()} retryLabel="Verificar novamente" />;
   if (view.kind === "empty") return <EmptySelection onRetry={() => void loadSelection()} />;
-  if (view.kind === "identity") return <VisualIdentityOnboarding farm={view.farm} />;
+  if (view.kind === "identity") return <VisualIdentityOnboarding farm={view.farm} onContinue={() => setView({ kind: "cover", farm: view.farm })} />;
   if (view.kind === "cover") return <BreedingFarmCoverOnboarding farm={view.farm} />;
   if (view.kind === "success") return <SelectionSuccess farm={view.farm} />;
 

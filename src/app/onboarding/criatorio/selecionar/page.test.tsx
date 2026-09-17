@@ -150,7 +150,8 @@ describe("BreedingFarmSelectionPage", () => {
       .mockResolvedValueOnce(singleSelectionResponse())
       .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(singleSelectionResponse("farm-a"))
-      .mockResolvedValueOnce(visualIdentityResponse());
+      .mockResolvedValueOnce(visualIdentityResponse())
+      .mockResolvedValueOnce(breedingFarmCoverResponse());
     vi.stubGlobal("fetch", fetchMock);
     render(<BreedingFarmSelectionPage />);
 
@@ -159,7 +160,11 @@ describe("BreedingFarmSelectionPage", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Identidade do criatório" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Alterar imagem do criatório" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Pular identidade visual e continuar" }).getAttribute("href")).toBe("/onboarding/criatorio/selecionar?coverFarmId=farm-a");
+    const skipIdentity = screen.getByRole("link", { name: "Pular identidade visual e continuar" });
+    expect(skipIdentity.getAttribute("href")).toBe("/onboarding/criatorio/selecionar?coverFarmId=farm-a");
+    fireEvent.click(skipIdentity);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Capa do criatório" })).toBeTruthy());
+    expect(routerReplace).toHaveBeenCalledWith("/onboarding/criatorio/selecionar?coverFarmId=farm-a");
     const [, selectionRequest] = fetchMock.mock.calls[3];
     expect(new Headers(selectionRequest.headers).get("x-xsrf-token")).toBe("csrf-token");
     expect(JSON.parse(selectionRequest.body as string)).toEqual({ breedingFarmId: "farm-a" });
@@ -202,7 +207,8 @@ describe("BreedingFarmSelectionPage", () => {
       .mockResolvedValueOnce(visualIdentityResponse())
       .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(visualIdentityResponse())
-      .mockResolvedValueOnce(visualIdentityResponse());
+      .mockResolvedValueOnce(visualIdentityResponse())
+      .mockResolvedValueOnce(breedingFarmCoverResponse());
     vi.stubGlobal("fetch", fetchMock);
     render(<BreedingFarmSelectionPage />);
 
@@ -214,6 +220,7 @@ describe("BreedingFarmSelectionPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação" }));
 
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/onboarding/criatorio/selecionar?coverFarmId=farm-a"));
+    expect(await screen.findByRole("heading", { name: "Capa do criatório" })).toBeTruthy();
     const applyRequest = fetchMock.mock.calls.find(([, request]) => request.method === "PUT");
     expect(applyRequest).toBeTruthy();
     expect(new Headers(applyRequest![1].headers).get("x-xsrf-token")).toBe("csrf-token");
@@ -238,7 +245,8 @@ describe("BreedingFarmSelectionPage", () => {
       .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(new Response(new Blob(["preview"]), { headers: { "content-type": "image/png" }, status: 200 }))
       .mockResolvedValueOnce(visualIdentityResponse())
-      .mockResolvedValueOnce(visualIdentityResponse());
+      .mockResolvedValueOnce(visualIdentityResponse())
+      .mockResolvedValueOnce(breedingFarmCoverResponse());
     vi.stubGlobal("fetch", fetchMock);
     render(<BreedingFarmSelectionPage />);
 
@@ -251,6 +259,7 @@ describe("BreedingFarmSelectionPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação do modelo" }));
 
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/onboarding/criatorio/selecionar?coverFarmId=farm-a"));
+    expect(await screen.findByRole("heading", { name: "Capa do criatório" })).toBeTruthy();
     const applyRequest = fetchMock.mock.calls.find(([, request]) => request.method === "PUT");
     expect(applyRequest).toBeTruthy();
     expect(new Headers(applyRequest![1].headers).get("x-xsrf-token")).toBe("csrf-token");
