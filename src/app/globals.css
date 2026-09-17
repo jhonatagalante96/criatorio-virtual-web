@@ -1581,6 +1581,66 @@ h1, h2 { line-height: 1.08; }
 .bird-detail-empty-media .dashboard-icon { color: #23875c; height: 2.25rem; width: 2.25rem; }
 .bird-detail-empty-media p { color: #365f72; font-size: .68rem; font-weight: 800; margin: 0; }
 .bird-detail-empty-media span { color: #78919a; font-size: .58rem; line-height: 1.35; max-width: 24ch; }
+.bird-media-heading { align-items: center; }
+.bird-media-count { background: #eef7f1; border-radius: 999px; color: #176b42; font-size: .58rem; font-weight: 800; padding: .28rem .5rem; white-space: nowrap; }
+.bird-media-blocked, .bird-media-action-error, .bird-media-action-success { border-radius: .45rem; font-size: .64rem; line-height: 1.45; margin: 0 0 .7rem; padding: .55rem .65rem; }
+.bird-media-blocked { background: #fff8e9; border: 1px solid #f0dfbd; color: #79521e; }
+.bird-media-action-error { background: #fff4f2; border: 1px solid #f0d4d0; color: #8b3730; }
+.bird-media-action-success { background: #f0f8f1; border: 1px solid #d2e9d6; color: #176b42; }
+.bird-media-loading, .bird-media-load-error p { color: #65758b; font-size: .65rem; line-height: 1.45; margin: 0 0 .65rem; }
+.bird-media-load-error { background: #fff8f6; border: 1px solid #f0d4d0; border-radius: .5rem; padding: .65rem; }
+.bird-media-load-error .auth-secondary-action { margin: 0; width: auto; }
+.bird-media-empty-icon { color: #23875c !important; font-size: 1.7rem !important; line-height: 1; }
+.bird-media-grid { display: grid; gap: .65rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bird-media-card { border: 1px solid #e0e9ed; border-radius: .55rem; min-width: 0; overflow: hidden; }
+.bird-media-preview { aspect-ratio: 4 / 3; background: #f2f6f4; overflow: hidden; }
+.bird-media-preview > img, .bird-media-preview > video, .bird-media-preview-trigger, .bird-media-preview-trigger > img { display: block; height: 100%; object-fit: cover; width: 100%; }
+.bird-media-preview-trigger { background: transparent; border: 0; cursor: zoom-in; padding: 0; }
+.bird-media-preview-trigger:focus-visible { outline: 3px solid #1b9a61; outline-offset: -3px; }
+.bird-media-file-placeholder { align-items: center; color: #65758b; display: flex; flex-direction: column; font-size: .62rem; gap: .35rem; height: 100%; justify-content: center; }
+.bird-media-file-placeholder > span:first-child { color: #829b8e; font-size: 1.5rem; }
+.bird-media-card-body { display: grid; gap: .4rem; padding: .55rem; }
+.bird-media-card-title { align-items: flex-start; display: flex; flex-wrap: wrap; gap: .25rem; min-width: 0; }
+.bird-media-card-title p { color: var(--ink); flex: 1 1 100%; font-size: .64rem; font-weight: 800; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bird-media-primary-badge, .bird-media-type-badge { border-radius: 999px; font-size: .53rem; font-weight: 800; padding: .19rem .36rem; }
+.bird-media-primary-badge { background: #e8f7e8; color: #176b42; }
+.bird-media-type-badge { background: #eaf2fb; color: #315f8a; }
+.bird-media-meta { color: #78919a; font-size: .55rem; margin: 0; }
+.bird-media-actions { display: flex; flex-wrap: wrap; gap: .35rem; }
+.bird-media-secondary-action, .bird-media-danger-action { background: #fff; border: 1px solid #cfdde2; border-radius: .35rem; cursor: pointer; font: inherit; font-size: .56rem; font-weight: 800; min-height: 1.9rem; padding: .35rem .48rem; }
+.bird-media-secondary-action { color: #145f4f; }
+.bird-media-danger-action { border-color: #ead6d3; color: #8b3730; }
+.bird-media-secondary-action:hover:not(:disabled), .bird-media-secondary-action:focus-visible { background: #f1f8f5; border-color: #9bcab1; }
+.bird-media-danger-action:hover:not(:disabled), .bird-media-danger-action:focus-visible { background: #fff4f2; border-color: #d99b94; }
+.bird-media-secondary-action:focus-visible, .bird-media-danger-action:focus-visible { outline: 2px solid #1b9a61; outline-offset: 2px; }
+.bird-media-secondary-action:disabled, .bird-media-danger-action:disabled { cursor: not-allowed; opacity: .58; }
+.bird-media-primary-note { color: #78919a; font-size: .53rem; line-height: 1.4; margin: 0; }
+.bird-media-documents { margin-top: .8rem; }
+.bird-media-documents h3 { color: var(--ink); font-size: .7rem; margin: 0 0 .4rem; }
+.bird-media-documents ul { border-top: 1px solid #edf3f3; list-style: none; margin: 0; padding: 0; }
+.bird-media-documents li { align-items: center; border-bottom: 1px solid #edf3f3; display: flex; flex-wrap: wrap; gap: .45rem; min-width: 0; padding: .5rem 0; }
+.bird-media-document-icon { align-items: center; background: #fff0ed; border-radius: .3rem; color: #a53a32; display: inline-flex; flex: 0 0 auto; font-size: .48rem !important; font-weight: 900; height: 1.6rem; justify-content: center; max-width: none !important; width: 1.6rem; }
+.bird-media-document-info { display: grid; flex: 1 1 7rem; gap: .12rem; min-width: 0; }
+.bird-media-document-info strong { color: #365f72; font-size: .58rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bird-media-document-info small { color: #78919a; font-size: .52rem; }
+.bird-media-documents a { color: #075bb3; font-size: .57rem; font-weight: 800; text-decoration: none; }
+.bird-media-documents a:hover, .bird-media-documents a:focus-visible { text-decoration: underline; }
+.bird-media-upload-form { border-top: 1px solid #edf3f3; display: grid; gap: .4rem; margin-top: .7rem; padding-top: .7rem; }
+.bird-media-upload-form label { color: var(--ink); font-size: .65rem; font-weight: 800; }
+.bird-media-upload-form input[type="file"] { color: #53667f; font: inherit; font-size: .58rem; max-width: 100%; }
+.bird-media-upload-form input[type="file"]::file-selector-button { background: #f1f8f5; border: 1px solid #cfe1d8; border-radius: .35rem; color: #145f4f; cursor: pointer; font: inherit; font-weight: 700; margin-right: .4rem; padding: .35rem .48rem; }
+.bird-media-hint, .bird-media-selected-file, .bird-media-field-error { font-size: .55rem; line-height: 1.45; margin: 0; overflow-wrap: anywhere; }
+.bird-media-hint { color: #78919a; }
+.bird-media-selected-file { color: #53667f; }
+.bird-media-field-error { color: #a53a32; }
+.bird-media-upload-form .auth-primary-action { margin: 0; width: fit-content; }
+.bird-media-upload-progress { align-items: center; color: #53667f; display: flex; font-size: .56rem; gap: .5rem; }
+.bird-media-upload-progress progress { accent-color: #1b9a61; height: .55rem; width: min(9rem, 55%); }
+.bird-media-zoom-dialog { background: #10251f; border: 0; border-radius: .7rem; color: #fff; max-height: min(92vh, 60rem); max-width: min(92vw, 70rem); overflow: auto; padding: .65rem; }
+.bird-media-zoom-dialog::backdrop { background: rgb(7 25 20 / 82%); }
+.bird-media-zoom-content { display: grid; gap: .55rem; justify-items: end; }
+.bird-media-zoom-content img { display: block; height: auto; max-height: calc(92vh - 4rem); max-width: 100%; object-fit: contain; width: auto; }
+.bird-media-zoom-content .bird-media-secondary-action { background: #fff; }
 .bird-detail-qr-content { align-items: center; display: flex; gap: .75rem; }
 .bird-detail-qr-placeholder { align-items: center; background: repeating-linear-gradient(45deg, #eef4f1 0 3px, #fff 3px 6px); border: 1px dashed #b9cdc4; border-radius: .3rem; color: #658276; display: flex; flex: 0 0 auto; font-size: .75rem; font-weight: 900; height: 4.5rem; justify-content: center; letter-spacing: .14em; width: 4.5rem; }
 .bird-detail-qr-content p { color: #78919a; font-size: .6rem; line-height: 1.4; margin: 0 0 .45rem; }
@@ -1622,6 +1682,10 @@ h1, h2 { line-height: 1.08; }
   .bird-eligibility-badge { margin-top: .05rem; }
   .bird-detail-side-column { grid-template-columns: 1fr; }
   .bird-detail-side-column .bird-detail-quick-actions { grid-column: auto; }
+  .bird-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bird-media-documents li { gap: .35rem; }
+  .bird-media-document-info { flex-basis: calc(100% - 2.2rem); }
+  .bird-media-documents a { margin-left: auto; }
   .bird-detail-activities li { grid-template-columns: 1.5rem minmax(0, 1fr) minmax(6rem, auto); }
   .bird-detail-activities li > span:not(.bird-detail-activity-icon) { display: none; }
   .bird-detail-activities time { font-size: .55rem; }

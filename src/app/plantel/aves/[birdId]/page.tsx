@@ -17,6 +17,7 @@ import {
   type ParentOption,
   type ParentLinkInput
 } from "./external-ancestor-editor";
+import { BirdMediaSection } from "./bird-media-section";
 
 interface BreedingFarmSummary {
   breedingFarmId: string;
@@ -908,34 +909,20 @@ function BirdDetailPhoto({ bird }: Readonly<{ bird: BirdDetailsResponse }>) {
   );
 }
 
-function BirdDetailMedia({ bird }: Readonly<{ bird: BirdDetailsResponse }>) {
+function BirdDetailQr({ bird }: Readonly<{ bird: BirdDetailsResponse }>) {
   return (
-    <>
-      <section aria-labelledby="titulo-fotos-ave" className="bird-detail-section bird-detail-media-card">
-        <div className="bird-detail-section-heading">
-          <div><p className="eyebrow">Galeria</p><h2 id="titulo-fotos-ave">Fotos</h2></div>
-          <span className="bird-detail-section-action">Ver todas (0)</span>
+    <section aria-labelledby="titulo-qr-ave" className="bird-detail-section bird-detail-qr-card">
+      <div className="bird-detail-section-heading">
+        <div><p className="eyebrow">Identificação</p><h2 id="titulo-qr-ave">Código de identificação da ave</h2></div>
+      </div>
+      <div className="bird-detail-qr-content">
+        <div aria-label={`Código de identificação de ${bird.name} indisponível`} className="bird-detail-qr-placeholder">QR</div>
+        <div>
+          <p>O código de identificação estará disponível quando a geração de documentos for liberada.</p>
+          <button disabled type="button">Baixar código de identificação</button>
         </div>
-        <div className="bird-detail-empty-media">
-          <DashboardIcon name="bird" />
-          <p>Nenhuma foto cadastrada.</p>
-          <span>A foto da ave aparecerá aqui quando for adicionada.</span>
-        </div>
-      </section>
-
-      <section aria-labelledby="titulo-qr-ave" className="bird-detail-section bird-detail-qr-card">
-        <div className="bird-detail-section-heading">
-          <div><p className="eyebrow">Identificação</p><h2 id="titulo-qr-ave">Código de identificação da ave</h2></div>
-        </div>
-        <div className="bird-detail-qr-content">
-          <div aria-label={`Código de identificação de ${bird.name} indisponível`} className="bird-detail-qr-placeholder">QR</div>
-          <div>
-            <p>O código de identificação estará disponível quando a geração de documentos for liberada.</p>
-            <button disabled type="button">Baixar código de identificação</button>
-          </div>
-        </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 }
 
@@ -1020,6 +1007,26 @@ function BirdDetailPage() {
   const prepareStatusMutation = useCallback(async () => {
     if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
   }, []);
+
+  const handleMediaSessionExpired = useCallback(async () => {
+    csrfToken.current = undefined;
+    const result = await refresh();
+    if (result.ok) setReloadVersion((value) => value + 1);
+  }, [refresh]);
+
+  const reloadAfterMediaChange = useCallback(() => {
+    const api = client.current;
+    if (!api) return;
+    api.clearCache();
+    void api.request<BirdDetailsResponse>(`api/birds/${encodeURIComponent(birdId)}`)
+      .then((updatedBird) => {
+        if (updatedBird.birdId !== birdId || updatedBird.breedingFarmId !== bird?.breedingFarmId) return;
+        setBird(updatedBird);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 401) void handleMediaSessionExpired();
+      });
+  }, [bird?.breedingFarmId, birdId, handleMediaSessionExpired]);
 
   const handleStatusChanged = useCallback((updatedBird: BirdStatusResponse) => {
     client.current?.clearCache();
@@ -1444,7 +1451,14 @@ function BirdDetailPage() {
         </div>
 
         <aside aria-label="Recursos da ficha" className="bird-detail-side-column">
-          <BirdDetailMedia bird={bird} />
+          <BirdMediaSection
+            bird={{ birdId: bird.birdId, breedingFarmId: bird.breedingFarmId, name: bird.name, status: bird.status }}
+            client={client.current!}
+            onBirdUpdated={reloadAfterMediaChange}
+            onSessionExpired={handleMediaSessionExpired}
+            prepareMutation={prepareStatusMutation}
+          />
+          <BirdDetailQr bird={bird} />
           <BirdQuickActions birdId={bird.birdId} />
         </aside>
       </div>

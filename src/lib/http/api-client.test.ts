@@ -141,6 +141,57 @@ describe("ApiClient", () => {
     expect(new Headers(fetchMock.mock.calls[0][1].headers).get("accept")).toBe("image/png");
   });
 
+  it("sends authenticated multipart uploads and reports their transfer progress", async () => {
+    let instance: MockUploadRequest | undefined;
+    class MockUploadRequest extends EventTarget {
+      upload = new EventTarget();
+      status = 201;
+      responseText = JSON.stringify({ attachmentId: "attachment-a" });
+      withCredentials = false;
+      requestHeaders = new Map<string, string>();
+      sentBody: FormData | undefined;
+
+      open = vi.fn();
+      setRequestHeader(name: string, value: string) { this.requestHeaders.set(name, value); }
+      getResponseHeader(name: string) { return name.toLowerCase() === "content-type" ? "application/json" : null; }
+      send(body: FormData) {
+        this.sentBody = body;
+        this.upload.dispatchEvent(new ProgressEvent("progress", { lengthComputable: true, loaded: 50, total: 100 }));
+        this.dispatchEvent(new Event("load"));
+      }
+      abort() { this.dispatchEvent(new Event("abort")); }
+
+      constructor() {
+        super();
+        instance = this;
+      }
+    }
+    vi.stubGlobal("XMLHttpRequest", MockUploadRequest);
+    const client = new ApiClient("http://localhost:5000", () => "csrf-token");
+    const form = new FormData();
+    form.set("file", new File(["bird"], "bird.jpg", { type: "image/jpeg" }));
+    const progress = vi.fn();
+
+    await expect(client.upload("api/birds/bird-a/attachments", form, progress)).resolves.toEqual({ attachmentId: "attachment-a" });
+
+    expect(instance?.open).toHaveBeenCalledWith("POST", "http://localhost:5000/api/birds/bird-a/attachments", true);
+    expect(instance?.withCredentials).toBe(true);
+    expect(instance?.requestHeaders.get("accept")).toBe("application/json");
+    expect(instance?.requestHeaders.get("x-xsrf-token")).toBe("csrf-token");
+    expect(instance?.sentBody).toBe(form);
+    expect(progress).toHaveBeenCalledWith(50);
+  });
+
+  it("does not send credentialed multipart uploads outside the configured API origin", async () => {
+    const request = vi.fn();
+    vi.stubGlobal("XMLHttpRequest", request);
+    const client = new ApiClient("https://api.example.test");
+
+    await expect(client.upload("https://untrusted.example/upload", new FormData()))
+      .rejects.toThrow("File uploads must use the configured API origin.");
+    expect(request).not.toHaveBeenCalled();
+  });
+
   it("does not send credentialed blob requests to an origin outside the configured API", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
