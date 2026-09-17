@@ -92,7 +92,14 @@ describe("StatisticsPage", () => {
     expect(screen.getByText("Nascimentos", { selector: ".statistics-metric small" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Plantel por situação" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Solicitações de transferência recebidas" })).toBeTruthy();
-    expect(screen.getByRole("img", { name: /Aves cadastradas e nascimentos/ })).toBeTruthy();
+    expect(screen.getByRole("group", { name: /Aves cadastradas e nascimentos/ })).toBeTruthy();
+    const chartPoint = screen.getByRole("button", { name: /16 de setembro de 2026: 1 ave cadastrada, 2 nascimentos/ });
+    fireEvent.pointerEnter(chartPoint);
+    expect(screen.getByText("16 de set.", { selector: ".statistics-chart-tooltip strong" })).toBeTruthy();
+    expect(screen.getByText("1 ave cadastrada")).toBeTruthy();
+    expect(screen.getByText("2 nascimentos")).toBeTruthy();
+    fireEvent.focus(chartPoint);
+    expect(document.querySelector(".statistics-chart-focus-line")).toBeTruthy();
     expect(screen.getAllByRole("link", { name: "Estatísticas" }).every((link) => link.getAttribute("href") === "/estatisticas")).toBe(true);
     expect(String(fetchMock.mock.calls.find(([input]) => String(input).includes("current/statistics"))?.[0]))
       .toMatch(/current\/statistics\?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/);

@@ -125,6 +125,8 @@ describe("BreedingFarmEditPage", () => {
     render(<BreedingFarmEditPage />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Meu Criatório" })).toBeTruthy());
+    expect(screen.getByRole("heading", { name: "Sítio Aurora" })).toBeTruthy();
+    expect(document.querySelector(".farm-profile-code")).toBeNull();
     expect(screen.getByRole("heading", { name: "Dados básicos" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Endereço" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Contato" })).toBeTruthy();
