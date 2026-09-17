@@ -75,6 +75,13 @@ function visualIdentityResponse(identity: Record<string, unknown> | null = null)
   });
 }
 
+function breedingFarmCoverResponse(cover: Record<string, unknown> | null = null): Response {
+  return new Response(JSON.stringify({ breedingFarmId: "farm-a", cover }), {
+    headers: { "content-type": "application/json" },
+    status: 200
+  });
+}
+
 describe("BreedingFarmSelectionPage", () => {
   it("keeps the selection private without an authenticated session", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
@@ -185,7 +192,7 @@ describe("BreedingFarmSelectionPage", () => {
     expect(fetchMock.mock.calls.some(([, request]) => request.method === "PUT")).toBe(false);
   });
 
-  it("advances to the dashboard after the identity upload succeeds", async () => {
+  it("continues to the cover step after the identity upload succeeds", async () => {
     window.history.replaceState({}, "", "/onboarding/criatorio/selecionar?identityFarmId=farm-a");
     Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:identity-preview", writable: true });
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn(), writable: true });
@@ -206,13 +213,13 @@ describe("BreedingFarmSelectionPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação" }));
 
-    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/onboarding/criatorio/selecionar?coverFarmId=farm-a"));
     const applyRequest = fetchMock.mock.calls.find(([, request]) => request.method === "PUT");
     expect(applyRequest).toBeTruthy();
     expect(new Headers(applyRequest![1].headers).get("x-xsrf-token")).toBe("csrf-token");
   });
 
-  it("advances to the dashboard after a visual identity template is applied", async () => {
+  it("continues to the cover step after a visual identity template is applied", async () => {
     window.history.replaceState({}, "", "/onboarding/criatorio/selecionar?identityFarmId=farm-a");
     Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:identity-template-preview", writable: true });
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn(), writable: true });
@@ -243,10 +250,48 @@ describe("BreedingFarmSelectionPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Aplicar modelo" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação do modelo" }));
 
-    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/onboarding/criatorio/selecionar?coverFarmId=farm-a"));
     const applyRequest = fetchMock.mock.calls.find(([, request]) => request.method === "PUT");
     expect(applyRequest).toBeTruthy();
     expect(new Headers(applyRequest![1].headers).get("x-xsrf-token")).toBe("csrf-token");
+  });
+
+  it("resumes the cover step with an already applied cover and does not apply it again", async () => {
+    window.history.replaceState({}, "", "/onboarding/criatorio/selecionar?coverFarmId=farm-a");
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:existing-cover", writable: true });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn(), writable: true });
+    const appliedCover = {
+      contentType: "image/png",
+      contentUrl: "/api/breeding-farms/farm-a/cover/content",
+      fileName: "cover.png",
+      length: 10,
+      source: "Template",
+      templateConfiguration: { name: "Sítio Aurora" },
+      templateModelId: "natureza_classica",
+      templateVersion: 1,
+      updatedAtUtc: "2026-09-17T12:00:00Z"
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
+      const path = new URL(String(input)).pathname;
+      if (path.endsWith("/api/auth/session")) return authenticatedSession();
+      if (path.endsWith("/api/breeding-farms")) return singleSelectionResponse("farm-a");
+      if (path.endsWith("/api/breeding-farms/farm-a/cover")) return breedingFarmCoverResponse(appliedCover);
+      if (path.endsWith("/api/breeding-farms/farm-a/cover/content")) {
+        return new Response(new Blob(["cover"], { type: "image/png" }), { headers: { "content-type": "image/png" }, status: 200 });
+      }
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BreedingFarmSelectionPage />);
+
+    expect(await screen.findByRole("heading", { name: "Capa do criatório" })).toBeTruthy();
+    expect(await screen.findByAltText("Capa atual de Sítio Aurora")).toBeTruthy();
+    const keepCover = screen.getByRole("button", { name: "Manter esta capa e ir para o painel" });
+    expect(keepCover).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+    fireEvent.click(keepCover);
+    expect(routerReplace).toHaveBeenCalledWith("/dashboard");
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
   });
 
   it("does not advance when the identity upload is rejected", async () => {

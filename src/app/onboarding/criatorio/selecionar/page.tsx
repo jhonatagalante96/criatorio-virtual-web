@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "../../../../lib/auth/auth-context";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../../../lib/http/api-client";
 import { AppLoadingState } from "../../../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../../../components/brand";
+import { BreedingFarmCoverManager } from "../../../configuracoes/criatorio/breeding-farm-cover-manager";
 import { VisualIdentityManager } from "../../../configuracoes/criatorio/visual-identity-manager";
 
 interface BreedingFarmSummary {
@@ -28,6 +29,7 @@ type SelectionView =
   | { kind: "empty" }
   | { kind: "list"; selection: BreedingFarmSelectionResponse }
   | { kind: "identity"; farm: BreedingFarmSummary }
+  | { kind: "cover"; farm: BreedingFarmSummary }
   | { kind: "success"; farm: BreedingFarmSummary };
 
 function BackIcon() {
@@ -134,6 +136,7 @@ function VisualIdentityOnboarding({ farm }: Readonly<{ farm: BreedingFarmSummary
   const router = useRouter();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const actionRef = useRef<() => void>(() => {});
+  const coverStepUrl = `/onboarding/criatorio/selecionar?coverFarmId=${encodeURIComponent(farm.breedingFarmId)}`;
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -144,11 +147,42 @@ function VisualIdentityOnboarding({ farm }: Readonly<{ farm: BreedingFarmSummary
       <p className="eyebrow">Etapa opcional</p>
       <h1 id="titulo-selecao-criatorio" ref={headingRef} tabIndex={-1}>Identidade do criatório</h1>
       <p className="lede">Personalize a imagem de {farm.name} com uma foto sua ou um modelo. A identidade atual será mantida até você confirmar uma nova opção.</p>
+      <div aria-label="Etapa 1 de 2" className="onboarding-progress"><span aria-hidden="true">1</span><span>Identidade visual</span></div>
       <div className="farm-identity-onboarding-preview">
-        <VisualIdentityManager actionRef={actionRef} breedingFarmId={farm.breedingFarmId} farmName={farm.name} onApplied={() => router.replace("/dashboard")} />
+        <VisualIdentityManager actionRef={actionRef} breedingFarmId={farm.breedingFarmId} farmName={farm.name} onApplied={() => router.replace(coverStepUrl)} />
       </div>
       <p className="farm-identity-onboarding-note">Use o botão sobre a imagem para enviar uma foto ou escolher um modelo. Você pode configurar isso depois.</p>
+      <button className="auth-secondary-action farm-onboarding-continue" onClick={() => router.replace(coverStepUrl)} type="button">Continuar para a capa</button>
       <Link className="auth-primary-action" href="/dashboard">Configurar depois e ir para o painel</Link>
+    </div>
+  );
+}
+
+function BreedingFarmCoverOnboarding({ farm }: Readonly<{ farm: BreedingFarmSummary }>) {
+  const router = useRouter();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
+  function finishOnboarding(): void {
+    router.replace("/dashboard");
+  }
+
+  return (
+    <div className="farm-selection-card farm-selection-success farm-cover-onboarding">
+      <p className="eyebrow">Etapa opcional</p>
+      <h1 id="titulo-selecao-criatorio" ref={headingRef} tabIndex={-1}>Capa do criatório</h1>
+      <p className="lede">Escolha uma imagem ou personalize um modelo para {farm.name}.</p>
+      <div aria-label="Etapa 2 de 2" className="onboarding-progress"><span aria-hidden="true">2</span><span>Capa do criatório</span></div>
+      <BreedingFarmCoverManager
+        breedingFarmId={farm.breedingFarmId}
+        farmName={farm.name}
+        mode="onboarding"
+        onApplied={finishOnboarding}
+        onContinue={finishOnboarding}
+      />
     </div>
   );
 }
@@ -225,6 +259,7 @@ function BreedingFarmSelection() {
   const [view, setView] = useState<SelectionView>({ kind: "loading" });
   const [selectedId, setSelectedId] = useState<string>();
   const [identityFarmId, setIdentityFarmId] = useState<string>();
+  const [coverFarmId, setCoverFarmId] = useState<string>();
   const [searchReady, setSearchReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string>();
@@ -234,7 +269,9 @@ function BreedingFarmSelection() {
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
 
   useEffect(() => {
-    setIdentityFarmId(new URLSearchParams(window.location.search).get("identityFarmId") ?? undefined);
+    const searchParams = new URLSearchParams(window.location.search);
+    setIdentityFarmId(searchParams.get("identityFarmId") ?? undefined);
+    setCoverFarmId(searchParams.get("coverFarmId") ?? undefined);
     setSearchReady(true);
   }, []);
 
@@ -246,7 +283,13 @@ function BreedingFarmSelection() {
       const selection = await client.current!.request<BreedingFarmSelectionResponse>("api/breeding-farms");
       client.current!.setTenant(selection.selectedBreedingFarmId ?? undefined);
       const persistedFarm = selection.breedingFarms.find((farm) => farm.breedingFarmId === selection.selectedBreedingFarmId);
+      const coverFarm = selection.breedingFarms.find((farm) => farm.breedingFarmId === coverFarmId);
       const identityFarm = selection.breedingFarms.find((farm) => farm.breedingFarmId === identityFarmId);
+      if (coverFarm && selection.selectedBreedingFarmId === coverFarm.breedingFarmId) {
+        setSelectedId(coverFarm.breedingFarmId);
+        setView({ kind: "cover", farm: coverFarm });
+        return;
+      }
       if (identityFarm && selection.selectedBreedingFarmId === identityFarm.breedingFarmId) {
         setSelectedId(identityFarm.breedingFarmId);
         setView({ kind: "identity", farm: identityFarm });
@@ -273,7 +316,7 @@ function BreedingFarmSelection() {
           : "Verifique sua conexão e tente novamente."
       });
     }
-  }, [identityFarmId, refresh]);
+  }, [coverFarmId, identityFarmId, refresh]);
 
   useEffect(() => {
     if (searchReady) void loadSelection();
@@ -297,9 +340,11 @@ function BreedingFarmSelection() {
       client.current!.setTenant(nextSelection.selectedBreedingFarmId ?? selectedId);
       const selectedFarm = nextSelection.breedingFarms.find((farm) => farm.breedingFarmId === selectedId) ?? view.selection.breedingFarms.find((farm) => farm.breedingFarmId === selectedId);
       if (selectedFarm) {
-        setView(identityFarmId === selectedFarm.breedingFarmId
-          ? { kind: "identity", farm: selectedFarm }
-          : { kind: "success", farm: selectedFarm });
+        setView(coverFarmId === selectedFarm.breedingFarmId
+          ? { kind: "cover", farm: selectedFarm }
+          : identityFarmId === selectedFarm.breedingFarmId
+            ? { kind: "identity", farm: selectedFarm }
+            : { kind: "success", farm: selectedFarm });
       }
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -333,6 +378,7 @@ function BreedingFarmSelection() {
   if (view.kind === "blocked") return <SelectionPanelState heading="Acesso bloqueado" message={view.message} onRetry={() => void loadSelection()} retryLabel="Verificar novamente" />;
   if (view.kind === "empty") return <EmptySelection onRetry={() => void loadSelection()} />;
   if (view.kind === "identity") return <VisualIdentityOnboarding farm={view.farm} />;
+  if (view.kind === "cover") return <BreedingFarmCoverOnboarding farm={view.farm} />;
   if (view.kind === "success") return <SelectionSuccess farm={view.farm} />;
 
   return (
