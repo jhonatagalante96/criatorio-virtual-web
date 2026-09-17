@@ -10,6 +10,7 @@ import { AppLoadingState } from "../../components/app-loading-state";
 import { AuthenticatedShell } from "../../components/authenticated-shell";
 import { DashboardIcon } from "../../components/dashboard-icons";
 import { postalCodeLookupMessage, usePostalCodeLookup } from "../../components/use-postal-code-lookup";
+import { BreedingFarmCoverManager } from "./breeding-farm-cover-manager";
 import { VisualIdentityManager } from "./visual-identity-manager";
 
 interface AddressFields {
@@ -209,7 +210,7 @@ function FarmOverview({ email, settings }: Readonly<{ email: string; settings: B
         <header className="farm-page-header"><div><h1>Meu Criatório</h1><p>Visualize e gerencie as informações do seu criatório.</p></div></header>
 
         <section aria-labelledby="titulo-perfil-criatorio" className="farm-profile">
-          <div className="farm-profile-cover"><img src="/assets/imagery/birds/bird-flock-hd.webp" alt="Aves em um galho" /><button className="farm-cover-action" disabled type="button">Alterar foto de capa</button></div>
+          <BreedingFarmCoverManager breedingFarmId={settings.breedingFarmId} farmName={settings.name} />
           <div className="farm-profile-body">
             <div className="farm-profile-identity"><VisualIdentityManager actionRef={openIdentityActionRef} breedingFarmId={settings.breedingFarmId} farmName={settings.name} /><div><div className="farm-profile-name-row"><h2 id="titulo-perfil-criatorio">{settings.name}</h2></div><p>Criatório Virtual</p><span className="farm-active-badge"><span aria-hidden="true" /> Ativo</span></div></div>
             <div className="farm-profile-actions"><Link className="farm-outline-action" href={`/configuracoes/criatorio?breedingFarmId=${encodeURIComponent(settings.breedingFarmId)}`}><DashboardIcon name="edit" /> Editar criatório</Link><details className="farm-more-actions"><summary aria-label="Mais ações" className="farm-more-action">⋮</summary><div className="farm-profile-action-menu"><button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openIdentityActionRef.current(); }} type="button">Alterar identidade visual</button></div></details></div>

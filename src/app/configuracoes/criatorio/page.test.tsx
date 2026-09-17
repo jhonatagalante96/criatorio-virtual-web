@@ -59,6 +59,13 @@ function visualIdentityResponse(identity: Record<string, unknown> | null = null)
   });
 }
 
+function breedingFarmCoverResponse(cover: Record<string, unknown> | null = null): Response {
+  return new Response(JSON.stringify({ breedingFarmId: "farm-id", cover }), {
+    headers: { "content-type": "application/json" },
+    status: 200
+  });
+}
+
 function visualIdentityTemplatesResponse(templates: Record<string, unknown>[] = [{
   aspectRatio: "1:1",
   id: "premium",
@@ -120,6 +127,7 @@ describe("BreedingFarmEditPage", () => {
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectionResponse())
       .mockResolvedValueOnce(settingsResponse())
+      .mockResolvedValueOnce(breedingFarmCoverResponse())
       .mockResolvedValueOnce(visualIdentityResponse());
     vi.stubGlobal("fetch", fetchMock);
     render(<BreedingFarmEditPage />);
@@ -141,6 +149,7 @@ describe("BreedingFarmEditPage", () => {
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectionResponse())
       .mockResolvedValueOnce(settingsResponse())
+      .mockResolvedValueOnce(breedingFarmCoverResponse())
       .mockResolvedValueOnce(visualIdentityResponse())
       .mockResolvedValueOnce(settingsResponse());
     vi.stubGlobal("fetch", fetchMock);
@@ -152,7 +161,7 @@ describe("BreedingFarmEditPage", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Editar criatório" })).toBeTruthy());
     expect(screen.getByLabelText("Nome do criatório")).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   it("previews, confirms, uploads, and explicitly removes a visual identity", async () => {
@@ -171,6 +180,7 @@ describe("BreedingFarmEditPage", () => {
       if (url.pathname.endsWith("/api/auth/session")) return authenticatedSession();
       if (url.pathname.endsWith("/api/breeding-farms")) return selectionResponse();
       if (url.pathname.endsWith("/api/breeding-farms/farm-id/settings")) return settingsResponse();
+      if (url.pathname.endsWith("/api/breeding-farms/farm-id/cover")) return breedingFarmCoverResponse();
       if (url.pathname.endsWith("/antiforgery/token")) return antiforgeryResponse();
       if (url.pathname.endsWith("/api/breeding-farms/visual-identity/content")) return new Response(new Blob(["png"], { type: "image/png" }), { status: 200 });
       if (url.pathname.endsWith("/api/breeding-farms/visual-identity") && init?.method === "PUT") {
@@ -251,6 +261,7 @@ describe("BreedingFarmEditPage", () => {
       if (url.pathname.endsWith("/api/auth/session")) return authenticatedSession();
       if (url.pathname.endsWith("/api/breeding-farms")) return selectionResponse();
       if (url.pathname.endsWith("/api/breeding-farms/farm-id/settings")) return settingsResponse();
+      if (url.pathname.endsWith("/api/breeding-farms/farm-id/cover")) return breedingFarmCoverResponse();
       if (url.pathname.endsWith("/api/breeding-farms/visual-identity/templates")) return visualIdentityTemplatesResponse();
       if (url.pathname.endsWith("/antiforgery/token")) return antiforgeryResponse();
       if (url.pathname.endsWith("/api/breeding-farms/visual-identity/templates/preview")) {
@@ -326,6 +337,7 @@ describe("BreedingFarmEditPage", () => {
       if (path.endsWith("/api/auth/session")) return authenticatedSession();
       if (path.endsWith("/api/breeding-farms")) return selectionResponse();
       if (path.endsWith("/api/breeding-farms/farm-id/settings")) return settingsResponse();
+      if (path.endsWith("/api/breeding-farms/farm-id/cover")) return breedingFarmCoverResponse();
       if (path.endsWith("/api/breeding-farms/visual-identity/templates")) {
         catalogRequests += 1;
         return catalogRequests === 1 ? firstCatalog : visualIdentityTemplatesResponse([]);
@@ -356,6 +368,7 @@ describe("BreedingFarmEditPage", () => {
       if (url.pathname.endsWith("/api/auth/session")) return authenticatedSession();
       if (url.pathname.endsWith("/api/breeding-farms")) return selectionResponse();
       if (url.pathname.endsWith("/api/breeding-farms/farm-id/settings")) return settingsResponse();
+      if (url.pathname.endsWith("/api/breeding-farms/farm-id/cover")) return breedingFarmCoverResponse();
       if (url.pathname.endsWith("/antiforgery/token")) return antiforgeryResponse();
       if (url.pathname.endsWith("/api/breeding-farms/visual-identity/templates/preview")) {
         return Promise.resolve(new Response(new Blob(["preview"], { type: "image/png" }), { status: 200 }));
@@ -395,6 +408,7 @@ describe("BreedingFarmEditPage", () => {
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectionResponse())
       .mockResolvedValueOnce(settingsResponse())
+      .mockResolvedValueOnce(breedingFarmCoverResponse())
       .mockResolvedValueOnce(visualIdentityResponse());
     vi.stubGlobal("fetch", fetchMock);
     render(<BreedingFarmEditPage />);
@@ -421,6 +435,7 @@ describe("BreedingFarmEditPage", () => {
       const path = new URL(String(input)).pathname;
       if (path.endsWith("/api/auth/session")) return authenticatedSession();
       if (path.endsWith("/api/breeding-farms/farm-id/settings")) return settingsResponse();
+      if (path.endsWith("/api/breeding-farms/farm-id/cover")) return breedingFarmCoverResponse();
       if (path.endsWith("/api/breeding-farms/visual-identity/templates")) return visualIdentityTemplatesResponse();
       if (path.endsWith("/api/breeding-farms/visual-identity")) {
         identityRequests += 1;
