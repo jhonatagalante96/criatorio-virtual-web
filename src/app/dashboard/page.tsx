@@ -160,6 +160,11 @@ function formatActivityType(activityType: string): string {
   return "Atividade registrada";
 }
 
+function formatActivityTitle(activity: DashboardActivity): string {
+  if (activity.activityType === "ReproductionRegistered") return "Reprodução registrada";
+  return activity.title;
+}
+
 function formatActivityDate(value: string): string {
   const date = new Date(value);
   if (!value || Number.isNaN(date.getTime())) return "Data não disponível";
@@ -409,7 +414,7 @@ function ActivitiesSection({ activities }: Readonly<{ activities: DashboardActiv
                   </span>
                 )}
                 <span className="dashboard-activity-copy">
-                  <strong>{activity.title}</strong>
+                  <strong>{formatActivityTitle(activity)}</strong>
                   <span>{formatActivityType(activity.activityType)}</span>
                 </span>
                 <time dateTime={activity.occurredAtUtc}>{formatActivityDate(activity.occurredAtUtc)}</time>

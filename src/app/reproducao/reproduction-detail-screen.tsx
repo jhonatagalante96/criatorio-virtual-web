@@ -7,6 +7,7 @@ import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "
 import { AppLoadingState } from "../components/app-loading-state";
 import { AuthenticatedShell } from "../components/authenticated-shell";
 import { DashboardIcon } from "../components/dashboard-icons";
+import { resolveBirdImageUrl } from "../plantel/aves/bird-image";
 import {
   birdSexLabel,
   birdStatusLabel,
@@ -26,6 +27,12 @@ type FarmState = "blocked" | "error" | "loading" | "ready";
 type DetailState = "error" | "loading" | "ready";
 type OriginSearchState = "empty" | "error" | "idle" | "loading" | "ready";
 type ReproductionDialogMode = "cancel" | "correct-notes" | "edit" | "finish" | "link-origin";
+
+interface CurrentBirdPhotoResponse {
+  birdId: string;
+  breedingFarmId: string;
+  imageUrl?: string | null;
+}
 
 type ReproductionMutationResponse = Pick<
   ReproductionDetailsResponse,
@@ -162,16 +169,17 @@ function StateCard({
 
 export function ReproductionBirdSnapshot({
   label,
-  bird
-}: Readonly<{ label: string; bird: ReproductionDetailsResponse["maleBird"] }>) {
+  bird,
+  imageUrl
+}: Readonly<{ label: string; bird: ReproductionDetailsResponse["maleBird"]; imageUrl?: string | null }>) {
   return (
     <article className="reproduction-detail-bird">
-      <header><span aria-hidden="true" className="reproduction-detail-bird-icon"><DashboardIcon name="bird" /></span><div><p className="eyebrow">{label}</p><h3>{bird.name}</h3></div></header>
+      <header><span aria-hidden="true" className="reproduction-detail-bird-icon">{imageUrl ? <img alt="" src={resolveBirdImageUrl(imageUrl)} /> : <DashboardIcon name="bird" />}</span><div><p className="eyebrow">{label}</p><h3>{bird.name}</h3></div></header>
       <dl>
         <div><dt>Sexo</dt><dd>{birdSexLabel(bird.sex)}</dd></div>
         <div><dt>Anilha</dt><dd>{bird.ringNumber || "Não informada"}</dd></div>
         <div><dt>Nascimento</dt><dd>{formatReproductionDate(bird.birthDate)}</dd></div>
-        <div><dt>Situação retornada</dt><dd>{birdStatusLabel(bird.status)}</dd></div>
+        <div><dt>Situação</dt><dd>{birdStatusLabel(bird.status)}</dd></div>
       </dl>
     </article>
   );
@@ -187,6 +195,7 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
   const [farmState, setFarmState] = useState<FarmState>("loading");
   const [selectedFarmId, setSelectedFarmId] = useState<string>();
   const [detail, setDetail] = useState<ReproductionDetailsResponse>();
+  const [birdImageUrls, setBirdImageUrls] = useState<Record<string, string | null>>({});
   const [detailError, setDetailError] = useState<string>();
   const [detailState, setDetailState] = useState<DetailState>("loading");
   const [originQuery, setOriginQuery] = useState("");
@@ -257,6 +266,7 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
     setDetailState("loading");
     setDetailError(undefined);
     setDetail(undefined);
+    setBirdImageUrls({});
     try {
       const response = await client.current!.request<ReproductionDetailsResponse>(`api/reproductions/${encodeURIComponent(reproductionId)}`);
       if (version !== detailRequestVersion.current) return;
@@ -290,6 +300,30 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
     void loadDetails();
     return () => { detailRequestVersion.current += 1; };
   }, [farmState, loadDetails, selectedFarmId, status]);
+
+  useEffect(() => {
+    if (detailState !== "ready" || !detail || !selectedFarmId) return;
+    const controller = new AbortController();
+    const birds = [detail.maleBird, detail.femaleBird].filter((bird) => bird.status.toLowerCase() !== "transferred");
+
+    void Promise.all(birds.map(async (bird) => {
+      try {
+        const profile = await client.current!.request<CurrentBirdPhotoResponse>(
+          `api/birds/${encodeURIComponent(bird.birdId)}`,
+          { signal: controller.signal }
+        );
+        const belongsToSelectedFarm = profile.breedingFarmId.toLowerCase() === selectedFarmId.toLowerCase();
+        const matchesBird = profile.birdId.toLowerCase() === bird.birdId.toLowerCase();
+        return [bird.birdId, belongsToSelectedFarm && matchesBird ? profile.imageUrl ?? null : null] as const;
+      } catch {
+        return [bird.birdId, null] as const;
+      }
+    })).then((entries) => {
+      if (!controller.signal.aborted) setBirdImageUrls(Object.fromEntries(entries));
+    });
+
+    return () => controller.abort();
+  }, [detail, detailState, selectedFarmId]);
 
   useEffect(() => {
     if (dialogMode !== "link-origin" || !selectedFarmId || !detail) return;
@@ -435,7 +469,7 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
       else if (detail && finishEndDate < detail.startDate) errors.endDate = "A data de término não pode ser anterior ao início.";
       else if (finishEndDate > today) errors.endDate = "A data de término não pode ser futura.";
     }
-    if (dialogMode === "link-origin" && !selectedOriginBird) errors.birdId = "Busque e selecione uma ave elegível.";
+    if (dialogMode === "link-origin" && !selectedOriginBird) errors.birdId = "Busque e selecione uma ave que possa ser vinculada.";
     if (dialogMode === "link-origin" && !isOriginConfirmed) errors.confirmed = "Confirme o vínculo antes de continuar.";
     if ((dialogMode === "finish" || dialogMode === "cancel") && !isConfirmed) {
       errors.confirmed = "Confirme a alteração antes de continuar.";
@@ -682,9 +716,9 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
           {actionNotice && <p className="reproduction-action-notice" ref={actionNoticeRef} role="status" tabIndex={-1}>{actionNotice}</p>}
 
           <div className="reproduction-detail-pair" aria-label="Casal registrado">
-            <ReproductionBirdSnapshot bird={detail.maleBird} label="Macho" />
+            <ReproductionBirdSnapshot bird={detail.maleBird} imageUrl={birdImageUrls[detail.maleBird.birdId]} label="Macho" />
             <span aria-hidden="true" className="reproduction-detail-pair-mark">×</span>
-            <ReproductionBirdSnapshot bird={detail.femaleBird} label="Fêmea" />
+            <ReproductionBirdSnapshot bird={detail.femaleBird} imageUrl={birdImageUrls[detail.femaleBird.birdId]} label="Fêmea" />
           </div>
 
           <dl className="reproduction-detail-record">
@@ -698,7 +732,7 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
             <h3 id="titulo-observacoes-reproducao">Observações</h3>
             <p>{detail.notes?.trim() || "Nenhuma observação informada."}</p>
           </section>
-          <p className="document-wizard-privacy-note"><span aria-hidden="true">i</span>Os dados do casal são os fornecidos pelo endpoint de histórico na origem. Esta tela não consulta fichas atuais de aves transferidas.</p>
+          <p className="document-wizard-privacy-note"><span aria-hidden="true">i</span>As informações do casal vêm do histórico do criatório de origem. Quando uma ave foi transferida, esta tela não mostra a ficha atual dela.</p>
         </section>
 
         {dialogMode && <div
@@ -734,7 +768,7 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
               onSubmit={(event) => void submitDialog(event)}
             >
               {dialogMode === "link-origin" && <>
-                <section aria-label="Buscar ave elegível" className="reproduction-origin-search">
+                <section aria-label="Buscar ave que possa ser vinculada" className="reproduction-origin-search">
                   <label className="bird-status-dialog-field" htmlFor={originSearchId}>
                     <span>Buscar ave por nome ou anilha</span>
                     <input
@@ -763,14 +797,14 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
                     <button className="text-action" disabled={isSubmitting} onClick={changeOriginBird} type="button">Alterar seleção</button>
                   </div>}
                   <div aria-live="polite" className="external-ancestor-results" id={originOptionsId}>
-                    {originSearchState === "loading" && <p role="status">Buscando aves elegíveis…</p>}
+                    {originSearchState === "loading" && <p role="status">Buscando aves…</p>}
                     {originSearchState === "idle" && !selectedOriginBird && <p role="status">Digite ao menos dois caracteres para buscar.</p>}
-                    {originSearchState === "empty" && <p role="status">Nenhuma ave elegível encontrada. Confira o nome ou a anilha informada.</p>}
+                    {originSearchState === "empty" && <p role="status">Nenhuma ave que possa ser vinculada foi encontrada. Confira o nome ou a anilha informada.</p>}
                     {originSearchState === "error" && <div className="external-ancestor-search-error">
                       <p role="alert">{originSearchError}</p>
                       <button className="auth-secondary-action" disabled={isSubmitting} onClick={() => setOriginSearchRetry((value) => value + 1)} type="button">Tentar novamente</button>
                     </div>}
-                    {originSearchState === "ready" && <ul aria-label="Aves elegíveis" className="external-ancestor-options" role="listbox">
+                    {originSearchState === "ready" && <ul aria-label="Aves disponíveis para vínculo" className="external-ancestor-options" role="listbox">
                       {originOptions.map((option) => <li key={option.birdId}>
                         <button aria-selected={false} disabled={isSubmitting} onClick={() => chooseOriginBird(option)} role="option" type="button">
                           <strong>{option.name}</strong>
@@ -785,7 +819,7 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
                 <section aria-labelledby="reproduction-origin-review-title" className="reproduction-origin-review">
                   <h3 id="reproduction-origin-review-title">Revisar vínculo</h3>
                   <dl>
-                    <div><dt>Ave vinculada</dt><dd>{selectedOriginBird?.name ?? "Selecione uma ave elegível"}</dd></div>
+                    <div><dt>Ave vinculada</dt><dd>{selectedOriginBird?.name ?? "Selecione uma ave que possa ser vinculada"}</dd></div>
                     <div><dt>Anilha</dt><dd>{selectedOriginBird?.ringNumber ?? "Não informada"}</dd></div>
                     <div><dt>Sexo</dt><dd>{selectedOriginBird ? birdSexLabel(selectedOriginBird.sex) : "Não informado"}</dd></div>
                     <div><dt>Origem reprodutiva</dt><dd>{detail.maleBird.name} × {detail.femaleBird.name}</dd></div>

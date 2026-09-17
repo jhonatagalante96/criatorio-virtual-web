@@ -455,8 +455,8 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Valide a elegibilidade" })).toBeTruthy());
-    await waitFor(() => expect(screen.getByText("Ave elegível para o certificado")).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Confira se a ave pode receber este documento" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Esta ave pode receber o certificado")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
     const photo = screen.getByRole("img", { name: "Prévia da foto de Aurora" });
@@ -531,7 +531,7 @@ describe("DocumentsPage", () => {
     fireEvent.click(screen.getByRole("option", { name: /Aurora/ }));
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Certificado bloqueado para esta ave" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Certificado indisponível para esta ave" })).toBeTruthy());
     expect(screen.getByText("Informe uma anilha válida de seis dígitos na edição da ave.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Editar dados da ave" }).getAttribute("href")).toBe("/plantel/aves/bird-a/editar");
     expect(fetchMock.mock.calls.some(([, request]) => String(request?.url).includes("/genealogy"))).toBe(false);
@@ -553,7 +553,7 @@ describe("DocumentsPage", () => {
     fireEvent.click(screen.getByRole("option", { name: /Aurora/ }));
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível validar a ave" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível conferir os dados da ave" })).toBeTruthy());
     expect(screen.getByText("Sua conta não tem permissão para consultar esta ave ou criatório.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeTruthy();
   });
@@ -578,8 +578,8 @@ describe("DocumentsPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Valide a elegibilidade" })).toBeTruthy());
-    await waitFor(() => expect(screen.getByText("Ave elegível para o documento de procedência")).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Confira se a ave pode receber este documento" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Esta ave pode receber o documento de procedência")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
@@ -626,7 +626,7 @@ describe("DocumentsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha a ave" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
-    await waitFor(() => expect(screen.getByText("Ave elegível para o documento de procedência")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Esta ave pode receber o documento de procedência")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Confira a prévia" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));

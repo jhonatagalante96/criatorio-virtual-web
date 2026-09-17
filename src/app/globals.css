@@ -559,11 +559,12 @@ h1, h2 { line-height: 1.08; }
 .reproduction-notes-field { position: relative; }
 .reproduction-character-count { text-align: right; }
 .reproduction-review { margin-top: .1rem; }
-.reproduction-review-pair { align-items: center; display: flex; flex-wrap: wrap; gap: .45rem; }
-.reproduction-review-pair img { background: #edf4ef; border-radius: 50%; height: 2.15rem; object-fit: cover; width: 2.15rem; }
-.reproduction-review-pair > span { display: grid; gap: .08rem; min-width: 5rem; }
-.reproduction-review-pair strong { color: #173b53; font-size: .67rem; }
-.reproduction-review-pair small { color: #78919a; font-size: .56rem; }
+.reproduction-review-pair { align-items: center; display: grid; gap: .45rem; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.reproduction-review-bird { align-items: center; display: flex; gap: .4rem; min-width: 0; }
+.reproduction-review-bird img { background: #edf4ef; border-radius: 50%; flex: 0 0 auto; height: 2.15rem; object-fit: cover; width: 2.15rem; }
+.reproduction-review-bird-copy { display: grid; gap: .08rem; min-width: 0; }
+.reproduction-review-bird strong { color: #173b53; font-size: .67rem; overflow-wrap: anywhere; }
+.reproduction-review-bird small { color: #78919a; font-size: .56rem; overflow-wrap: anywhere; }
 .reproduction-review-pair > b { color: #8ca09c; font-size: .8rem; }
 .reproduction-confirmation-box { background: #f0fbf3; border: 1px solid #cfe9d5; }
 .reproduction-confirmation-box > span { align-items: center; background: #32a66b; border-radius: 50%; color: #fff; display: inline-flex; flex: 0 0 auto; font-size: .7rem; font-weight: 900; height: 1.25rem; justify-content: center; width: 1.25rem; }
@@ -2922,17 +2923,17 @@ h1, h2 { line-height: 1.08; }
 .dashboard-section-heading h2 { color: var(--ink); font-size: 1.05rem; letter-spacing: -.035em; margin: 0; }
 .dashboard-section-count { color: #78919a; font-size: .63rem; white-space: nowrap; }
 .dashboard-metrics-grid { display: grid; gap: .85rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.dashboard-metric { align-items: center; background: #f8fcfb; border: 1px solid #dcebed; border-radius: .7rem; display: flex; gap: .75rem; min-height: 6.4rem; min-width: 0; padding: 1.05rem; position: relative; }
+.dashboard-metric { align-items: center; background: #f8fcfb; border: 1px solid #dcebed; border-radius: .7rem; display: grid; gap: .75rem; grid-template-columns: 2.65rem minmax(0, 1fr) 1rem; min-height: 6.4rem; min-width: 0; padding: 1.05rem; position: relative; }
 .dashboard-metric-icon { align-items: center; background: #c4eccf; border-radius: 50%; color: var(--green-dark); display: inline-flex; flex: 0 0 auto; height: 2.65rem; justify-content: center; width: 2.65rem; }
 .dashboard-metric-icon .dashboard-icon { height: 1.45rem; width: 1.45rem; }
 .dashboard-metric-main { display: grid; gap: .1rem; min-width: 0; }
-.dashboard-metric-label { color: #68818f; font-size: .65rem; font-weight: 800; line-height: 1.25; }
+.dashboard-metric-label { color: #68818f; font-size: .65rem; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
 .dashboard-metric strong { color: var(--ink); font-size: 1.7rem; letter-spacing: -.05em; line-height: 1; }
 .dashboard-metric-link { border-radius: .7rem; color: inherit; display: block; text-decoration: none; }
 .dashboard-metric-link:hover .dashboard-metric { border-color: #72b98d; box-shadow: 0 .45rem 1.2rem rgb(6 58 86 / 9%); }
 .dashboard-metric-link:focus-visible { outline: 3px solid rgb(23 105 160 / 24%); outline-offset: 3px; }
 .dashboard-metric-link .dashboard-metric { height: 100%; }
-.dashboard-metric-arrow { color: #152139; font-size: 1.25rem; line-height: 1; margin-left: auto; }
+.dashboard-metric-arrow { color: #152139; font-size: 1.25rem; justify-self: end; line-height: 1; }
 .dashboard-metric-orange { background: #fffaf2; border-color: #f0dfbd; }
 .dashboard-metric-orange .dashboard-metric-icon { background: #f5dcae; }
 .dashboard-metric-orange .dashboard-metric-icon { color: #946324; }
@@ -3231,7 +3232,8 @@ h1, h2 { line-height: 1.08; }
 .reproduction-detail-pair-mark { color: #78919a; font-size: 1rem; font-weight: 800; }
 .reproduction-detail-bird { background: #fbfdfd; border: 1px solid #dce9ea; border-radius: .65rem; min-width: 0; padding: .85rem; }
 .reproduction-detail-bird > header { align-items: center; display: flex; gap: .65rem; }
-.reproduction-detail-bird-icon { align-items: center; background: #e4f1f2; border-radius: .5rem; color: #236f87; display: inline-flex; flex: 0 0 auto; height: 2.45rem; justify-content: center; width: 2.45rem; }
+.reproduction-detail-bird-icon { align-items: center; background: #e4f1f2; border-radius: .5rem; color: #236f87; display: inline-flex; flex: 0 0 auto; height: 2.45rem; justify-content: center; overflow: hidden; width: 2.45rem; }
+.reproduction-detail-bird-icon img { display: block; height: 100%; object-fit: cover; width: 100%; }
 .reproduction-detail-bird-icon .dashboard-icon { height: 1.2rem; width: 1.2rem; }
 .reproduction-detail-bird .eyebrow { margin: 0 0 .12rem; }
 .reproduction-detail-bird h3 { color: var(--ink); font-size: .95rem; margin: 0; overflow-wrap: anywhere; }

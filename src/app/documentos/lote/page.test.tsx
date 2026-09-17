@@ -123,7 +123,7 @@ describe("BadgeBatchPage", () => {
       printSize: "Medium",
       selectedFields: ["Name", "RingNumber", "Species", "Sex", "BreedingFarmAddress"]
     });
-    await waitFor(() => expect(screen.getByRole("link", { name: "Baixar PDF agregado" }).getAttribute("href")).toBe("blob:batch-pdf"));
+    await waitFor(() => expect(screen.getByRole("link", { name: "Baixar arquivo completo" }).getAttribute("href")).toBe("blob:batch-pdf"));
     expect(screen.getAllByText("Não gerado: anilha ausente")).toHaveLength(1);
   });
 
@@ -141,7 +141,7 @@ describe("BadgeBatchPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Nenhum crachá foi gerado" })).toBeTruthy());
     expect(screen.getByText("Brisa")).toBeTruthy();
     expect(screen.getAllByText("Não gerado: anilha ausente")).toHaveLength(2);
-    expect(screen.queryByRole("link", { name: "Baixar PDF agregado" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Baixar arquivo completo" })).toBeNull();
   });
 
   it("shows an empty state when the selected farm has no active birds", async () => {

@@ -165,7 +165,7 @@ function statusNotice(status: BirdStatus): string | undefined {
 function eligibilityIssueTitle(code: string): string {
   if (code === "MissingRingNumber") return "Anilha não informada";
   if (code === "InactiveStatus") return "Ave inativa";
-  return "Pendência de elegibilidade";
+  return "Confira estes dados antes de continuar";
 }
 
 function eligibilityIssueMessage(issue: BirdEligibilityIssue): string {
@@ -771,29 +771,29 @@ function BirdEligibilityPanel({
   state: EligibilityState;
 }>) {
   return (
-    <section aria-busy={state === "loading"} aria-label="Resultado da elegibilidade" aria-labelledby="titulo-elegibilidade-ave" aria-live="polite" className={`bird-eligibility-panel${state === "ready" && eligibility?.isEligible ? " is-eligible" : ""}`}>
+    <section aria-busy={state === "loading"} aria-label="Conferência das informações da ave" aria-labelledby="titulo-elegibilidade-ave" aria-live="polite" className={`bird-eligibility-panel${state === "ready" && eligibility?.isEligible ? " is-eligible" : ""}`}>
       <div className="bird-eligibility-heading">
         <div>
           <p className="eyebrow">Verificação dos dados</p>
-          <h2 id="titulo-elegibilidade-ave">Elegibilidade da ave</h2>
+          <h2 id="titulo-elegibilidade-ave">Confira as informações desta ave</h2>
         </div>
-        {state === "ready" && eligibility && <span className={`bird-eligibility-badge${eligibility.isEligible ? " is-eligible" : " is-pending"}`}>{eligibility.isEligible ? "Elegível" : "Requer atenção"}</span>}
+        {state === "ready" && eligibility && <span className={`bird-eligibility-badge${eligibility.isEligible ? " is-eligible" : " is-pending"}`}>{eligibility.isEligible ? "Sem pendências" : "Requer atenção"}</span>}
       </div>
 
-      {state === "loading" && <LoadingSection label="elegibilidade" />}
+      {state === "loading" && <LoadingSection label="conferência" />}
 
       {state === "error" && (
         <div className="bird-eligibility-feedback" role="alert">
-          <strong>Não foi possível consultar a elegibilidade</strong>
-          <p>{error ?? "Tente novamente para verificar as pendências da ave."}</p>
+          <strong>Não foi possível conferir as informações</strong>
+          <p>{error ?? "Tente novamente para conferir se há algo que precise de atenção."}</p>
           <button className="text-action" onClick={onRetry} type="button">Tentar novamente</button>
         </div>
       )}
 
       {state === "blocked" && (
         <div className="bird-eligibility-feedback" role="alert">
-          <strong>Elegibilidade indisponível</strong>
-          <p>{error ?? "Não foi possível consultar a elegibilidade no criatório selecionado."}</p>
+          <strong>Conferência indisponível</strong>
+          <p>{error ?? "Não foi possível conferir as informações no criatório selecionado."}</p>
           <button className="text-action" onClick={onRetry} type="button">Tentar novamente</button>
         </div>
       )}
@@ -803,7 +803,7 @@ function BirdEligibilityPanel({
           <span aria-hidden="true" className="bird-eligibility-mark">✓</span>
           <div>
             <strong>Nenhuma pendência encontrada</strong>
-            <p>Não foram encontrados motivos de inelegibilidade para esta ave.</p>
+            <p>Não há pendências que impeçam as ações disponíveis para esta ave.</p>
           </div>
         </div>
       )}
@@ -812,7 +812,7 @@ function BirdEligibilityPanel({
         <>
           <p className="bird-eligibility-intro">Resolva os itens abaixo para liberar as ações compatíveis com esta ave.</p>
           {eligibility.issues.length > 0 ? (
-            <ul aria-label="Motivos de inelegibilidade" className="bird-eligibility-issues">
+            <ul aria-label="Informações que precisam de atenção" className="bird-eligibility-issues">
               {eligibility.issues.map((issue) => (
                 <li key={`${issue.code}-${issue.message}`}>
                   <span aria-hidden="true" className="bird-eligibility-issue-mark">!</span>
@@ -827,7 +827,7 @@ function BirdEligibilityPanel({
               ))}
             </ul>
           ) : (
-            <p className="bird-eligibility-feedback">Esta ave não está elegível, mas não foram informados os motivos.</p>
+            <p className="bird-eligibility-feedback">Há informações que precisam de atenção, mas não recebemos os detalhes.</p>
           )}
         </>
       )}
@@ -1101,8 +1101,8 @@ function BirdDetailPage() {
       } else if (eligibilityResult.reason instanceof ApiError && (eligibilityResult.reason.status === 404 || eligibilityResult.reason.status === 409)) {
         setEligibilityState("blocked");
         setEligibilityError(eligibilityResult.reason.status === 409
-          ? "Selecione novamente um criatório para consultar esta elegibilidade."
-          : "A elegibilidade não está disponível para o criatório selecionado.");
+          ? "Selecione novamente um criatório para conferir as informações desta ave."
+          : "Não foi possível conferir as informações no criatório selecionado.");
       } else {
         setEligibilityState("error");
         setEligibilityError(eligibilityResult.reason instanceof ApiError && eligibilityResult.reason.status >= 500

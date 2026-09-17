@@ -183,7 +183,7 @@ function BirdSelector({
           {filteredBirds.map((bird) => <BirdOption bird={bird} key={bird.birdId} onSelect={() => onSelect(bird)} selected={selectedBirdId === bird.birdId} />)}
         </ul>
       ) : (
-        <p className="document-wizard-inline-empty" role="status">{birds.length > 0 ? "Nenhuma ave corresponde à busca." : `Nenhuma ave ${label} elegível foi encontrada.`}</p>
+        <p className="document-wizard-inline-empty" role="status">{birds.length > 0 ? "Nenhuma ave corresponde à busca." : `Nenhuma ave ${label} disponível foi encontrada.`}</p>
       )}
     </section>
   );
@@ -435,7 +435,7 @@ function ReproductionWizard() {
   }
 
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
-    return <AppLoadingState activeNav="reproduction" email={session?.email} farmName={farmName} label="Preparando reprodução" message="Consultando o criatório e as aves elegíveis." />;
+    return <AppLoadingState activeNav="reproduction" email={session?.email} farmName={farmName} label="Preparando reprodução" message="Conferindo o criatório e as aves disponíveis." />;
   }
   if (status === "unauthenticated") return <StateCard actionHref="/login" actionLabel="Entrar" heading="Entre para registrar uma reprodução" message="Sua sessão é necessária para consultar o criatório selecionado." />;
   if (status === "forbidden" || status === "error") return <StateCard heading="Não foi possível abrir a reprodução" message="Sua sessão não conseguiu acessar esta área. Tente novamente." onRetry={() => void refresh()} />;
@@ -445,7 +445,7 @@ function ReproductionWizard() {
   if (farmState === "error") return <AuthenticatedShell activeNav="reproduction" email={session.email} farmName={farmName}><StateCard heading="Não foi possível abrir a reprodução" message={farmError ?? "Tente novamente para continuar."} onRetry={() => void loadData()} /></AuthenticatedShell>;
   if (birdsState === "loading") return <AuthenticatedShell activeNav="reproduction" email={session.email} farmName={farmName}><main className="reproduction-wizard-page"><AppLoadingContent label="Carregando aves" message="Buscando machos e fêmeas ativos no criatório selecionado." /></main></AuthenticatedShell>;
   if (birdsState === "error") return <AuthenticatedShell activeNav="reproduction" email={session.email} farmName={farmName}><StateCard heading="Não foi possível carregar as aves" message={birdsError ?? "Tente novamente para escolher o casal."} onRetry={() => selectedFarmId && void loadBirds(selectedFarmId)} /></AuthenticatedShell>;
-  if (birdsState === "empty") return <AuthenticatedShell activeNav="reproduction" email={session.email} farmName={farmName}><StateCard actionHref="/plantel/aves/novo" actionLabel="Cadastrar ave" heading="Nenhum casal elegível disponível" message="É necessário ter ao menos um macho e uma fêmea ativos, identificados com anilha, para registrar uma reprodução." /></AuthenticatedShell>;
+  if (birdsState === "empty") return <AuthenticatedShell activeNav="reproduction" email={session.email} farmName={farmName}><StateCard actionHref="/plantel/aves/novo" actionLabel="Cadastrar ave" heading="Nenhum casal disponível" message="É necessário ter ao menos um macho e uma fêmea ativos, identificados com anilha, para registrar uma reprodução." /></AuthenticatedShell>;
 
   return (
     <AuthenticatedShell activeNav="reproduction" email={session.email} farmName={farmName}>
@@ -460,15 +460,86 @@ function ReproductionWizard() {
         {notice && <p className={`document-wizard-notice document-wizard-notice-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.text}</p>}
 
         <form className="document-wizard-card reproduction-wizard-card" onSubmit={submit}>
-          {step === 0 && <section aria-labelledby="titulo-etapa-aves"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 1 de 4</p><h2 id="titulo-etapa-aves">Escolha o casal</h2><p>Selecione um macho e uma fêmea elegíveis para iniciar o registro.</p></div></div><div className="reproduction-parent-grid"><BirdSelector birds={maleBirds} label="macho" onSearchChange={setMaleSearch} onSelect={(bird) => selectBird("male", bird)} search={maleSearch} selectedBirdId={maleBirdId} /><BirdSelector birds={femaleBirds} label="fêmea" onSearchChange={setFemaleSearch} onSelect={(bird) => selectBird("female", bird)} search={femaleSearch} selectedBirdId={femaleBirdId} /></div>{(fieldErrors.maleBirdId || fieldErrors.femaleBirdId || fieldErrors.pair) && <p className="document-wizard-field-error" role="alert">{fieldErrors.pair ?? fieldErrors.maleBirdId ?? fieldErrors.femaleBirdId}</p>}<div className="reproduction-rule-box"><span aria-hidden="true"><DashboardIcon name="alert" /></span><div><strong>Regra do casal</strong><p>A reprodução precisa de um macho e uma fêmea ativos e identificados. A API confirma a elegibilidade e o pertencimento ao criatório ao salvar.</p></div></div></section>}
+          {step === 0 && (
+            <section aria-labelledby="titulo-etapa-aves">
+              <div className="document-wizard-section-heading">
+                <div>
+                  <p className="eyebrow">Etapa 1 de 4</p>
+                  <h2 id="titulo-etapa-aves">Escolha o casal</h2>
+                  <p>Selecione um macho e uma fêmea que possam iniciar uma reprodução.</p>
+                </div>
+              </div>
+              <div className="reproduction-parent-grid">
+                <BirdSelector birds={maleBirds} label="macho" onSearchChange={setMaleSearch} onSelect={(bird) => selectBird("male", bird)} search={maleSearch} selectedBirdId={maleBirdId} />
+                <BirdSelector birds={femaleBirds} label="fêmea" onSearchChange={setFemaleSearch} onSelect={(bird) => selectBird("female", bird)} search={femaleSearch} selectedBirdId={femaleBirdId} />
+              </div>
+              {(fieldErrors.maleBirdId || fieldErrors.femaleBirdId || fieldErrors.pair) && <p className="document-wizard-field-error" role="alert">{fieldErrors.pair ?? fieldErrors.maleBirdId ?? fieldErrors.femaleBirdId}</p>}
+              <div className="reproduction-rule-box">
+                <span aria-hidden="true"><DashboardIcon name="alert" /></span>
+                <div>
+                  <strong>Regra do casal</strong>
+                  <p>A reprodução só pode começar com um macho e uma fêmea ativos e identificados. O sistema confere se ambos pertencem ao criatório escolhido antes de salvar.</p>
+                </div>
+              </div>
+            </section>
+          )}
 
           {step === 1 && <section aria-labelledby="titulo-etapa-periodo"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 2 de 4</p><h2 id="titulo-etapa-periodo">Defina o período</h2><p>Informe quando a reprodução começou. A data de término pode ser preenchida depois.</p></div></div><div className="reproduction-date-grid"><label className="reproduction-field" htmlFor="data-inicio"><span>Data de início <b aria-hidden="true">*</b></span><input aria-describedby={fieldErrors.startDate ? "erro-data-inicio" : undefined} aria-invalid={Boolean(fieldErrors.startDate)} id="data-inicio" max={todayIso()} onChange={(event) => { setStartDate(event.target.value); setFieldErrors((current) => ({ ...current, startDate: "" })); }} type="date" value={startDate} />{fieldErrors.startDate && <small id="erro-data-inicio" className="reproduction-field-error">{fieldErrors.startDate}</small>}</label><label className="reproduction-field" htmlFor="data-termino"><span>Data de término <em>(opcional)</em></span><input aria-describedby={fieldErrors.endDate ? "erro-data-termino" : undefined} aria-invalid={Boolean(fieldErrors.endDate)} id="data-termino" max={todayIso()} min={startDate || undefined} onChange={(event) => { setEndDate(event.target.value); setFieldErrors((current) => ({ ...current, endDate: "" })); }} type="date" value={endDate} />{fieldErrors.endDate && <small id="erro-data-termino" className="reproduction-field-error">{fieldErrors.endDate}</small>}</label></div><div className="reproduction-tip-box"><span aria-hidden="true">i</span><p>Deixe a data de término em branco enquanto a reprodução estiver em andamento. Você poderá atualizar o registro depois.</p></div></section>}
 
-          {step === 2 && <section aria-labelledby="titulo-etapa-dados"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 3 de 4</p><h2 id="titulo-etapa-dados">Dados da reprodução</h2><p>Adicione uma observação para contextualizar o registro, se necessário.</p></div></div><div className="reproduction-status-field"><span>Status inicial</span><strong><i aria-hidden="true" /> Em andamento</strong><small>O status é definido pelo servidor no momento do cadastro.</small></div><label className="reproduction-field reproduction-notes-field" htmlFor="observacoes-reproducao"><span>Observações <em>(opcional)</em></span><textarea aria-describedby={fieldErrors.notes ? "erro-observacoes" : "contador-observacoes"} aria-invalid={Boolean(fieldErrors.notes)} id="observacoes-reproducao" maxLength={2000} onChange={(event) => { setNotes(event.target.value); setFieldErrors((current) => ({ ...current, notes: "" })); }} placeholder="Ex.: casal separado para acompanhamento no viveiro 2." rows={6} value={notes} />{fieldErrors.notes ? <small className="reproduction-field-error" id="erro-observacoes">{fieldErrors.notes}</small> : <small id="contador-observacoes" className="reproduction-character-count">{notes.length}/2000 caracteres</small>}</label><div className="reproduction-tip-box"><span aria-hidden="true">i</span><p>Não inclua dados sensíveis nas observações. Use este espaço apenas para informações úteis sobre o acompanhamento do casal.</p></div></section>}
+          {step === 2 && <section aria-labelledby="titulo-etapa-dados"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 3 de 4</p><h2 id="titulo-etapa-dados">Dados da reprodução</h2><p>Adicione uma observação para contextualizar o registro, se necessário.</p></div></div><div className="reproduction-status-field"><span>Situação inicial</span><strong><i aria-hidden="true" /> Em andamento</strong><small>A situação é definida ao salvar.</small></div><label className="reproduction-field reproduction-notes-field" htmlFor="observacoes-reproducao"><span>Observações <em>(opcional)</em></span><textarea aria-describedby={fieldErrors.notes ? "erro-observacoes" : "contador-observacoes"} aria-invalid={Boolean(fieldErrors.notes)} id="observacoes-reproducao" maxLength={2000} onChange={(event) => { setNotes(event.target.value); setFieldErrors((current) => ({ ...current, notes: "" })); }} placeholder="Ex.: casal separado para acompanhamento no viveiro 2." rows={6} value={notes} />{fieldErrors.notes ? <small className="reproduction-field-error" id="erro-observacoes">{fieldErrors.notes}</small> : <small id="contador-observacoes" className="reproduction-character-count">{notes.length}/2000 caracteres</small>}</label><div className="reproduction-tip-box"><span aria-hidden="true">i</span><p>Não inclua dados sensíveis nas observações. Use este espaço apenas para informações úteis sobre o acompanhamento do casal.</p></div></section>}
 
-          {step === 3 && !createdReproduction && <section aria-labelledby="titulo-etapa-revisao"><div className="document-wizard-section-heading"><div><p className="eyebrow">Etapa 4 de 4</p><h2 id="titulo-etapa-revisao">Revise os dados</h2><p>Confira as informações antes de salvar o registro.</p></div></div>{fieldErrors.pair && <p className="document-wizard-field-error" role="alert">{fieldErrors.pair}</p>}<dl className="document-wizard-review reproduction-review"><div><dt>Casal</dt><dd><span className="reproduction-review-pair"><img alt="" aria-hidden="true" src={resolveBirdImageUrl(selectedMale?.imageUrl)} /><span><strong>{selectedMale?.name}</strong><small>Macho · {selectedMale?.speciesPopularName}</small></span><b aria-hidden="true">×</b><img alt="" aria-hidden="true" src={resolveBirdImageUrl(selectedFemale?.imageUrl)} /><span><strong>{selectedFemale?.name}</strong><small>Fêmea · {selectedFemale?.speciesPopularName}</small></span></span><button onClick={() => setStep(0)} type="button">Alterar</button></dd></div><div><dt>Período</dt><dd>{formatDate(startDate)}<small>{endDate ? `Término em ${formatDate(endDate)}` : "Em andamento · sem data de término"}</small><button onClick={() => setStep(1)} type="button">Alterar</button></dd></div><div><dt>Status</dt><dd>Em andamento<small>Definido pelo servidor ao salvar</small><button onClick={() => setStep(2)} type="button">Ver dados</button></dd></div><div><dt>Observações</dt><dd>{notes.trim() || "Nenhuma observação"}<button onClick={() => setStep(2)} type="button">Alterar</button></dd></div></dl><div className="reproduction-confirmation-box"><span aria-hidden="true">✓</span><div><strong>Tudo certo?</strong><p>O registro ficará vinculado ao criatório selecionado e será validado pela API antes de ser criado.</p></div></div></section>}
+          {step === 3 && !createdReproduction && (
+            <section aria-labelledby="titulo-etapa-revisao">
+              <div className="document-wizard-section-heading">
+                <div>
+                  <p className="eyebrow">Etapa 4 de 4</p>
+                  <h2 id="titulo-etapa-revisao">Revise os dados</h2>
+                  <p>Confira as informações antes de salvar o registro.</p>
+                </div>
+              </div>
+              {fieldErrors.pair && <p className="document-wizard-field-error" role="alert">{fieldErrors.pair}</p>}
+              <dl className="document-wizard-review reproduction-review">
+                <div>
+                  <dt>Casal</dt>
+                  <dd>
+                    <span className="reproduction-review-pair">
+                      <span className="reproduction-review-bird">
+                        <img alt="" aria-hidden="true" src={resolveBirdImageUrl(selectedMale?.imageUrl)} />
+                        <span className="reproduction-review-bird-copy"><strong>{selectedMale?.name}</strong><small>Macho · {selectedMale?.speciesPopularName}</small></span>
+                      </span>
+                      <b aria-hidden="true">×</b>
+                      <span className="reproduction-review-bird">
+                        <img alt="" aria-hidden="true" src={resolveBirdImageUrl(selectedFemale?.imageUrl)} />
+                        <span className="reproduction-review-bird-copy"><strong>{selectedFemale?.name}</strong><small>Fêmea · {selectedFemale?.speciesPopularName}</small></span>
+                      </span>
+                    </span>
+                    <button onClick={() => setStep(0)} type="button">Alterar</button>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Período</dt>
+                  <dd>{formatDate(startDate)}<small>{endDate ? `Término em ${formatDate(endDate)}` : "Em andamento · sem data de término"}</small><button onClick={() => setStep(1)} type="button">Alterar</button></dd>
+                </div>
+                <div>
+                  <dt>Situação</dt>
+                  <dd>Em andamento<small>Definida ao salvar</small><button onClick={() => setStep(2)} type="button">Ver dados</button></dd>
+                </div>
+                <div>
+                  <dt>Observações</dt>
+                  <dd>{notes.trim() || "Nenhuma observação"}<button onClick={() => setStep(2)} type="button">Alterar</button></dd>
+                </div>
+              </dl>
+              <div className="reproduction-confirmation-box">
+                <span aria-hidden="true">✓</span>
+                <div>
+                  <strong>Tudo certo?</strong>
+                  <p>O casal será conferido antes de salvar, e o registro ficará vinculado ao criatório escolhido.</p>
+                </div>
+              </div>
+            </section>
+          )}
 
-          {step === 3 && createdReproduction && <section aria-labelledby="titulo-reproducao-criada" className="document-wizard-success reproduction-success"><span aria-hidden="true" className="document-wizard-success-icon">✓</span><p className="eyebrow">Registro concluído</p><h2 id="titulo-reproducao-criada">Reprodução registrada com sucesso</h2><p>{selectedMale?.name} e {selectedFemale?.name} foram registrados no criatório.</p><dl><div><dt>Início</dt><dd>{formatDate(createdReproduction.startDate)}</dd></div><div><dt>Status</dt><dd>Em andamento</dd></div><div><dt>Identificador</dt><dd>{createdReproduction.reproductionId}</dd></div></dl><div className="reproduction-success-actions"><Link className="auth-primary-action" href={`/reproducao/${encodeURIComponent(createdReproduction.reproductionId)}`}>Ver detalhes</Link><button className="auth-secondary-action" onClick={resetWizard} type="button">Registrar outra reprodução</button><Link className="auth-secondary-action" href="/reproducao">Ver todas as reproduções</Link></div></section>}
+          {step === 3 && createdReproduction && <section aria-labelledby="titulo-reproducao-criada" className="document-wizard-success reproduction-success"><span aria-hidden="true" className="document-wizard-success-icon">✓</span><p className="eyebrow">Registro concluído</p><h2 id="titulo-reproducao-criada">Reprodução registrada com sucesso</h2><p>{selectedMale?.name} e {selectedFemale?.name} foram registrados no criatório.</p><dl><div><dt>Início</dt><dd>{formatDate(createdReproduction.startDate)}</dd></div><div><dt>Situação</dt><dd>Em andamento</dd></div></dl><div className="reproduction-success-actions"><Link className="auth-primary-action" href={`/reproducao/${encodeURIComponent(createdReproduction.reproductionId)}`}>Ver detalhes</Link><button className="auth-secondary-action" onClick={resetWizard} type="button">Registrar outra reprodução</button><Link className="auth-secondary-action" href="/reproducao">Ver todas as reproduções</Link></div></section>}
 
           {!createdReproduction && <div className="document-wizard-actions"><Link className="settings-cancel-action" href="/dashboard">Cancelar</Link>{step > 0 && <button className="settings-cancel-action" disabled={submissionState === "loading"} onClick={goBack} type="button">Anterior</button>}<span>Etapa {step + 1} de 4</span>{step < 3 ? <button className="auth-primary-action" type="submit">Continuar</button> : <button className="auth-primary-action" disabled={submissionState === "loading"} type="submit">{submissionState === "loading" ? "Salvando…" : "Salvar reprodução"}</button>}</div>}
         </form>

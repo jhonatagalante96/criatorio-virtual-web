@@ -77,6 +77,7 @@ async function reachReview(fetchMock: ReturnType<typeof vi.fn>) {
   await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha o casal" })).toBeTruthy());
   fireEvent.click(screen.getByRole("option", { name: /Aurora/ }));
   fireEvent.click(screen.getByRole("option", { name: /Brisa/ }));
+  expect(screen.queryByText(/API/i)).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
   await waitFor(() => expect(screen.getByRole("heading", { name: "Defina o período" })).toBeTruthy());
   fireEvent.change(screen.getByLabelText(/Data de início/), { target: { value: "2026-09-10" } });
@@ -85,6 +86,9 @@ async function reachReview(fetchMock: ReturnType<typeof vi.fn>) {
   fireEvent.change(screen.getByLabelText(/Observações/), { target: { value: "Acompanhamento do viveiro 2." } });
   fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
   await waitFor(() => expect(screen.getByRole("heading", { name: "Revise os dados" })).toBeTruthy());
+  expect(screen.getByText("Aurora").closest(".reproduction-review-bird")?.querySelector("img")).toBeTruthy();
+  expect(screen.getByText("Brisa").closest(".reproduction-review-bird")?.querySelector("img")).toBeTruthy();
+  expect(screen.queryByText(/API|servidor/i)).toBeNull();
   expect(fetchMock).toHaveBeenCalledTimes(3);
 }
 
@@ -102,6 +106,8 @@ describe("ReproductionPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Reprodução registrada com sucesso" })).toBeTruthy());
     expect(screen.getByRole("link", { name: "Ver detalhes" }).getAttribute("href")).toBe("/reproducao/reproduction-a");
     expect(screen.getByRole("link", { name: "Ver todas as reproduções" }).getAttribute("href")).toBe("/reproducao");
+    expect(screen.queryByText("Identificador")).toBeNull();
+    expect(screen.queryByText("reproduction-a")).toBeNull();
     const postCall = fetchMock.mock.calls.find(([, request]) => request?.method === "POST");
     expect(postCall).toBeTruthy();
     expect(String(postCall?.[0])).toContain("/api/reproductions");
@@ -162,7 +168,7 @@ describe("ReproductionPage", () => {
 
     render(<ReproductionPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Nenhum casal elegível disponível" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Nenhum casal disponível" })).toBeTruthy());
     expect(screen.getByRole("link", { name: "Cadastrar ave" }).getAttribute("href")).toBe("/plantel/aves/novo");
   });
 

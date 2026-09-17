@@ -819,7 +819,7 @@ describe("BirdDetailPage", () => {
     expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith("/api/birds/bird-a")).length).toBe(1);
   });
 
-  it("renders API eligibility and offers contextual identification action", async () => {
+  it("shows bird information checks and offers a contextual identification action", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectedFarmResponse())
@@ -834,7 +834,7 @@ describe("BirdDetailPage", () => {
 
     await openDetail(fetchMock);
 
-    expect(screen.getByRole("heading", { name: "Elegibilidade da ave" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Confira as informações desta ave" })).toBeTruthy();
     expect(screen.getByText("Requer atenção")).toBeTruthy();
     expect(screen.getByText("Anilha não informada")).toBeTruthy();
     expect(screen.getByText("Informe uma anilha válida de seis dígitos para liberar as ações que exigem identificação.")).toBeTruthy();
@@ -917,10 +917,10 @@ describe("BirdDetailPage", () => {
 
     render(<BirdDetailPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Elegibilidade da ave" })).toBeTruthy());
-    const eligibilityPanel = screen.getByRole("heading", { name: "Elegibilidade da ave" }).closest("section");
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Confira as informações desta ave" })).toBeTruthy());
+    const eligibilityPanel = screen.getByRole("heading", { name: "Confira as informações desta ave" }).closest("section");
     expect(eligibilityPanel).not.toBeNull();
-    expect(within(eligibilityPanel as HTMLElement).getByRole("alert").textContent).toContain("Não foi possível consultar a elegibilidade");
+    expect(within(eligibilityPanel as HTMLElement).getByRole("alert").textContent).toContain("Não foi possível conferir as informações");
 
     fireEvent.click(within(eligibilityPanel as HTMLElement).getByRole("button", { name: "Tentar novamente" }));
     await waitFor(() => expect(screen.getByText("Nenhuma pendência encontrada")).toBeTruthy());
@@ -938,8 +938,8 @@ describe("BirdDetailPage", () => {
 
     render(<BirdDetailPage />);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Elegibilidade da ave" })).toBeTruthy());
-    const eligibilityPanel = screen.getByRole("heading", { name: "Elegibilidade da ave" }).closest("section");
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Confira as informações desta ave" })).toBeTruthy());
+    const eligibilityPanel = screen.getByRole("heading", { name: "Confira as informações desta ave" }).closest("section");
     expect(eligibilityPanel).not.toBeNull();
     expect(within(eligibilityPanel as HTMLElement).getByRole("alert").textContent).toContain("Selecione novamente um criatório");
     expect(screen.getByRole("heading", { name: "Informações da ave" })).toBeTruthy();
