@@ -1743,7 +1743,7 @@ h1, h2 { line-height: 1.08; }
 .farm-identity-placeholder small { font-size: .5rem; }
 .farm-identity-camera-action { align-items: center; background: #145f4f; border: 2px solid #fff; border-radius: 50%; bottom: -.3rem; color: #fff; cursor: pointer; display: flex; height: 1.8rem; justify-content: center; padding: .32rem; position: absolute; right: -.3rem; width: 1.8rem; }
 .farm-identity-camera-action:hover, .farm-identity-camera-action:focus-visible { background: #0e4e40; outline: 2px solid #1b9a61; outline-offset: 2px; }
-.farm-identity-camera-action svg, .farm-identity-chooser-icon svg { height: 100%; width: 100%; }
+.farm-identity-camera-action svg, .farm-identity-chooser-icon svg { display: block; height: 100%; width: 100%; }
 .farm-identity-details { display: grid; gap: .2rem; min-width: 0; }
 .farm-identity-details strong { color: #244c43; font-size: .68rem; }
 .farm-identity-details p, .farm-identity-details small { color: #718198; font-size: .61rem; margin: 0; overflow-wrap: anywhere; }
@@ -1790,7 +1790,8 @@ h1, h2 { line-height: 1.08; }
 .farm-identity-dialog-heading { align-items: flex-start; display: flex; gap: .8rem; justify-content: space-between; }
 .farm-identity-dialog-heading > div { min-width: 0; }
 .farm-identity-dialog-heading p { margin-bottom: 0; }
-.farm-identity-dialog-close { align-items: center; background: #f3f8f6; border: 1px solid #dce9e4; border-radius: 50%; color: #145f4f; cursor: pointer; display: flex; flex: 0 0 auto; font-size: 1.2rem; height: 2rem; justify-content: center; line-height: 1; padding: 0; width: 2rem; }
+.farm-identity-dialog-close { align-items: center; background: #f3f8f6; border: 1px solid #dce9e4; border-radius: 50%; color: #145f4f; cursor: pointer; display: flex; flex: 0 0 auto; height: 2rem; justify-content: center; padding: 0; width: 2rem; }
+.farm-identity-dialog-close svg { display: block; height: 1rem; width: 1rem; }
 .farm-identity-dialog-close:focus-visible { outline: 2px solid #1b9a61; outline-offset: 2px; }
 .farm-identity-chooser-options { display: grid; gap: .7rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .farm-identity-chooser-option { align-items: flex-start; background: #fff; border: 1px solid #dce9e4; border-radius: .6rem; color: #244c43; cursor: pointer; display: flex; gap: .7rem; min-height: 6rem; padding: .85rem; text-align: left; }
