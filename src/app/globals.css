@@ -1741,6 +1741,26 @@ h1, h2 { line-height: 1.08; }
 .farm-identity-file-input { clip: rect(0, 0, 0, 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
 .farm-identity-file-input:focus-visible ~ .farm-identity-actions .farm-identity-primary-action { outline: 2px solid #1b9a61; outline-offset: 3px; }
 .farm-identity-help, .farm-identity-feedback { color: #718198; font-size: .61rem; line-height: 1.45; margin: 0; }
+.farm-identity-templates { border-top: 1px solid #edf3f3; display: grid; gap: .65rem; padding-top: .8rem; }
+.farm-identity-templates h3, .farm-identity-template-configuration h4 { color: #244c43; font-size: .72rem; margin: 0; }
+.farm-identity-templates > div:first-child > p, .farm-identity-template-configuration > p { color: #718198; font-size: .61rem; line-height: 1.45; margin: .2rem 0 0; }
+.farm-identity-template-gallery { display: grid; gap: .6rem; }
+.farm-identity-template-option { background: #fff; border: 1px solid #dce9e4; border-radius: .55rem; color: #244c43; cursor: pointer; display: grid; gap: .35rem; justify-items: center; padding: .55rem; text-align: center; }
+.farm-identity-template-option:hover, .farm-identity-template-option:focus-visible { border-color: #54a97a; }
+.farm-identity-template-option:focus-visible { outline: 2px solid #1b9a61; outline-offset: 2px; }
+.farm-identity-template-option[aria-pressed="true"] { background: #f1f8f5; border-color: #145f4f; box-shadow: 0 0 0 1px #145f4f; }
+.farm-identity-template-option:disabled { cursor: wait; opacity: .65; }
+.farm-identity-template-option img { aspect-ratio: 1; border: 1px solid #edf3f3; border-radius: .4rem; object-fit: contain; width: min(100%, 10rem); }
+.farm-identity-template-name { font-size: .68rem; font-weight: 800; }
+.farm-identity-template-version { color: #718198; font-size: .56rem; }
+.farm-identity-template-configuration { border-top: 1px solid #edf3f3; display: grid; gap: .55rem; padding-top: .7rem; }
+.farm-identity-template-fields { border: 1px solid #dce9e4; border-radius: .5rem; display: grid; gap: .55rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); margin: 0; padding: .65rem; }
+.farm-identity-template-fields legend { color: #53667f; font-size: .6rem; font-weight: 700; padding: 0 .2rem; }
+.farm-identity-template-field label { color: #53667f; display: grid; font-size: .6rem; font-weight: 700; gap: .25rem; }
+.farm-identity-template-field input, .farm-identity-template-field select { border: 1px solid #cfdde2; border-radius: .35rem; color: #244c43; font: inherit; font-size: .65rem; min-height: 2.1rem; padding: .4rem .5rem; width: 100%; }
+.farm-identity-template-field input:focus-visible, .farm-identity-template-field select:focus-visible { border-color: #145f4f; outline: 2px solid #1b9a61; outline-offset: 1px; }
+.farm-identity-template-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .5rem; }
+.farm-identity-template-render { aspect-ratio: 1; background: #f3f8f6; border: 1px solid #dce9e4; border-radius: .55rem; display: block; max-width: 100%; object-fit: contain; width: min(100%, 12rem); }
 .farm-identity-pending { align-items: flex-end; border-top: 1px solid #edf3f3; display: flex; flex-wrap: wrap; gap: .8rem; justify-content: space-between; padding-top: .75rem; }
 .farm-identity-pending > div:first-child { display: grid; gap: .4rem; }
 .farm-identity-pending .eyebrow { margin: 0; }
@@ -1802,7 +1822,14 @@ h1, h2 { line-height: 1.08; }
   .farm-cancel-action, .farm-edit-actions .auth-primary-action { width: 100%; }
   .farm-identity-actions, .farm-identity-dialog-actions { align-items: stretch; flex-direction: column; }
   .farm-identity-actions > :not(.farm-identity-file-input), .farm-identity-dialog-actions > * { width: 100%; }
+  .farm-identity-template-actions { align-items: stretch; flex-direction: column; }
+  .farm-identity-template-actions > button { width: 100%; }
+  .farm-identity-template-gallery { grid-template-columns: 1fr; }
   .farm-identity-pending { align-items: stretch; flex-direction: column; }
+}
+
+@media (min-width: 640px) {
+  .farm-identity-template-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* Bird registration */

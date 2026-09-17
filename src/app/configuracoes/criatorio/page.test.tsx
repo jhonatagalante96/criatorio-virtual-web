@@ -59,6 +59,17 @@ function visualIdentityResponse(identity: Record<string, unknown> | null = null)
   });
 }
 
+function visualIdentityTemplatesResponse(templates: Record<string, unknown>[] = [{
+  aspectRatio: "1:1",
+  id: "premium",
+  name: "Premium",
+  options: [{ default: "MODELO PREMIUM", key: "subtitle", required: false, type: "text", values: [] }],
+  previewUrl: "/api/breeding-farms/visual-identity/templates/premium/1.0.0/preview",
+  version: "1.0.0"
+}]): Response {
+  return new Response(JSON.stringify(templates), { headers: { "content-type": "application/json" }, status: 200 });
+}
+
 function viaCepResponse(): Response {
   return new Response(JSON.stringify({
     bairro: "Bela Vista",
@@ -109,7 +120,8 @@ describe("BreedingFarmEditPage", () => {
       .mockResolvedValueOnce(authenticatedSession())
       .mockResolvedValueOnce(selectionResponse())
       .mockResolvedValueOnce(settingsResponse())
-      .mockResolvedValueOnce(visualIdentityResponse());
+      .mockResolvedValueOnce(visualIdentityResponse())
+      .mockResolvedValueOnce(visualIdentityTemplatesResponse());
     vi.stubGlobal("fetch", fetchMock);
     render(<BreedingFarmEditPage />);
 
@@ -128,6 +140,7 @@ describe("BreedingFarmEditPage", () => {
       .mockResolvedValueOnce(selectionResponse())
       .mockResolvedValueOnce(settingsResponse())
       .mockResolvedValueOnce(visualIdentityResponse())
+      .mockResolvedValueOnce(visualIdentityTemplatesResponse())
       .mockResolvedValueOnce(settingsResponse());
     vi.stubGlobal("fetch", fetchMock);
     const view = render(<BreedingFarmEditPage />);
@@ -138,7 +151,7 @@ describe("BreedingFarmEditPage", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Editar criatório" })).toBeTruthy());
     expect(screen.getByLabelText("Nome do criatório")).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   it("previews, confirms, uploads, and explicitly removes a visual identity", async () => {
@@ -212,6 +225,157 @@ describe("BreedingFarmEditPage", () => {
     expect(fetchMock.mock.calls.some(([, options]) => (options as RequestInit | undefined)?.method === "DELETE")).toBe(true);
   });
 
+  it("previews a catalog template and applies only after explicit confirmation", async () => {
+    let currentIdentity: Record<string, unknown> | null = null;
+    const templateIdentity = {
+      configuration: { name: "Sítio Aurora", subtitle: "Criatório de aves" },
+      contentType: "image/png",
+      contentUrl: "/api/breeding-farms/visual-identity/content",
+      fileName: null,
+      length: 3,
+      modelId: "premium",
+      source: "Template",
+      updatedAtUtc: "2026-09-10T20:00:00Z",
+      version: "1.0.0"
+    };
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/api/auth/session")) return authenticatedSession();
+      if (url.pathname.endsWith("/api/breeding-farms")) return selectionResponse();
+      if (url.pathname.endsWith("/api/breeding-farms/farm-id/settings")) return settingsResponse();
+      if (url.pathname.endsWith("/api/breeding-farms/visual-identity/templates")) return visualIdentityTemplatesResponse();
+      if (url.pathname.endsWith("/antiforgery/token")) return antiforgeryResponse();
+      if (url.pathname.endsWith("/api/breeding-farms/visual-identity/templates/preview")) {
+        return new Response(new Blob(["preview"], { type: "image/png" }), { status: 200 });
+      }
+      if (url.pathname.endsWith("/api/breeding-farms/visual-identity/template") && init?.method === "PUT") {
+        currentIdentity = templateIdentity;
+        return visualIdentityResponse(currentIdentity);
+      }
+      if (url.pathname.endsWith("/api/breeding-farms/visual-identity/content")) {
+        return new Response(new Blob(["png"], { type: "image/png" }), { status: 200 });
+      }
+      if (url.pathname.endsWith("/api/breeding-farms/visual-identity/templates")) return visualIdentityTemplatesResponse();
+      if (url.pathname.endsWith("/api/breeding-farms/visual-identity")) return visualIdentityResponse(currentIdentity);
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const TestURL = class extends URL {};
+    vi.stubGlobal("URL", Object.assign(TestURL, {
+      createObjectURL: vi.fn(() => "blob:visual-identity-template-preview"),
+      revokeObjectURL: vi.fn()
+    }));
+    render(<BreedingFarmEditPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Premium/ }));
+    fireEvent.change(screen.getByLabelText("Subtítulo"), { target: { value: "Criatório de aves" } });
+    fireEvent.click(screen.getByRole("button", { name: "Gerar prévia" }));
+    expect(await screen.findByRole("img", { name: "Prévia de Premium com as opções escolhidas" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar modelo" }));
+    expect(screen.getByRole("dialog", { name: "Aplicar este modelo?" })).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([input, options]) =>
+      new URL(String(input)).pathname.endsWith("/api/breeding-farms/visual-identity/template") &&
+      (options as RequestInit | undefined)?.method === "PUT"
+    )).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação do modelo" }));
+    expect(await screen.findByText("Modelo de identidade visual aplicado com sucesso.")).toBeTruthy();
+    expect(await screen.findByText("Modelo da plataforma")).toBeTruthy();
+    expect(await screen.findByText("Premium · versão 1.0.0")).toBeTruthy();
+
+    const previewCall = fetchMock.mock.calls.find(([input, options]) =>
+      new URL(String(input)).pathname.endsWith("/api/breeding-farms/visual-identity/templates/preview") &&
+      (options as RequestInit | undefined)?.method === "POST"
+    );
+    expect(JSON.parse(String((previewCall?.[1] as RequestInit | undefined)?.body))).toEqual({
+      config: { subtitle: "Criatório de aves" },
+      templateId: "premium",
+      version: "1.0.0"
+    });
+    expect(new Headers((previewCall?.[1] as RequestInit | undefined)?.headers).get("x-xsrf-token")).toBe("csrf-token");
+
+    const applyCall = fetchMock.mock.calls.find(([input, options]) =>
+      new URL(String(input)).pathname.endsWith("/api/breeding-farms/visual-identity/template") &&
+      (options as RequestInit | undefined)?.method === "PUT"
+    );
+    expect(JSON.parse(String((applyCall?.[1] as RequestInit | undefined)?.body))).toEqual({
+      config: { subtitle: "Criatório de aves" },
+      templateId: "premium",
+      version: "1.0.0"
+    });
+    expect(new Headers((applyCall?.[1] as RequestInit | undefined)?.headers).get("x-xsrf-token")).toBe("csrf-token");
+  });
+
+  it("offers model loading, error, retry, and empty states from the live catalog", async () => {
+    let resolveFirstCatalog: ((response: Response) => void) | undefined;
+    const firstCatalog = new Promise<Response>((resolve) => { resolveFirstCatalog = resolve; });
+    let catalogRequests = 0;
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const path = new URL(String(input)).pathname;
+      if (path.endsWith("/api/auth/session")) return authenticatedSession();
+      if (path.endsWith("/api/breeding-farms")) return selectionResponse();
+      if (path.endsWith("/api/breeding-farms/farm-id/settings")) return settingsResponse();
+      if (path.endsWith("/api/breeding-farms/visual-identity/templates")) {
+        catalogRequests += 1;
+        return catalogRequests === 1 ? firstCatalog : visualIdentityTemplatesResponse([]);
+      }
+      if (path.endsWith("/api/breeding-farms/visual-identity")) return visualIdentityResponse();
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BreedingFarmEditPage />);
+
+    expect(await screen.findByText("Carregando modelos…")).toBeTruthy();
+    resolveFirstCatalog?.(new Response(JSON.stringify({ status: 503, title: "Unavailable" }), {
+      headers: { "content-type": "application/problem+json" },
+      status: 503
+    }));
+    expect(await screen.findByText("Não foi possível carregar os modelos de identidade. Tente novamente.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    expect(await screen.findByText("Nenhum modelo está disponível no momento.")).toBeTruthy();
+    expect(catalogRequests).toBe(2);
+  });
+
+  it("asks the user to choose a current model when the selected version becomes unavailable", async () => {
+    let failApplication = true;
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/api/auth/session")) return authenticatedSession();
+      if (url.pathname.endsWith("/api/breeding-farms")) return selectionResponse();
+      if (url.pathname.endsWith("/api/breeding-farms/farm-id/settings")) return settingsResponse();
+      if (url.pathname.endsWith("/antiforgery/token")) return antiforgeryResponse();
+      if (url.pathname.endsWith("/api/breeding-farms/visual-identity/templates/preview")) {
+        return Promise.resolve(new Response(new Blob(["preview"], { type: "image/png" }), { status: 200 }));
+      }
+      if (url.pathname.endsWith("/api/breeding-farms/visual-identity/template") && init?.method === "PUT" && failApplication) {
+        failApplication = false;
+        return Promise.resolve(new Response(JSON.stringify({ status: 409, title: "Template unavailable" }), {
+          headers: { "content-type": "application/problem+json" },
+          status: 409
+        }));
+      }
+      if (url.pathname.endsWith("/api/breeding-farms/visual-identity/templates")) return Promise.resolve(visualIdentityTemplatesResponse());
+      if (url.pathname.endsWith("/api/breeding-farms/visual-identity")) return Promise.resolve(visualIdentityResponse());
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const TestURL = class extends URL {};
+    vi.stubGlobal("URL", Object.assign(TestURL, {
+      createObjectURL: vi.fn(() => "blob:visual-identity-template-preview"),
+      revokeObjectURL: vi.fn()
+    }));
+    render(<BreedingFarmEditPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Premium/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar prévia" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Aplicar modelo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação do modelo" }));
+    expect(await screen.findByText("Este modelo ou versão não está mais disponível. Escolha outro modelo e gere uma nova prévia.")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /Premium/ })).toBeTruthy();
+    expect(screen.queryByText("Personalizar Premium")).toBeNull();
+  });
+
   it("rejects unsupported images before creating an application preview", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
@@ -240,6 +404,7 @@ describe("BreedingFarmEditPage", () => {
       const path = new URL(String(input)).pathname;
       if (path.endsWith("/api/auth/session")) return authenticatedSession();
       if (path.endsWith("/api/breeding-farms/farm-id/settings")) return settingsResponse();
+      if (path.endsWith("/api/breeding-farms/visual-identity/templates")) return visualIdentityTemplatesResponse();
       if (path.endsWith("/api/breeding-farms/visual-identity")) {
         identityRequests += 1;
         return identityRequests === 1 ? new Response(null, { status: 503 }) : visualIdentityResponse();
@@ -251,8 +416,8 @@ describe("BreedingFarmEditPage", () => {
     render(<BreedingFarmEditPage />);
 
     await waitFor(() => expect(identityRequests).toBe(1));
-    expect(screen.queryByRole("alert")?.textContent).toBe("O armazenamento está indisponível no momento. Tente novamente em instantes.");
-    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    expect(screen.getByText("O armazenamento está indisponível no momento. Tente novamente em instantes.")).toBeTruthy();
+    fireEvent.click(screen.getAllByRole("button", { name: "Tentar novamente" })[0]);
     expect(await screen.findByText("Nenhuma imagem personalizada")).toBeTruthy();
   });
 
