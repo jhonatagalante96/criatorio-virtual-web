@@ -480,7 +480,7 @@ export function VisualIdentityManager({ actionRef, breedingFarmId, farmName, onA
               <div>{confirmApplyTemplate
                 ? <><h3 id="titulo-confirmar-modelo">Aplicar este modelo?</h3><p>Confira o resultado antes de atualizar o perfil do seu criatório.</p></>
                 : <><h3 id="farm-identity-chooser-title">Alterar identidade visual</h3><p>Escolha como deseja atualizar a imagem do seu criatório.</p></>}</div>
-              <button aria-label="Fechar" className="farm-identity-dialog-close" onClick={closeIdentityDialog} type="button">×</button>
+              <button aria-label="Fechar" className="farm-identity-dialog-close" onClick={closeIdentityDialog} type="button"><svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" /></svg></button>
             </header>
             {mutationError && !showTemplatePicker && <p className="form-error" role="alert">{mutationError}</p>}
             {fileError && <p className="form-error" role="alert">{fileError}</p>}
@@ -495,7 +495,7 @@ export function VisualIdentityManager({ actionRef, breedingFarmId, farmName, onA
                   <span aria-hidden="true" className="farm-identity-chooser-icon"><svg fill="none" viewBox="0 0 24 24"><rect height="15" rx="2" stroke="currentColor" strokeWidth="1.8" width="17" x="3.5" y="4.5"/><circle cx="9" cy="10" r="1.5" stroke="currentColor" strokeWidth="1.6"/><path d="m5 18 5-5 3 3 2.5-2.5L19 17" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8"/></svg></span>
                   <span><strong>Escolher um modelo</strong><small>Veja os modelos disponíveis e personalize uma prévia.</small></span>
                 </button>
-                {identity && <button className="farm-identity-chooser-option" disabled={isMutating} onClick={() => { setMutationError(undefined); setConfirmRemove(true); closeIdentityDialog(); }} type="button"><span aria-hidden="true" className="farm-identity-chooser-icon">×</span><span><strong>Remover imagem</strong><small>Voltar a usar o símbolo padrão do Criatório Virtual.</small></span></button>}
+                {identity && <button className="farm-identity-chooser-option" disabled={isMutating} onClick={() => { setMutationError(undefined); setConfirmRemove(true); closeIdentityDialog(); }} type="button"><span aria-hidden="true" className="farm-identity-chooser-icon"><svg fill="none" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" /></svg></span><span><strong>Remover imagem</strong><small>Voltar a usar o símbolo padrão do Criatório Virtual.</small></span></button>}
               </div>
             ) : confirmApplyTemplate && selectedTemplate && templatePreviewUrl && templatePreviewSignature === currentTemplateSignature() ? (
               <div className="farm-identity-template-confirmation">
