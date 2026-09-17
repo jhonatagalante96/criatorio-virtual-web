@@ -6,7 +6,7 @@ import { DashboardIcon } from "./dashboard-icons";
 import { PwaInstallPrompt } from "./pwa-install-prompt";
 import type { DashboardIconName } from "./dashboard-icons";
 
-export type AuthenticatedNav = "dashboard" | "birds" | "reproduction" | "transfers" | "documents" | "farm" | "settings";
+export type AuthenticatedNav = "dashboard" | "statistics" | "birds" | "reproduction" | "transfers" | "documents" | "farm" | "settings";
 
 interface AuthenticatedShellProps {
   activeNav: AuthenticatedNav;
@@ -24,6 +24,7 @@ interface NavigationItem {
 
 const primaryNavigation: NavigationItem[] = [
   { href: "/dashboard", icon: "home", id: "dashboard", label: "Painel" },
+  { href: "/estatisticas", icon: "chart", id: "statistics", label: "Estatísticas" },
   { href: "/plantel/aves", icon: "bird", id: "birds", label: "Aves" },
   { href: "/reproducao", icon: "heart", id: "reproduction", label: "Reprodução" },
   { href: "/transferencias", icon: "transfer", id: "transfers", label: "Transferências" },

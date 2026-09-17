@@ -5,6 +5,7 @@ export type DashboardIconName =
   | "ban"
   | "bird"
   | "calendar"
+  | "chart"
   | "crown"
   | "document"
   | "edit"
@@ -45,6 +46,10 @@ export function DashboardIcon({ name, className = "" }: Readonly<{ name: Dashboa
 
   if (name === "calendar") {
     return <svg {...props}><rect height="15" rx="2" width="17" x="3.5" y="5.5" /><path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17" /></svg>;
+  }
+
+  if (name === "chart") {
+    return <svg {...props}><path d="M4 20V11M10 20V5M16 20v-7M22 20H2" /><path d="m3 8 6-4 6 5 6-6" /></svg>;
   }
 
   if (name === "eye") {

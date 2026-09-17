@@ -89,4 +89,18 @@ describe("AuthenticatedShell", () => {
     expect(transferLinks.every((link) => link.getAttribute("href") === "/transferencias")).toBe(true);
     expect(transferLinks.some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
   });
+
+  it("opens Estatísticas from the primary navigation on desktop and mobile", async () => {
+    render(
+      <AuthenticatedShell activeNav="statistics" email="jhonata@example.com" farmName="Criatório Aurora">
+        <div>Resumo analítico</div>
+      </AuthenticatedShell>
+    );
+
+    await waitFor(() => expect(screen.getAllByText("Jhonata").length).toBeGreaterThan(0));
+    const statisticsLinks = screen.getAllByRole("link", { name: "Estatísticas" });
+    expect(statisticsLinks).toHaveLength(2);
+    expect(statisticsLinks.every((link) => link.getAttribute("href") === "/estatisticas")).toBe(true);
+    expect(statisticsLinks.every((link) => link.getAttribute("aria-current") === "page")).toBe(true);
+  });
 });
