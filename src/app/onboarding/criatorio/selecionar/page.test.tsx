@@ -159,7 +159,7 @@ describe("BreedingFarmSelectionPage", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Identidade do criatório" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Alterar imagem do criatório" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Configurar depois e ir para o painel" }).getAttribute("href")).toBe("/dashboard");
+    expect(screen.getByRole("link", { name: "Pular identidade visual e continuar" }).getAttribute("href")).toBe("/onboarding/criatorio/selecionar?coverFarmId=farm-a");
     const [, selectionRequest] = fetchMock.mock.calls[3];
     expect(new Headers(selectionRequest.headers).get("x-xsrf-token")).toBe("csrf-token");
     expect(JSON.parse(selectionRequest.body as string)).toEqual({ breedingFarmId: "farm-a" });
@@ -185,7 +185,7 @@ describe("BreedingFarmSelectionPage", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Identidade do criatório" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Alterar imagem do criatório" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Configurar depois e ir para o painel" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Pular identidade visual e continuar" }).getAttribute("href")).toBe("/onboarding/criatorio/selecionar?coverFarmId=farm-a");
     fireEvent.click(screen.getByRole("button", { name: "Alterar imagem do criatório" }));
     expect(screen.getByRole("button", { name: "Fechar" }).querySelector("svg")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Remover imagem/ }).querySelector("svg")).toBeTruthy();

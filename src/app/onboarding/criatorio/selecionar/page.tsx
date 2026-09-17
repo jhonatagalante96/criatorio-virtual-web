@@ -152,8 +152,7 @@ function VisualIdentityOnboarding({ farm }: Readonly<{ farm: BreedingFarmSummary
         <VisualIdentityManager actionRef={actionRef} breedingFarmId={farm.breedingFarmId} farmName={farm.name} onApplied={() => router.replace(coverStepUrl)} />
       </div>
       <p className="farm-identity-onboarding-note">Use o botão sobre a imagem para enviar uma foto ou escolher um modelo. Você pode configurar isso depois.</p>
-      <button className="auth-secondary-action farm-onboarding-continue" onClick={() => router.replace(coverStepUrl)} type="button">Continuar para a capa</button>
-      <Link className="auth-primary-action" href="/dashboard">Configurar depois e ir para o painel</Link>
+      <Link className="auth-primary-action" href={coverStepUrl}>Pular identidade visual e continuar</Link>
     </div>
   );
 }

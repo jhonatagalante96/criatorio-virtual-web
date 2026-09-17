@@ -575,6 +575,7 @@ export function BreedingFarmCoverManager({
                 <h4 id="titulo-confirmar-modelo-capa">Aplicar este modelo?</h4>
                 <p>O modelo {selectedTemplate.name} será aplicado à capa de {farmName}, usando a prévia e as opções exibidas.</p>
                 <img alt={`Prévia de ${selectedTemplate.name} que será aplicada`} className="farm-cover-template-render" src={templatePreviewUrl} />
+                {mutationError && <p className="form-error" role="alert">{mutationError}</p>}
                 <div className="farm-identity-dialog-actions">
                   <button autoFocus className="farm-identity-secondary-action" disabled={isMutating} onClick={() => setConfirmApplyTemplate(false)} type="button">Voltar à prévia</button>
                   <button className="farm-identity-primary-action" disabled={isMutating} onClick={() => void applyTemplate()} type="button">{isMutating ? "Aplicando…" : "Confirmar aplicação do modelo"}</button>

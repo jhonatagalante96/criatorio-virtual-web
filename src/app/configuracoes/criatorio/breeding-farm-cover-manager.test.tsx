@@ -39,7 +39,7 @@ function currentCover(): Record<string, unknown> {
   };
 }
 
-function setupFetch(initialCover: Record<string, unknown> | null = null) {
+function setupFetch(initialCover: Record<string, unknown> | null = null, templateApplyFailureStatus?: number) {
   let cover = initialCover;
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = new URL(String(input));
@@ -52,6 +52,12 @@ function setupFetch(initialCover: Record<string, unknown> | null = null) {
       return new Response(new Blob(["cover"], { type: "image/png" }), { headers: { "content-type": "image/png" }, status: 200 });
     }
     if (url.pathname.endsWith("/api/breeding-farms/farm-id/cover/template") && init?.method === "PUT") {
+      if (templateApplyFailureStatus) {
+        return new Response(JSON.stringify({ status: templateApplyFailureStatus, title: "Cover update unavailable" }), {
+          headers: { "content-type": "application/problem+json" },
+          status: templateApplyFailureStatus
+        });
+      }
       cover = currentCover();
       return coverResponse(cover);
     }
@@ -136,6 +142,23 @@ describe("BreedingFarmCoverManager", () => {
     expect(await screen.findByRole("alert")).toHaveProperty("textContent", "A imagem deve ter pelo menos 1200 × 400 pixels.");
     expect(screen.queryByRole("heading", { name: "Conferir nova capa" })).toBeNull();
     expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname.endsWith("/cover/upload") && init?.method === "PUT")).toBe(false);
+  });
+
+  it("keeps the apply confirmation open and explains a server failure", async () => {
+    setupFetch(null, 503);
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:cover-preview", writable: true });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn(), writable: true });
+    render(<BreedingFarmCoverManager breedingFarmId="farm-id" farmName="Sítio Aurora" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Configurar capa" }));
+    fireEvent.click(screen.getByRole("button", { name: /Escolher um modelo/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Natureza clássica/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Conferir aplicação da capa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aplicação do modelo" }));
+
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "A capa não pôde ser aplicada agora. Tente novamente em instantes.");
+    expect(screen.getByRole("heading", { name: "Aplicar este modelo?" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Confirmar aplicação do modelo" })).toBeTruthy();
   });
 
   it("uploads an accepted image and confirms removal of the current cover", async () => {
