@@ -275,7 +275,22 @@ describe("ApiClient", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("allows public or explicitly exempt mutations without CSRF token", async () => {
+  it("requires CSRF token for public mutations like login when defaultRequiresCsrf is true", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("http://localhost:5000", () => undefined, { defaultRequiresCsrf: true });
+
+    // Public/anonymous mutations still require CSRF under defaultRequiresCsrf mode
+    await expect(client.request("api/auth/login", { body: "{}", method: "POST" })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+    await expect(client.request("api/auth/register", { body: "{}", method: "POST" })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+    await expect(client.request("api/auth/confirm-email", { body: "{}", method: "POST" })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+    await expect(client.request("api/auth/forgot-password", { body: "{}", method: "POST" })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+    await expect(client.request("api/auth/reset-password", { body: "{}", method: "POST" })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("allows mutations without CSRF token only when explicitly exempt via exemptCsrf", async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), {
       headers: { "content-type": "application/json" },
       status: 200
@@ -283,11 +298,9 @@ describe("ApiClient", () => {
     vi.stubGlobal("fetch", fetchMock);
     const client = new ApiClient("http://localhost:5000", () => undefined, { defaultRequiresCsrf: true });
 
-    // Public endpoint is exempt even when defaultRequiresCsrf is true
-    await expect(client.request("api/auth/login", { body: "{}", method: "POST" })).resolves.toEqual({ ok: true });
     // Explicitly exempt mutation is allowed
-    await expect(client.request("api/custom", { body: "{}", exemptCsrf: true, method: "POST" })).resolves.toEqual({ ok: true });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await expect(client.request("api/custom-webhook", { body: "{}", exemptCsrf: true, method: "POST" })).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("sends X-XSRF-TOKEN when CSRF token is provided for protected mutations", async () => {
