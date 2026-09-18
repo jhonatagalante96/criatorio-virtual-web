@@ -281,6 +281,21 @@ describe("parseAccessContext", () => {
       access: { ...validBasePayload.access, status: "Blocked", blockedReason: "SubscriptionRequired" }
     })).toThrow(InvalidAccessContextError);
 
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Blocked", blockedReason: null, requiredAction: "None" }
+    })).toThrow(InvalidAccessContextError);
+
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Blocked", blockedReason: null }
+    })).toThrow(InvalidAccessContextError);
+
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Blocked", requiredAction: "None" }
+    })).toThrow(InvalidAccessContextError);
+
     // 5. Cancelled combinations
     expect(() => parseAccessContext({
       ...validBasePayload,
@@ -307,6 +322,18 @@ describe("parseAccessContext", () => {
     expect(() => parseAccessContext({
       ...validBasePayload,
       access: { ...validBasePayload.access, status: "PendingSubscription", canAccessApp: false, blockedReason: "SubscriptionRequired", requiredAction: "None" }
+    })).toThrow(InvalidAccessContextError);
+
+    // PendingSubscription with farm but blockedReason null
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "PendingSubscription", canAccessApp: false, blockedReason: null, requiredAction: "Subscribe" }
+    })).toThrow(InvalidAccessContextError);
+
+    // PendingSubscription with farm but both null and None
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "PendingSubscription", canAccessApp: false, blockedReason: null, requiredAction: "None" }
     })).toThrow(InvalidAccessContextError);
 
     // PendingSubscription without farm but requiredAction Subscribe

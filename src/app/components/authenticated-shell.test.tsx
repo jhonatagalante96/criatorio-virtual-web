@@ -282,13 +282,6 @@ describe("AuthenticatedShell", () => {
           expectedHref: "/assinatura",
           expectedLabel: "Reativar assinatura",
           status: "Cancelled" as const
-        },
-        {
-          action: "None" as const,
-          blockedReason: null,
-          expectedHref: null,
-          expectedLabel: "Verificar novamente",
-          status: "Blocked" as const
         }
       ];
 

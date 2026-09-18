@@ -227,30 +227,12 @@ export function parseAccessContext(payload: unknown): AccessContextResult {
       }
       break;
     case "Blocked":
-      if (canAccessApp || breedingFarm === null) {
-        throw new InvalidAccessContextError("Combinação inconsistente para status Blocked.");
-      }
-      if (blockedReason === "PaymentOverdue" && requiredAction !== "Regularize") {
-        throw new InvalidAccessContextError("Combinação inconsistente para status Blocked.");
-      }
-      if (blockedReason === null && requiredAction !== "None") {
-        throw new InvalidAccessContextError("Combinação inconsistente para status Blocked.");
-      }
-      if (blockedReason !== "PaymentOverdue" && blockedReason !== null) {
+      if (canAccessApp || blockedReason !== "PaymentOverdue" || requiredAction !== "Regularize" || breedingFarm === null) {
         throw new InvalidAccessContextError("Combinação inconsistente para status Blocked.");
       }
       break;
     case "Cancelled":
-      if (canAccessApp || breedingFarm === null) {
-        throw new InvalidAccessContextError("Combinação inconsistente para status Cancelled.");
-      }
-      if (blockedReason === "SubscriptionCancelled" && requiredAction !== "Resubscribe") {
-        throw new InvalidAccessContextError("Combinação inconsistente para status Cancelled.");
-      }
-      if (blockedReason === null && requiredAction !== "None") {
-        throw new InvalidAccessContextError("Combinação inconsistente para status Cancelled.");
-      }
-      if (blockedReason !== "SubscriptionCancelled" && blockedReason !== null) {
+      if (canAccessApp || blockedReason !== "SubscriptionCancelled" || requiredAction !== "Resubscribe" || breedingFarm === null) {
         throw new InvalidAccessContextError("Combinação inconsistente para status Cancelled.");
       }
       break;
@@ -259,13 +241,7 @@ export function parseAccessContext(payload: unknown): AccessContextResult {
         throw new InvalidAccessContextError("Combinação inconsistente: PendingSubscription não pode ter canAccessApp=true.");
       }
       if (breedingFarm !== null) {
-        if (blockedReason === "SubscriptionRequired" && requiredAction !== "Subscribe") {
-          throw new InvalidAccessContextError("Combinação inconsistente para PendingSubscription com criatório selecionado.");
-        }
-        if (blockedReason === null && requiredAction !== "None") {
-          throw new InvalidAccessContextError("Combinação inconsistente para PendingSubscription com criatório selecionado.");
-        }
-        if (blockedReason !== "SubscriptionRequired" && blockedReason !== null) {
+        if (blockedReason !== "SubscriptionRequired" || requiredAction !== "Subscribe") {
           throw new InvalidAccessContextError("Combinação inconsistente para PendingSubscription com criatório selecionado.");
         }
       } else {
