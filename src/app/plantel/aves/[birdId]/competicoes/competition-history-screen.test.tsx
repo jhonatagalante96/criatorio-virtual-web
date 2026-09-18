@@ -27,6 +27,10 @@ function response(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), { headers: { "content-type": "application/json" }, status });
 }
 
+function antiforgeryResponse(): Response {
+  return new Response(null, { headers: { "X-XSRF-TOKEN": "test-token" } });
+}
+
 function farmResponse(selectedBreedingFarmId: string | null = "farm-a"): Response {
   return response({
     breedingFarms: [{ breedingFarmId: "farm-a", isSelected: selectedBreedingFarmId === "farm-a", name: "Criatório Aurora", responsibleName: "Ana Souza" }],
@@ -156,5 +160,90 @@ describe("CompetitionHistoryScreen", () => {
     await screen.findByRole("link", { name: /Exposição Estadual/ });
     expect(authState.refresh).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("edits the approved fields with the antiforgery token and renders the saved response", async () => {
+    const updated = competition({ name: "Copa Nacional", date: "2026-09-16", updatedAtUtc: "2026-09-16T12:00:00Z" });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(farmResponse())
+      .mockResolvedValueOnce(response(birdResponse()))
+      .mockResolvedValueOnce(response(competition()))
+      .mockResolvedValueOnce(antiforgeryResponse())
+      .mockResolvedValueOnce(response(updated));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CompetitionHistoryScreen birdId="bird-a" competitionId="competition-a" />);
+    await screen.findByRole("heading", { name: "Exposição Estadual" });
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Nome da competição/ }), { target: { value: "Copa Nacional" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await screen.findByText("Competição atualizada com sucesso.");
+    expect(screen.getByRole("heading", { name: "Copa Nacional" })).toBeTruthy();
+    const [url, options] = fetchMock.mock.calls[4];
+    expect(String(url)).toContain("/api/birds/bird-a/competitions/competition-a");
+    expect(options.method).toBe("PUT");
+    expect(JSON.parse(String(options.body))).toEqual({
+      name: "Copa Nacional",
+      date: "2026-09-14",
+      category: "Canário individual",
+      placement: 1,
+      location: "São Paulo, SP",
+      notes: "Porte e plumagem avaliados."
+    });
+    expect(new Headers(options.headers).get("x-xsrf-token")).toBe("test-token");
+    expect(options.credentials).toBe("include");
+  });
+
+  it("shows API validation errors inline and lets the user correct the field", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(farmResponse())
+      .mockResolvedValueOnce(response(birdResponse()))
+      .mockResolvedValueOnce(response(competition()))
+      .mockResolvedValueOnce(antiforgeryResponse())
+      .mockResolvedValueOnce(response({ title: "Competition update data is invalid.", errors: { Name: ["A competition name is required."] } }, 400));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CompetitionHistoryScreen birdId="bird-a" competitionId="competition-a" />);
+    await screen.findByRole("heading", { name: "Exposição Estadual" });
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    expect(await screen.findByText("Revise os campos destacados e tente novamente.")).toBeTruthy();
+    expect(screen.getByText("Informe um nome com até 200 caracteres.")).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: /Nome da competição/ }).getAttribute("aria-invalid")).toBe("true");
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("requires explicit confirmation before deleting and removes the item from the detail view", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(farmResponse())
+      .mockResolvedValueOnce(response(birdResponse()))
+      .mockResolvedValueOnce(response(competition()))
+      .mockResolvedValueOnce(antiforgeryResponse())
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CompetitionHistoryScreen birdId="bird-a" competitionId="competition-a" />);
+    await screen.findByRole("heading", { name: "Exposição Estadual" });
+    fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+    expect(screen.getByText(/será removido do histórico desta ave/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Excluir competição" }));
+
+    expect(await screen.findByRole("heading", { name: "Competição excluída" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Exposição Estadual" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Voltar ao histórico" }).getAttribute("href")).toBe("/plantel/aves/bird-a/competicoes");
+    const [url, options] = fetchMock.mock.calls[4];
+    expect(String(url)).toContain("/api/birds/bird-a/competitions/competition-a");
+    expect(options.method).toBe("DELETE");
+    expect(JSON.parse(String(options.body))).toEqual({ confirmed: true });
+    expect(new Headers(options.headers).get("x-xsrf-token")).toBe("test-token");
+    expect(options.credentials).toBe("include");
   });
 });
