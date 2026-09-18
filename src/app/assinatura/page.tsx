@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
+import { useAccessContext } from "../../lib/auth/access-provider";
 import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../lib/http/api-client";
 import { normalizeFarmResponse, selectedFarmFromResponse, type BreedingFarmSelectionResponse } from "../reproducao/reproduction-data";
 import { AppLoadingState } from "../components/app-loading-state";
@@ -25,6 +26,7 @@ const pageSize = 20;
 
 function SubscriptionScreen() {
   const { error: authError, refresh, session, status } = useAuth();
+  const access = useAccessContext();
   const [view, setView] = useState<SubscriptionView>({ kind: "loading" });
   const [paymentPage, setPaymentPage] = useState(1);
   const [pendingRegularization, setPendingRegularization] = useState<PendingRegularizationReturn | null>(() => readPendingRegularizationReturn());
@@ -87,10 +89,19 @@ function SubscriptionScreen() {
         setPendingRegularization(savedReturn);
         const returnedPayment = payments.items.find((payment) => payment.paymentId === savedReturn.paymentId);
         if (returnedPayment && subscription && paymentAndSubscriptionAllowAccess(returnedPayment.status, subscription.status)) {
-          clearPendingRegularizationReturn();
-          setPendingRegularization(null);
-          setView({ kind: "ready", farmName: farm.name, payments, subscription, regularizationConfirmed: true });
-          return;
+          let freshAccess;
+          try {
+            freshAccess = access?.refetch ? await access.refetch() : undefined;
+          } catch {
+            freshAccess = undefined;
+          }
+          if (!isCurrent()) return;
+          if (freshAccess?.access?.canAccessApp === true) {
+            clearPendingRegularizationReturn();
+            setPendingRegularization(null);
+            setView({ kind: "ready", farmName: farm.name, payments, subscription, regularizationConfirmed: true });
+            return;
+          }
         }
         setView({ kind: "awaiting-confirmation", farmName: farm.name });
         return;
@@ -153,11 +164,20 @@ function SubscriptionScreen() {
         }
         const payment = payments.items.find((item) => item.paymentId === pendingRegularization!.paymentId);
         if (payment && paymentAndSubscriptionAllowAccess(payment.status, subscription.status)) {
-          clearPendingRegularizationReturn();
-          setPendingRegularization(null);
-          setIsPollingReturn(false);
-          setView({ kind: "ready", farmName: "Criatório Virtual", payments, subscription, regularizationConfirmed: true });
-          return;
+          let freshAccess;
+          try {
+            freshAccess = access?.refetch ? await access.refetch() : undefined;
+          } catch {
+            freshAccess = undefined;
+          }
+          if (cancelled) return;
+          if (freshAccess?.access?.canAccessApp === true) {
+            clearPendingRegularizationReturn();
+            setPendingRegularization(null);
+            setIsPollingReturn(false);
+            setView({ kind: "ready", farmName: "Criatório Virtual", payments, subscription, regularizationConfirmed: true });
+            return;
+          }
         }
         const confirmationMessage = payment?.status === "Confirmed"
           ? "Pagamento confirmado. Estamos aguardando a atualização da permissão de acesso."
@@ -217,7 +237,7 @@ function SubscriptionScreen() {
       callbackResult={callbackResult}
       client={client.current!}
       farmName={view.farmName}
-      onRefresh={() => { client.current?.clearCache(); void loadSubscription(); }}
+      onRefresh={() => { client.current?.clearCache(); void access?.refetch?.(); void loadSubscription(); }}
       onPageChange={setPaymentPage}
       onRegularize={(payment) => void startRegularization(payment, view.farmName, view.subscription?.breedingFarmId)}
       payments={view.payments}

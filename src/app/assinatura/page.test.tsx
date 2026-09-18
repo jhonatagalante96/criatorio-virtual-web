@@ -7,7 +7,9 @@ vi.mock("./regularization", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./regularization")>();
   return { ...actual, redirectToHostedInvoice: vi.fn() };
 });
-import { redirectToHostedInvoice } from "./regularization";
+import { readPendingRegularizationReturn, redirectToHostedInvoice, savePendingRegularizationReturn } from "./regularization";
+import { AccessProvider } from "../../lib/auth/access-provider";
+import { AuthProvider } from "../../lib/auth/auth-context";
 
 afterEach(() => {
   cleanup();
@@ -51,6 +53,22 @@ function subscriptionResponse() {
 
 function paymentsResponse(items: unknown[] = []) {
   return { breedingFarmId: "farm-id", items, page: 1, pageSize: 20, totalCount: items.length };
+}
+
+function accessContextResponse(canAccessApp = true) {
+  return {
+    user: { avatarUrl: null, email: "owner@example.com", id: "user-id", name: "User" },
+    breedingFarm: { id: "farm-id", name: "Sítio Esperança", role: "Owner" },
+    onboarding: { status: "Completed", nextStep: null },
+    access: {
+      status: canAccessApp ? "Active" : "Blocked",
+      canAccessApp,
+      requiredAction: canAccessApp ? "None" : "Regularize",
+      blockedReason: canAccessApp ? null : "PaymentOverdue",
+      gracePeriodEndsAt: null,
+      trialEndsAt: null
+    }
+  };
 }
 
 describe("SubscriptionPage", () => {
@@ -192,4 +210,70 @@ describe("SubscriptionPage", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("link seguro de pagamento não está disponível");
     expect(redirectToHostedInvoice).not.toHaveBeenCalled();
   });
+
+  it("does not restore access if payment is confirmed but access-context does not grant app access", async () => {
+    savePendingRegularizationReturn({ breedingFarmId: "farm-id", paymentId: "regularized-payment-id" });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api/auth/session")) return sessionResponse();
+      if (url.includes("api/breeding-farms")) return jsonResponse(farmSelectionResponse());
+      if (url.includes("api/billing/subscription")) return jsonResponse({ ...subscriptionResponse(), status: "Active" });
+      if (url.includes("api/billing/payments")) return jsonResponse(paymentsResponse([{
+        amount: 119.5,
+        createdAtUtc: "2026-02-15T12:00:00Z",
+        currencyCode: "BRL",
+        dueAtUtc: "2026-02-15T12:00:00Z",
+        paidAtUtc: "2026-02-15T12:30:00Z",
+        paymentId: "regularized-payment-id",
+        status: "Confirmed"
+      }]));
+      if (url.includes("api/me/access-context")) return jsonResponse(accessContextResponse(false));
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <AuthProvider>
+        <AccessProvider>
+          <SubscriptionPage />
+        </AccessProvider>
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Aguardando confirmação" })).toBeTruthy());
+    expect(screen.queryByText("Pagamento confirmado")).toBeNull();
+    expect(readPendingRegularizationReturn()).toEqual({ breedingFarmId: "farm-id", paymentId: "regularized-payment-id" });
+  });
+
+  it("restores access and confirms regularization when access-context refetch confirms canAccessApp", async () => {
+    savePendingRegularizationReturn({ breedingFarmId: "farm-id", paymentId: "regularized-payment-id" });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api/auth/session")) return sessionResponse();
+      if (url.includes("api/breeding-farms")) return jsonResponse(farmSelectionResponse());
+      if (url.includes("api/billing/subscription")) return jsonResponse({ ...subscriptionResponse(), status: "Active" });
+      if (url.includes("api/billing/payments")) return jsonResponse(paymentsResponse([{
+        amount: 119.5,
+        createdAtUtc: "2026-02-15T12:00:00Z",
+        currencyCode: "BRL",
+        dueAtUtc: "2026-02-15T12:00:00Z",
+        paidAtUtc: "2026-02-15T12:30:00Z",
+        paymentId: "regularized-payment-id",
+        status: "Confirmed"
+      }]));
+      if (url.includes("api/me/access-context")) return jsonResponse(accessContextResponse(true));
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <AuthProvider>
+        <AccessProvider>
+          <SubscriptionPage />
+        </AccessProvider>
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByText("Pagamento confirmado")).toBeTruthy());
+    expect(readPendingRegularizationReturn()).toBeNull();
+  });
 });
+

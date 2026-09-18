@@ -4,13 +4,25 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SubscriptionCheckoutFlow } from "./subscription-checkout-flow";
 import { navigateToHostedCheckout } from "./hosted-checkout-navigation";
 
-const { router, routerReplace } = vi.hoisted(() => {
+const { mockRefetch, mockUseAccessContext, router, routerReplace } = vi.hoisted(() => {
   const routerReplace = vi.fn();
-  return { router: { replace: routerReplace }, routerReplace };
+  const mockRefetch = vi.fn().mockResolvedValue({
+    access: { canAccessApp: true }
+  });
+  const mockUseAccessContext = vi.fn(() => ({
+    status: "ready",
+    refetch: mockRefetch,
+    accessContext: null,
+    error: undefined
+  }));
+  return { mockRefetch, mockUseAccessContext, router: { replace: routerReplace }, routerReplace };
 });
 
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("./hosted-checkout-navigation", () => ({ navigateToHostedCheckout: vi.fn() }));
+vi.mock("../../lib/auth/access-provider", () => ({
+  useAccessContext: () => mockUseAccessContext()
+}));
 
 afterEach(() => {
   cleanup();
@@ -18,6 +30,8 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   routerReplace.mockReset();
+  mockRefetch.mockReset();
+  mockRefetch.mockResolvedValue({ access: { canAccessApp: true } });
 });
 
 function authenticatedSession(): Response {
@@ -217,5 +231,35 @@ describe("SubscriptionCheckoutFlow", () => {
     expect((screen.getByRole("radio", { name: /Anual/ }) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByRole("radio", { name: /Anual/ }).closest("fieldset") as HTMLFieldSetElement).disabled).toBe(true);
     expect(screen.getByRole("button", { name: "Continuar para o checkout" })).toBeTruthy();
+  });
+
+  it("FE-086-AC06/AC08: never opens dashboard when fresh AccessContext refetch fails or returns undefined post-checkout", async () => {
+    window.history.replaceState({}, "", "/billing/subscription-checkout?result=success");
+    // Mock refetch failure / missing context
+    mockRefetch.mockRejectedValue(new Error("Access context fetch failed"));
+    const fetchMock = mockFetch(subscriptionResponse("Trial"));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SubscriptionCheckoutFlow isReturn />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Aguardando confirmação" })).toBeTruthy();
+    });
+    expect(routerReplace).not.toHaveBeenCalled();
+    expect(routerReplace).not.toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("FE-086-AC06/AC08: never opens dashboard when fresh AccessContext confirms canAccessApp=false post-checkout", async () => {
+    window.history.replaceState({}, "", "/billing/subscription-checkout?result=success");
+    // Mock refetch returning canAccessApp false
+    mockRefetch.mockResolvedValue({ access: { canAccessApp: false } });
+    const fetchMock = mockFetch(subscriptionResponse("Trial"));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SubscriptionCheckoutFlow isReturn />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Aguardando confirmação" })).toBeTruthy();
+    });
+    expect(routerReplace).not.toHaveBeenCalled();
+    expect(routerReplace).not.toHaveBeenCalledWith("/dashboard");
   });
 });
