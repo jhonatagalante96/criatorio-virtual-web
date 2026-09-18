@@ -4188,3 +4188,38 @@ h1, h2 { line-height: 1.08; }
   .landing-scroll-next small { font-size: .62rem; }
   .landing-scroll-next-arrow { font-size: 1rem; height: 1.9rem; width: 1.9rem; }
 }
+.subscription-actions-panel { background: #fff; border: 1px solid #e0e9ed; border-radius: .7rem; box-shadow: 0 .35rem 1rem rgb(6 58 86 / 4%); min-width: 0; padding: 1rem; }
+.subscription-actions-panel h2 { color: var(--ink); font-size: 1rem; margin: 0; }
+.subscription-actions-panel > p:not(.eyebrow) { color: #596780; font-size: .8rem; line-height: 1.5; margin: 0 0 .7rem; }
+.subscription-action-notice { background: #eef9f1; border: 1px solid #c8e8d0; border-radius: .5rem; color: #175744; font-size: .82rem; line-height: 1.5; margin: 0; padding: .7rem .85rem; }
+.subscription-action-notice-error { background: #fff6f4; border-color: #f1cbc5; color: #8d2b24; }
+.subscription-action-help, .subscription-field-help { color: #68778b; font-size: .72rem; }
+.subscription-primary-action, .subscription-secondary-action, .subscription-danger-action { align-items: center; border-radius: .5rem; cursor: pointer; display: inline-flex; font: inherit; font-size: .8rem; font-weight: 700; justify-content: center; min-height: 2.5rem; padding: .6rem .9rem; text-decoration: none; }
+.subscription-primary-action { background: #216c59; border: 1px solid #216c59; color: #fff; }
+.subscription-secondary-action { background: #fff; border: 1px solid #cbd6dd; color: #23495b; }
+.subscription-danger-action { background: #fff; border: 1px solid #d9aaa8; color: #9a261f; }
+.subscription-primary-action:hover:not(:disabled) { background: #195645; }
+.subscription-secondary-action:hover:not(:disabled) { background: #f5f8f9; }
+.subscription-danger-action:hover:not(:disabled) { background: #fff5f4; }
+.subscription-primary-action:disabled, .subscription-secondary-action:disabled, .subscription-danger-action:disabled { cursor: wait; opacity: .65; }
+.subscription-rehire-form { display: grid; gap: .7rem; margin-top: 1rem; max-width: 34rem; }
+.subscription-rehire-form fieldset { border: 0; display: grid; gap: .55rem; margin: 0; padding: 0; }
+.subscription-rehire-form legend, .subscription-tax-field { color: #34485e; font-size: .76rem; font-weight: 700; margin-bottom: .1rem; }
+.subscription-cycle-option { align-items: center; border: 1px solid #dce6e9; border-radius: .5rem; cursor: pointer; display: flex; gap: .65rem; padding: .65rem .75rem; }
+.subscription-cycle-option:has(input:checked) { background: #f0f8f5; border-color: #80b8a5; }
+.subscription-cycle-option input { accent-color: #216c59; }
+.subscription-cycle-option span { display: grid; gap: .12rem; }
+.subscription-cycle-option strong { color: #263d4f; font-size: .8rem; }
+.subscription-cycle-option small, .subscription-field-help { color: #68778b; font-size: .7rem; }
+.subscription-tax-field { margin-top: .2rem; }
+.subscription-rehire-form > input { border: 1px solid #cbd6dd; border-radius: .45rem; color: #25384d; font: inherit; font-size: .85rem; min-height: 2.6rem; padding: .55rem .7rem; }
+.subscription-rehire-form > input:focus-visible, .subscription-actions-panel button:focus-visible, .subscription-action-notice + button:focus-visible { outline: 3px solid rgb(57 137 113 / 35%); outline-offset: 2px; }
+.subscription-field-help, .subscription-field-error { margin: 0; }
+.subscription-field-error { color: #9a261f; font-size: .72rem; }
+.subscription-dialog-backdrop { align-items: center; background: rgb(17 32 48 / 45%); display: flex; inset: 0; justify-content: center; padding: 1rem; position: fixed; z-index: 100; }
+.subscription-confirm-dialog { background: #fff; border: 1px solid #e0e9ed; border-radius: .75rem; box-shadow: 0 1rem 3rem rgb(10 32 45 / 24%); max-width: 30rem; padding: 1.25rem; width: 100%; }
+.subscription-confirm-dialog h2 { color: var(--ink); font-size: 1.1rem; margin: 0; }
+.subscription-confirm-dialog h2:focus { outline: none; }
+.subscription-confirm-dialog p { color: #596780; font-size: .84rem; line-height: 1.55; margin: .65rem 0 1rem; }
+.subscription-dialog-actions { display: flex; flex-wrap: wrap; gap: .55rem; justify-content: flex-end; }
+@media (max-width: 47.99rem) { .subscription-actions-panel { border-radius: .65rem; padding: .85rem; } .subscription-dialog-actions > button { flex: 1 1 100%; } }
