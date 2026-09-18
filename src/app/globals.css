@@ -4048,6 +4048,7 @@ h1, h2 { line-height: 1.08; }
 .landing-scroll-next strong { color: #172039; font-size: .9rem; }
 .landing-scroll-next small { color: #596780; font-size: .72rem; line-height: 1.4; }
 .landing-scroll-next-arrow { align-items: center; animation: landing-scroll-bob 1.7s ease-in-out infinite; background: #145f4f; border-radius: 50%; color: #fff; display: inline-flex; font-size: 1.25rem; height: 2.4rem; justify-content: center; width: 2.4rem; }
+.landing-header { background: #fff; top: 0; }
 
 @media (max-width: 75rem) {
   .landing-preview { grid-template-columns: minmax(7.5rem, 16.8%) minmax(0, 1fr); }

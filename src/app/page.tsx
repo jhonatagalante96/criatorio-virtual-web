@@ -4,6 +4,7 @@ import { BrandLockup } from "./components/brand";
 import { DashboardIcon } from "./components/dashboard-icons";
 import type { DashboardIconName } from "./components/dashboard-icons";
 import { GoogleAuthenticationCallback } from "./components/google-authentication-callback";
+import LandingSectionLink from "./components/landing-section-link";
 
 const featureItems: Array<{
   icon: DashboardIconName;
@@ -345,12 +346,12 @@ export default function Home() {
   return (
     <main className="landing-page" id="inicio">
       <GoogleAuthenticationCallback />
-      <a className="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
+      <LandingSectionLink className="skip-link" href="#conteudo-principal">Pular para o conteúdo</LandingSectionLink>
       <div className="landing-shell">
         <header className="landing-header">
-          <a className="landing-brand-link" href="#inicio" aria-label="Criatório Virtual, voltar ao início">
+          <LandingSectionLink className="landing-brand-link" href="#inicio" aria-label="Criatório Virtual, voltar ao início">
             <BrandLockup />
-          </a>
+          </LandingSectionLink>
           <div className="landing-header-actions">
             <Link className="landing-login-link" href="/login">Entrar</Link>
             <Link className="landing-header-cta" href="/cadastro">Criar conta <ArrowIcon /></Link>
@@ -367,10 +368,10 @@ export default function Home() {
                 <Link className="primary-action" href="/cadastro">Criar minha conta <ArrowIcon /></Link>
                 <Link className="secondary-action landing-secondary-action" href="/login">Já tenho conta</Link>
               </div>
-              <a className="landing-scroll-cue" href="#recursos">
+              <LandingSectionLink className="landing-scroll-cue" href="#recursos">
                 <span className="landing-scroll-cue-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v15m-6-6 6 6 6-6" /></svg></span>
                 <span><strong>Role até o final para conhecer tudo</strong><small>Recursos, versão mobile e plano completo estão logo abaixo.</small></span>
-              </a>
+              </LandingSectionLink>
               <p className="landing-plan-note"><DashboardIcon name="shield" /> Um plano com as mesmas funcionalidades nas opções mensal e anual.</p>
             </div>
             <DashboardPreview />
@@ -394,19 +395,19 @@ export default function Home() {
             </div>
           </section>
 
-          <a className="landing-scroll-next" href="#acesso-movel">
+          <LandingSectionLink className="landing-scroll-next" href="#acesso-movel">
             <span className="landing-scroll-next-step">01 <i /> 03</span>
             <span><strong>Ainda tem mais para descobrir</strong><small>Continue rolando para ver o Criatório Virtual no celular.</small></span>
             <span className="landing-scroll-next-arrow" aria-hidden="true">↓</span>
-          </a>
+          </LandingSectionLink>
 
           <MobileAppPreview />
 
-          <a className="landing-scroll-next" href="#planos">
+          <LandingSectionLink className="landing-scroll-next" href="#planos">
             <span className="landing-scroll-next-step">02 <i /> 03</span>
             <span><strong>Conheça o plano completo</strong><small>Mais um passo e você vê tudo o que está incluído.</small></span>
             <span className="landing-scroll-next-arrow" aria-hidden="true">↓</span>
-          </a>
+          </LandingSectionLink>
 
           <section id="planos" className="landing-section plans-section" aria-labelledby="titulo-planos">
             <div className="landing-section-heading">
@@ -458,9 +459,8 @@ export default function Home() {
 
         <footer className="landing-footer">
           <span className="landing-footer-brand"><BrandLockup /></span>
-          <span className="landing-footer-links"><a href="#recursos">Recursos</a><span aria-hidden="true">•</span><a href="#planos">Plano</a></span>
           <span className="landing-footer-actions">
-            <a href="#inicio">Voltar ao topo</a>
+            <LandingSectionLink href="#inicio">Voltar ao topo</LandingSectionLink>
             <a className="landing-support" href="mailto:suporte@criatoriovirtual.com.br">Falar com o suporte</a>
           </span>
         </footer>

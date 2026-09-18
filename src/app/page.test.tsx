@@ -1,6 +1,6 @@
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import Home from "./page";
 
 afterEach(cleanup);
@@ -22,6 +22,29 @@ describe("Home", () => {
     expect(screen.getAllByRole("link", { name: "Entrar" }).some((link) => link.getAttribute("href") === "/login")).toBe(true);
     expect(screen.getAllByRole("link", { name: "Criar minha conta" })).toHaveLength(3);
     expect(screen.getByRole("link", { name: "Criar conta" }).getAttribute("href")).toBe("/cadastro");
+  });
+
+  it("scrolls within the landing page without navigating and removes footer section links", () => {
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    try {
+      render(<Home />);
+
+      const footer = document.querySelector(".landing-footer");
+      expect(footer?.querySelector('a[href="#recursos"]')).toBeNull();
+      expect(footer?.querySelector('a[href="#planos"]')).toBeNull();
+
+      const sectionLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]'));
+      expect(sectionLinks).toHaveLength(6);
+      for (const link of sectionLinks) expect(fireEvent.click(link)).toBe(false);
+
+      expect(scrollIntoView).toHaveBeenCalledTimes(6);
+      expect(window.location.hash).toBe("");
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    }
   });
 
   it("shows the current dashboard layout and official platform mark", () => {
