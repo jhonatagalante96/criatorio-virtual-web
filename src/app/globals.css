@@ -3576,6 +3576,38 @@ h1, h2 { line-height: 1.08; }
 }
 
 .competition-wizard-page { max-width: 74rem; }
+
+.competition-history-page { max-width: 74rem; }
+.competition-history-header { align-items: flex-start; }
+.competition-history-header .document-wizard-header-actions { flex-wrap: wrap; }
+.competition-history-results, .competition-history-detail { margin-top: 1rem; padding: 1.2rem; }
+.competition-history-results .document-history-results-heading { margin-bottom: .9rem; }
+.competition-history-results .document-history-results-heading h2 { margin: 0; }
+.competition-history-list { list-style: none; margin: 0; padding: 0; }
+.competition-history-list > li + li { border-top: 1px solid #e6eef0; }
+.competition-history-item { align-items: center; }
+.competition-history-item .document-history-item-main { min-width: 0; }
+.competition-history-item .document-history-item-main small { display: block; margin-top: .2rem; }
+.competition-placement-badge { background: #e7f4f3; border-radius: 999px; color: #087067; font-size: .7rem; font-weight: 800; padding: .25rem .55rem; white-space: nowrap; }
+.competition-history-state { margin-top: 1rem; min-height: 16rem; }
+.competition-history-icon { color: #06756b; display: grid; height: 2.5rem; place-items: center; width: 2.5rem; }
+.competition-history-detail-heading { align-items: center; border-bottom: 1px solid #e6eef0; display: flex; gap: .9rem; padding-bottom: 1rem; }
+.competition-history-detail-heading h2 { margin: 0; }
+.competition-history-detail-heading p:last-child { margin: .3rem 0 0; }
+.competition-history-fields { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 1rem 0 1.3rem; }
+.competition-history-fields > div { min-width: 0; }
+.competition-history-fields dt { color: #52666e; font-size: .8rem; font-weight: 700; margin-bottom: .25rem; }
+.competition-history-fields dd { margin: 0; overflow-wrap: anywhere; }
+.competition-history-notes { grid-column: 1 / -1; }
+
+@media (max-width: 47.99rem) {
+  .competition-history-header .document-wizard-header-actions { width: 100%; }
+  .competition-history-header .document-wizard-header-actions > * { flex: 1 1 auto; text-align: center; }
+  .competition-history-results, .competition-history-detail { padding: .9rem; }
+  .competition-history-item .document-history-item-actions { display: none; }
+  .competition-history-fields { gap: .8rem; grid-template-columns: 1fr; }
+  .competition-history-notes { grid-column: auto; }
+}
 .competition-wizard-progress { grid-template-columns: repeat(4, minmax(4.2rem, 1fr)); }
 .competition-wizard-card { display: grid; gap: 0; }
 .competition-wizard-card > section { min-width: 0; }
