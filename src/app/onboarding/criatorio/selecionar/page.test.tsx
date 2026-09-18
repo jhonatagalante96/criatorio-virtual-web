@@ -128,7 +128,7 @@ describe("BreedingFarmSelectionPage", () => {
     const [, request] = fetchMock.mock.calls[3];
     expect(new Headers(request.headers).get("x-xsrf-token")).toBe("csrf-token");
     expect(JSON.parse(request.body as string)).toEqual({ breedingFarmId: "farm-b" });
-    expect(screen.getByRole("link", { name: "Ir para o painel" }).getAttribute("href")).toBe("/dashboard");
+    expect(screen.getByRole("link", { name: "Continuar para a assinatura" }).getAttribute("href")).toBe("/assinatura");
   });
 
   it("preselects the only farm so the onboarding can be resumed directly", async () => {
@@ -295,11 +295,11 @@ describe("BreedingFarmSelectionPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Capa do criatório" })).toBeTruthy();
     expect(await screen.findByAltText("Capa atual de Sítio Aurora")).toBeTruthy();
-    const keepCover = screen.getByRole("button", { name: "Manter esta capa e ir para o painel" });
+    const keepCover = screen.getByRole("button", { name: "Manter esta capa e continuar para a assinatura" });
     expect(keepCover).toBeTruthy();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
     fireEvent.click(keepCover);
-    expect(routerReplace).toHaveBeenCalledWith("/dashboard");
+    expect(routerReplace).toHaveBeenCalledWith("/assinatura");
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
   });
 

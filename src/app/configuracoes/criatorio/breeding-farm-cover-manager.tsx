@@ -530,7 +530,7 @@ export function BreedingFarmCoverManager({
             ? "Esta capa já está aplicada. Você pode mantê-la ou escolher outra antes de continuar."
             : "Envie uma imagem ou escolha um modelo. A capa pode ser configurada depois em Meu Criatório."}</p>
           <button className="auth-primary-action" disabled={isMutating} onClick={onContinue} type="button">
-            {cover ? "Manter esta capa e ir para o painel" : "Configurar depois e ir para o painel"}
+            {cover ? "Manter esta capa e continuar para a assinatura" : "Configurar depois e continuar para a assinatura"}
           </button>
         </div>
       )}
