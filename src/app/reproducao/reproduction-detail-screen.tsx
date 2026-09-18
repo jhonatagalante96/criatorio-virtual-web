@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../lib/auth/auth-context";
-import { ApiClient, ApiError, StaleTenantResponseError, createApiClient } from "../../lib/http/api-client";
+import { ApiClient, ApiError, MissingCsrfTokenError, StaleTenantResponseError, createApiClient } from "../../lib/http/api-client";
 import { AppLoadingState } from "../components/app-loading-state";
 import { AuthenticatedShell } from "../components/authenticated-shell";
 import { DashboardIcon } from "../components/dashboard-icons";
@@ -59,6 +59,9 @@ function reproductionFieldErrorMessage(field: string): string {
 }
 
 function reproductionMutationErrorMessage(error: unknown): string {
+  if (error instanceof MissingCsrfTokenError) {
+    return "O token de segurança não está disponível. Atualize a página e tente novamente.";
+  }
   if (error instanceof ApiError) {
     if (error.status === 400) {
       if (firstFieldError(error.fields, "Confirmed")) return "Confirme a alteração antes de continuar.";
@@ -89,6 +92,9 @@ function reproductionOriginSearchErrorMessage(error: unknown): string {
 }
 
 function reproductionOriginMutationErrorMessage(error: unknown): string {
+  if (error instanceof MissingCsrfTokenError) {
+    return "O token de segurança não está disponível. Atualize a página e tente novamente.";
+  }
   if (error instanceof StaleTenantResponseError) return "O criatório selecionado mudou. Atualize os dados antes de vincular a origem.";
   if (!(error instanceof ApiError)) return "Não foi possível vincular a origem reprodutiva. Verifique sua conexão e tente novamente.";
   if (error.status === 400) {
@@ -223,8 +229,20 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
   const actionNoticeRef = useRef<HTMLParagraphElement | null>(null);
   const originSearchId = useId();
   const originOptionsId = useId();
+  const csrfToken = useRef<string | undefined>(undefined);
 
-  if (!client.current) client.current = createApiClient();
+  if (!client.current) client.current = createApiClient(() => csrfToken.current);
+
+  const ensureCsrfToken = useCallback(async (force = false): Promise<string> => {
+    if (!csrfToken.current || force) {
+      try {
+        csrfToken.current = await client.current!.fetchAntiforgeryToken();
+      } catch (error) {
+        throw new MissingCsrfTokenError();
+      }
+    }
+    return csrfToken.current;
+  }, []);
 
   const loadFarm = useCallback(async (recoverSession = true) => {
     const version = ++farmRequestVersion.current;
@@ -483,14 +501,23 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
     recoverSession = true
   ): Promise<ReproductionMutationResponse> {
     try {
+      await ensureCsrfToken();
       return await client.current!.request<ReproductionMutationResponse>(
         `api/reproductions/${encodeURIComponent(reproductionId)}${method === "PATCH" ? "/status" : ""}`,
-        { body: JSON.stringify(body), headers: { "content-type": "application/json" }, method }
+        {
+          body: JSON.stringify(body),
+          headers: { "content-type": "application/json" },
+          method,
+          requiresCsrf: true
+        }
       );
     } catch (error) {
       if (error instanceof ApiError && error.status === 401 && recoverSession) {
         const result = await refresh({ showLoading: false });
-        if (result.ok) return requestMutation(method, body, false);
+        if (result.ok) {
+          await ensureCsrfToken(true);
+          return requestMutation(method, body, false);
+        }
       }
       throw error;
     }
@@ -498,18 +525,23 @@ export function ReproductionDetailScreen({ reproductionId }: Readonly<{ reproduc
 
   async function requestOriginMutation(birdId: string, recoverSession = true): Promise<void> {
     try {
+      await ensureCsrfToken();
       await client.current!.request<unknown>(
         "api/reproductions/" + encodeURIComponent(reproductionId) + "/origin",
         {
           body: JSON.stringify({ birdId, confirmed: true }),
           headers: { "content-type": "application/json" },
-          method: "POST"
+          method: "POST",
+          requiresCsrf: true
         }
       );
     } catch (error) {
       if (error instanceof ApiError && error.status === 401 && recoverSession) {
         const result = await refresh({ showLoading: false });
-        if (result.ok) return requestOriginMutation(birdId, false);
+        if (result.ok) {
+          await ensureCsrfToken(true);
+          return requestOriginMutation(birdId, false);
+        }
       }
       throw error;
     }

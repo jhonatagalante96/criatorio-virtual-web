@@ -20,6 +20,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function antiforgeryResponse(token = "csrf-token"): Response {
+  return new Response(null, { headers: { "X-XSRF-TOKEN": token }, status: 204 });
+}
+
 function selectedFarmResponse(selectedBreedingFarmId: string | null = "farm-a"): Response {
   return new Response(JSON.stringify({
     breedingFarms: [{ breedingFarmId: "farm-a", isSelected: selectedBreedingFarmId === "farm-a", name: "Criatório Aurora", responsibleName: "Ana Souza" }],
@@ -180,6 +184,7 @@ describe("ReproductionDetailScreen", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(mutationResponse({ startDate: "2026-09-03", endDate: "2026-09-07" }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -194,8 +199,10 @@ describe("ReproductionDetailScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
     await waitFor(() => expect(screen.getByText("Reprodução atualizada.")).toBeTruthy());
-    expect(fetchMock.mock.calls[2][1]?.method).toBe("PUT");
-    expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({
+    expect(fetchMock.mock.calls[2][0]).toContain("/antiforgery/token");
+    expect(fetchMock.mock.calls[3][1]?.method).toBe("PUT");
+    expect(new Headers(fetchMock.mock.calls[3][1]?.headers).get("x-xsrf-token")).toBe("csrf-token");
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1]?.body))).toEqual({
       maleBirdId: "bird-male",
       femaleBirdId: "bird-female",
       startDate: "2026-09-03",
@@ -208,6 +215,7 @@ describe("ReproductionDetailScreen", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(mutationResponse({ endDate: "2026-09-08", status: "Finished" }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -225,8 +233,9 @@ describe("ReproductionDetailScreen", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Corrigir observações" })).toBeTruthy());
     expect(screen.queryByRole("button", { name: "Editar dados" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Cancelar reprodução" })).toBeNull();
-    expect(fetchMock.mock.calls[2][1]?.method).toBe("PATCH");
-    expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({
+    expect(fetchMock.mock.calls[3][1]?.method).toBe("PATCH");
+    expect(new Headers(fetchMock.mock.calls[3][1]?.headers).get("x-xsrf-token")).toBe("csrf-token");
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1]?.body))).toEqual({
       status: "Finished",
       confirmed: true,
       endDate: "2026-09-08"
@@ -237,6 +246,7 @@ describe("ReproductionDetailScreen", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(mutationResponse({ status: "Cancelled" }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -250,8 +260,9 @@ describe("ReproductionDetailScreen", () => {
     fireEvent.click(submit);
 
     await waitFor(() => expect(screen.getByText("Reprodução cancelada. O histórico foi mantido.")).toBeTruthy());
-    expect(fetchMock.mock.calls[2][1]?.method).toBe("PATCH");
-    expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({ status: "Cancelled", confirmed: true });
+    expect(fetchMock.mock.calls[3][1]?.method).toBe("PATCH");
+    expect(new Headers(fetchMock.mock.calls[3][1]?.headers).get("x-xsrf-token")).toBe("csrf-token");
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1]?.body))).toEqual({ status: "Cancelled", confirmed: true });
     expect(screen.getByRole("button", { name: "Corrigir observações" })).toBeTruthy();
   });
 
@@ -259,6 +270,7 @@ describe("ReproductionDetailScreen", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse({ status: "Finished", endDate: "2026-09-06" }))
+      .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(mutationResponse({ endDate: "2026-09-06", status: "Finished", notes: "Correção histórica." }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -273,14 +285,16 @@ describe("ReproductionDetailScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar observações" }));
 
     await waitFor(() => expect(screen.getByText("Observações corrigidas.")).toBeTruthy());
-    expect(fetchMock.mock.calls[2][1]?.method).toBe("PUT");
-    expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({ notes: "Correção histórica." });
+    expect(fetchMock.mock.calls[3][1]?.method).toBe("PUT");
+    expect(new Headers(fetchMock.mock.calls[3][1]?.headers).get("x-xsrf-token")).toBe("csrf-token");
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1]?.body))).toEqual({ notes: "Correção histórica." });
   });
 
   it("shows a recoverable message when the backend rejects a stale status transition", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: 409, title: "The reproduction status cannot be changed from its current state." }), {
         headers: { "content-type": "application/problem+json" },
         status: 409
@@ -296,12 +310,14 @@ describe("ReproductionDetailScreen", () => {
 
     expect(await screen.findByText("A reprodução foi alterada por outra solicitação. Atualize os dados antes de tentar novamente.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Atualizar reprodução" })).toBeTruthy();
+    expect(new Headers(fetchMock.mock.calls[3][1]?.headers).get("x-xsrf-token")).toBe("csrf-token");
   });
 
   it("shows server validation beside each reproduction field", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(new Response(JSON.stringify({
         status: 400,
         title: "One or more validation errors occurred.",
@@ -323,6 +339,7 @@ describe("ReproductionDetailScreen", () => {
     const notes = screen.getByRole("textbox", { name: /Observações/ });
     expect(document.getElementById(endDate.getAttribute("aria-describedby") ?? "")?.textContent).toBe("Confira a data de término informada.");
     expect(document.getElementById(notes.getAttribute("aria-describedby") ?? "")?.textContent).toBe("As observações não podem exceder 2.000 caracteres.");
+    expect(new Headers(fetchMock.mock.calls[3][1]?.headers).get("x-xsrf-token")).toBe("csrf-token");
   });
 
   it("searches eligible birds, reviews the pair, and links only after explicit confirmation", async () => {
@@ -336,6 +353,7 @@ describe("ReproductionDetailScreen", () => {
         originBirdOption({ birdId: "bird-invalid", name: "Anilha inválida", ringNumber: "12345x" }),
         originBirdOption()
       ]))
+      .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(new Response(JSON.stringify({ birdId: "bird-child" }), {
         headers: { "content-type": "application/json" },
         status: 200
@@ -365,9 +383,10 @@ describe("ReproductionDetailScreen", () => {
     fireEvent.click(confirm);
 
     await waitFor(() => expect(screen.getByText("Origem reprodutiva vinculada a Filhote Sol.")).toBeTruthy());
-    expect(fetchMock.mock.calls[3][1]?.method).toBe("POST");
-    expect(String(fetchMock.mock.calls[3][0])).toContain("/api/reproductions/reproduction-a/origin");
-    expect(JSON.parse(String(fetchMock.mock.calls[3][1]?.body))).toEqual({ birdId: "bird-child", confirmed: true });
+    expect(fetchMock.mock.calls[4][1]?.method).toBe("POST");
+    expect(String(fetchMock.mock.calls[4][0])).toContain("/api/reproductions/reproduction-a/origin");
+    expect(new Headers(fetchMock.mock.calls[4][1]?.headers).get("x-xsrf-token")).toBe("csrf-token");
+    expect(JSON.parse(String(fetchMock.mock.calls[4][1]?.body))).toEqual({ birdId: "bird-child", confirmed: true });
   });
 
   it("refreshes an expired session and retries the origin link once", async () => {
@@ -383,7 +402,9 @@ describe("ReproductionDetailScreen", () => {
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse())
       .mockResolvedValueOnce(originOptionsResponse([originBirdOption()]))
+      .mockResolvedValueOnce(antiforgeryResponse("token-initial"))
       .mockResolvedValueOnce(unauthorized)
+      .mockResolvedValueOnce(antiforgeryResponse("token-refreshed"))
       .mockResolvedValueOnce(linked);
     vi.stubGlobal("fetch", fetchMock);
 
@@ -397,10 +418,12 @@ describe("ReproductionDetailScreen", () => {
 
     await waitFor(() => expect(screen.getByText("Origem reprodutiva vinculada a Filhote Sol.")).toBeTruthy());
     expect(authState.refresh).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledTimes(5);
-    expect(fetchMock.mock.calls[3][1]?.method).toBe("POST");
+    expect(fetchMock).toHaveBeenCalledTimes(7);
     expect(fetchMock.mock.calls[4][1]?.method).toBe("POST");
-    expect(JSON.parse(String(fetchMock.mock.calls[4][1]?.body))).toEqual({ birdId: "bird-child", confirmed: true });
+    expect(new Headers(fetchMock.mock.calls[4][1]?.headers).get("x-xsrf-token")).toBe("token-initial");
+    expect(fetchMock.mock.calls[6][1]?.method).toBe("POST");
+    expect(new Headers(fetchMock.mock.calls[6][1]?.headers).get("x-xsrf-token")).toBe("token-refreshed");
+    expect(JSON.parse(String(fetchMock.mock.calls[6][1]?.body))).toEqual({ birdId: "bird-child", confirmed: true });
   });
 
   it("shows backend genealogy-cycle validation without losing the selected bird", async () => {
@@ -408,6 +431,7 @@ describe("ReproductionDetailScreen", () => {
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse())
       .mockResolvedValueOnce(originOptionsResponse([originBirdOption()]))
+      .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(new Response(JSON.stringify({
         status: 400,
         title: "Reproduction origin data is invalid.",
@@ -431,6 +455,7 @@ describe("ReproductionDetailScreen", () => {
     expect(screen.getAllByText("Filhote Sol").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Alterar seleção" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Atualizar reprodução" })).toBeNull();
+    expect(new Headers(fetchMock.mock.calls[4][1]?.headers).get("x-xsrf-token")).toBe("csrf-token");
   });
 
   it("explains when the selected bird already has a genealogy origin", async () => {
@@ -438,6 +463,7 @@ describe("ReproductionDetailScreen", () => {
       .mockResolvedValueOnce(selectedFarmResponse())
       .mockResolvedValueOnce(detailsResponse())
       .mockResolvedValueOnce(originOptionsResponse([originBirdOption()]))
+      .mockResolvedValueOnce(antiforgeryResponse())
       .mockResolvedValueOnce(new Response(JSON.stringify({
         status: 409,
         title: "The selected bird already has another genealogy origin."
@@ -458,6 +484,7 @@ describe("ReproductionDetailScreen", () => {
     expect(await screen.findByText("Esta ave já possui outra origem genealógica. Escolha outra ave para vincular.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Alterar seleção" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Atualizar reprodução" })).toBeNull();
+    expect(new Headers(fetchMock.mock.calls[4][1]?.headers).get("x-xsrf-token")).toBe("csrf-token");
   });
 
   it("shows a recoverable search error and retries loading eligible birds", async () => {
@@ -481,5 +508,54 @@ describe("ReproductionDetailScreen", () => {
 
     expect(await screen.findByRole("option", { name: /Filhote Sol/ })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("displays an error when the antiforgery token cannot be fetched before mutation", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(new Response(null, { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReproductionDetailScreen reproductionId="reproduction-a" />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Cancelar reprodução" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar reprodução" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confirmo o cancelamento desta reprodução." }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar cancelamento" }));
+
+    expect(await screen.findByText("O token de segurança não está disponível. Atualize a página e tente novamente.")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[2][0]).toContain("/antiforgery/token");
+  });
+
+  it("retries status mutation (PATCH) with fresh token on 401 response", async () => {
+    const unauthorized = new Response(JSON.stringify({ status: 401, title: "Unauthorized" }), {
+      headers: { "content-type": "application/problem+json" },
+      status: 401
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(selectedFarmResponse())
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce(antiforgeryResponse("token-expired"))
+      .mockResolvedValueOnce(unauthorized)
+      .mockResolvedValueOnce(antiforgeryResponse("token-renewed"))
+      .mockResolvedValueOnce(mutationResponse({ status: "Cancelled" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReproductionDetailScreen reproductionId="reproduction-a" />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Cancelar reprodução" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar reprodução" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confirmo o cancelamento desta reprodução." }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar cancelamento" }));
+
+    await waitFor(() => expect(screen.getByText("Reprodução cancelada. O histórico foi mantido.")).toBeTruthy());
+    expect(authState.refresh).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock.mock.calls[3][1]?.method).toBe("PATCH");
+    expect(new Headers(fetchMock.mock.calls[3][1]?.headers).get("x-xsrf-token")).toBe("token-expired");
+    expect(fetchMock.mock.calls[5][1]?.method).toBe("PATCH");
+    expect(new Headers(fetchMock.mock.calls[5][1]?.headers).get("x-xsrf-token")).toBe("token-renewed");
   });
 });

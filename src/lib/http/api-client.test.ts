@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiClient, StaleTenantResponseError } from "./api-client";
+import { ApiClient, MissingCsrfTokenError, StaleTenantResponseError } from "./api-client";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -233,6 +233,97 @@ describe("ApiClient", () => {
     expect(await client.request("api/birds")).toEqual({ name: "FreshBird" });
 
     unsubscribe();
+  });
+
+  it("fails before network request when a marked protected mutation is missing CSRF token", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("http://localhost:5000");
+
+    await expect(client.request("api/reproductions/rep-1/status", {
+      body: JSON.stringify({ status: "Finished" }),
+      method: "PATCH",
+      requiresCsrf: true
+    })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("fails before network upload when a protected upload is missing CSRF token", async () => {
+    const request = vi.fn();
+    vi.stubGlobal("XMLHttpRequest", request);
+    const client = new ApiClient("http://localhost:5000");
+    const form = new FormData();
+
+    await expect(client.upload("api/birds/bird-a/attachments", form, undefined, {
+      requiresCsrf: true
+    })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("fails before network request when a protected blob mutation is missing CSRF token", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("http://localhost:5000");
+
+    await expect(client.requestBlob("api/reports/generate", {
+      method: "POST",
+      requiresCsrf: true
+    })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("requires CSRF token for public mutations like login when defaultRequiresCsrf is true", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("http://localhost:5000", () => undefined, { defaultRequiresCsrf: true });
+
+    // Public/anonymous mutations still require CSRF under defaultRequiresCsrf mode
+    await expect(client.request("api/auth/login", { body: "{}", method: "POST" })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+    await expect(client.request("api/auth/register", { body: "{}", method: "POST" })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+    await expect(client.request("api/auth/confirm-email", { body: "{}", method: "POST" })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+    await expect(client.request("api/auth/forgot-password", { body: "{}", method: "POST" })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+    await expect(client.request("api/auth/reset-password", { body: "{}", method: "POST" })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("allows mutations without CSRF token only when explicitly exempt via exemptCsrf", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), {
+      headers: { "content-type": "application/json" },
+      status: 200
+    })));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("http://localhost:5000", () => undefined, { defaultRequiresCsrf: true });
+
+    // Explicitly exempt mutation is allowed
+    await expect(client.request("api/custom-webhook", { body: "{}", exemptCsrf: true, method: "POST" })).resolves.toEqual({ ok: true });
+    // requiresCsrf: false does NOT bypass defaultRequiresCsrf: true
+    await expect(client.request("api/custom-action", { body: "{}", method: "POST", requiresCsrf: false })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends X-XSRF-TOKEN when CSRF token is provided for protected mutations", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "Finished" }), {
+      headers: { "content-type": "application/json" },
+      status: 200
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("http://localhost:5000", () => "csrf-token-abc");
+
+    const result = await client.request("api/reproductions/rep-1/status", {
+      body: JSON.stringify({ status: "Finished" }),
+      method: "PATCH",
+      requiresCsrf: true
+    });
+
+    expect(result).toEqual({ status: "Finished" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, request] = fetchMock.mock.calls[0];
+    expect(new Headers(request.headers).get("x-xsrf-token")).toBe("csrf-token-abc");
   });
 });
 
