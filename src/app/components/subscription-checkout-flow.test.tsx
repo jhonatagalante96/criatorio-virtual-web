@@ -148,6 +148,20 @@ describe("SubscriptionCheckoutFlow", () => {
     expect(checkoutError.textContent).toBe("Não foi possível contratar o criatório selecionado. Confira se este é o criatório correto e se sua conta tem autorização de responsável.");
   });
 
+  it("shows a service availability message for an unknown checkout route", async () => {
+    const unavailableRoute = new Response("Not found", { status: 404 });
+    const fetchMock = mockFetch(noSubscriptionResponse(), unavailableRoute);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SubscriptionCheckoutFlow />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha sua assinatura" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("CPF ou CNPJ"), { target: { value: "123.456.789-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar para o pagamento" }));
+
+    const checkoutError = await screen.findByRole("alert");
+    expect(checkoutError.textContent).toBe("O serviço de contratação não está disponível no momento. Tente novamente em instantes.");
+  });
+
   it("does not navigate to a checkout URL outside the Asaas domain", async () => {
     const checkoutResponse = new Response(JSON.stringify({
       checkoutId: "checkout-id",
