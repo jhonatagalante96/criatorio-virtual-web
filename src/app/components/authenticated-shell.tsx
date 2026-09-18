@@ -6,7 +6,7 @@ import { DashboardIcon } from "./dashboard-icons";
 import { PwaInstallPrompt } from "./pwa-install-prompt";
 import type { DashboardIconName } from "./dashboard-icons";
 
-export type AuthenticatedNav = "dashboard" | "statistics" | "birds" | "reproduction" | "transfers" | "competitions" | "documents" | "farm" | "settings" | "subscription";
+export type AuthenticatedNav = "dashboard" | "statistics" | "birds" | "reproduction" | "transfers" | "competitions" | "documents" | "farm" | "subscription" | "settings";
 
 interface AuthenticatedShellProps {
   activeNav: AuthenticatedNav;
@@ -14,6 +14,7 @@ interface AuthenticatedShellProps {
   email: string;
   farmName: string;
 }
+
 interface NavigationItem {
   href?: string;
   icon: DashboardIconName;
