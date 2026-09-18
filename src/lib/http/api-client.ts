@@ -30,8 +30,11 @@ export interface ApiRequestOptions {
   accept?: string;
   acceptedStatuses?: readonly number[];
   body?: BodyInit | null;
+  exemptCsrf?: boolean;
   headers?: HeadersInit;
   method?: ApiMethod;
+  protected?: boolean;
+  requiresCsrf?: boolean;
   signal?: AbortSignal;
 }
 
@@ -98,16 +101,55 @@ async function toApiError(response: Response): Promise<ApiError> {
   return error;
 }
 
+export class MissingCsrfTokenError extends Error {
+  constructor(message = "O token de segurança (CSRF) é obrigatório para operações protegidas.") {
+    super(message);
+    this.name = "MissingCsrfTokenError";
+  }
+}
+
+export interface ApiClientOptions {
+  defaultRequiresCsrf?: boolean;
+}
+
+export function isPublicEndpoint(path: string): boolean {
+  const normalized = path.replace(/^\/+/, "").toLowerCase();
+  return (
+    normalized.startsWith("api/auth/login") ||
+    normalized.startsWith("api/auth/register") ||
+    normalized.startsWith("api/auth/confirm-email") ||
+    normalized.startsWith("api/auth/forgot-password") ||
+    normalized.startsWith("api/auth/reset-password") ||
+    normalized.startsWith("api/auth/google") ||
+    normalized.startsWith("antiforgery/token") ||
+    normalized.startsWith("health")
+  );
+}
+
 export class ApiClient {
   private readonly cache = new Map<string, unknown>();
   private readonly csrfToken: () => string | undefined;
+  private readonly defaultRequiresCsrf: boolean;
   private readonly endpoint: string;
   private tenantId: string | undefined;
   private tenantVersion = 0;
 
-  constructor(endpoint: string, csrfToken: () => string | undefined = () => undefined) {
+  constructor(
+    endpoint: string,
+    csrfToken: () => string | undefined = () => undefined,
+    options: ApiClientOptions = {}
+  ) {
     this.endpoint = endpoint.endsWith("/") ? endpoint : `${endpoint}/`;
     this.csrfToken = csrfToken;
+    this.defaultRequiresCsrf = Boolean(options.defaultRequiresCsrf);
+  }
+
+  private isCsrfRequired(method: ApiMethod, path: string, options?: ApiRequestOptions): boolean {
+    if (!isMutation(method)) return false;
+    if (options?.exemptCsrf === true || options?.requiresCsrf === false) return false;
+    if (options?.requiresCsrf === true || options?.protected === true) return true;
+    if (this.defaultRequiresCsrf && !isPublicEndpoint(path)) return true;
+    return false;
   }
 
   setTenant(tenantId: string | undefined): void {
@@ -132,7 +174,13 @@ export class ApiClient {
     const headers = new Headers(options.headers);
     headers.set("accept", "application/json");
 
-    if (isMutation(method)) {
+    if (this.isCsrfRequired(method, path, options)) {
+      const token = this.csrfToken();
+      if (!token) {
+        throw new MissingCsrfTokenError();
+      }
+      headers.set(ANTIFORGERY_HEADER, token);
+    } else if (isMutation(method)) {
       const token = this.csrfToken();
       if (token) headers.set(ANTIFORGERY_HEADER, token);
     }
@@ -177,7 +225,13 @@ export class ApiClient {
     const headers = new Headers(options.headers);
     headers.set("accept", "application/json");
 
-    if (isMutation(method)) {
+    if (this.isCsrfRequired(method, path, options)) {
+      const token = this.csrfToken();
+      if (!token) {
+        throw new MissingCsrfTokenError("O token de segurança (CSRF) é obrigatório para uploads protegidos.");
+      }
+      headers.set(ANTIFORGERY_HEADER, token);
+    } else if (isMutation(method)) {
       const token = this.csrfToken();
       if (token) headers.set(ANTIFORGERY_HEADER, token);
     }
@@ -269,7 +323,13 @@ export class ApiClient {
     const headers = new Headers(options.headers);
     headers.set("accept", options.accept ?? "application/pdf");
 
-    if (isMutation(method)) {
+    if (this.isCsrfRequired(method, path, options)) {
+      const token = this.csrfToken();
+      if (!token) {
+        throw new MissingCsrfTokenError();
+      }
+      headers.set(ANTIFORGERY_HEADER, token);
+    } else if (isMutation(method)) {
       const token = this.csrfToken();
       if (token) headers.set(ANTIFORGERY_HEADER, token);
     }
@@ -312,7 +372,14 @@ export function getApiUrl(path: string): string {
   return new URL(path, process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:58016").toString();
 }
 
-export function createApiClient(csrfToken?: () => string | undefined): ApiClient {
-  return new ApiClient(process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:58016", csrfToken);
+export function createApiClient(
+  csrfToken?: () => string | undefined,
+  options?: ApiClientOptions
+): ApiClient {
+  return new ApiClient(
+    process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:58016",
+    csrfToken,
+    options
+  );
 }
 
