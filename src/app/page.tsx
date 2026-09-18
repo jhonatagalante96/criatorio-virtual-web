@@ -5,11 +5,6 @@ import { DashboardIcon } from "./components/dashboard-icons";
 import type { DashboardIconName } from "./components/dashboard-icons";
 import { GoogleAuthenticationCallback } from "./components/google-authentication-callback";
 
-const navigationItems = [
-  { href: "#recursos", label: "Recursos" },
-  { href: "#planos", label: "Plano" }
-];
-
 const featureItems: Array<{
   icon: DashboardIconName;
   title: string;
@@ -44,44 +39,75 @@ const featureItems: Array<{
     icon: "chart",
     title: "Estatísticas",
     copy: "Acompanhe a composição do plantel e as movimentações dos últimos 30 dias."
+  },
+  {
+    icon: "trophy",
+    title: "Competições",
+    copy: "Registre resultados e acompanhe o histórico competitivo das suas aves."
   }
 ];
 
 const previewModules: Array<{
   icon: DashboardIconName;
   label: string;
-  disabled?: boolean;
 }> = [
   { icon: "home", label: "Painel" },
   { icon: "chart", label: "Estatísticas" },
   { icon: "bird", label: "Aves" },
   { icon: "heart", label: "Reprodução" },
   { icon: "transfer", label: "Transferências" },
-  { icon: "document", label: "Documentos" },
-  { icon: "trophy", label: "Competições", disabled: true }
+  { icon: "trophy", label: "Competições" },
+  { icon: "document", label: "Documentos" }
 ];
 
 const previewMetrics: Array<{
   icon: DashboardIconName;
   label: string;
+  value: string;
   tone: string;
 }> = [
-  { icon: "bird", label: "Aves ativas", tone: "green" },
-  { icon: "heart", label: "Reproduções registradas", tone: "rose" },
-  { icon: "alert", label: "Pendências", tone: "orange" },
-  { icon: "transfer", label: "Transferências", tone: "blue" }
+  { icon: "bird", label: "Aves Ativas", value: "42", tone: "green" },
+  { icon: "heart", label: "Reproduções registradas", value: "8", tone: "rose" },
+  { icon: "alert", label: "Pendências", value: "2", tone: "orange" },
+  { icon: "transfer", label: "Transferências", value: "5", tone: "blue" }
+];
+
+const previewSummaryMetrics = [
+  { icon: "bird" as const, label: "Aves no plantel", value: "68" },
+  { icon: "calendar" as const, label: "Nascimentos · 30 dias", value: "7" },
+  { icon: "heart" as const, label: "Reproduções iniciadas", value: "4" },
+  { icon: "transfer" as const, label: "Saídas · 30 dias", value: "3" }
+];
+
+const previewDistributions = [
+  {
+    title: "Distribuição por sexo",
+    rows: [
+      { label: "Fêmeas", value: "34", width: "50%" },
+      { label: "Machos", value: "30", width: "44%" },
+      { label: "Não informado", value: "4", width: "12%" }
+    ]
+  },
+  {
+    title: "Principais espécies",
+    rows: [
+      { label: "Curió", value: "22", width: "78%" },
+      { label: "Canário", value: "12", width: "43%" },
+      { label: "Trinca-ferro", value: "9", width: "32%" }
+    ]
+  }
 ];
 
 const previewActions: Array<{
   icon: DashboardIconName;
   label: string;
   tone: string;
-  disabled?: boolean;
+  description: string;
 }> = [
-  { icon: "bird", label: "Cadastrar ave", tone: "green" },
-  { icon: "heart", label: "Registrar reprodução", tone: "rose" },
-  { icon: "transfer", label: "Nova transferência", tone: "blue" },
-  { icon: "trophy", label: "Competições", tone: "purple", disabled: true }
+  { icon: "bird", label: "Cadastrar ave", description: "Adicione uma nova ave ao seu criatório", tone: "green" },
+  { icon: "heart", label: "Registrar reprodução", description: "Acompanhe seus cruzamentos", tone: "rose" },
+  { icon: "transfer", label: "Nova transferência", description: "Registre entrada ou saída de aves", tone: "blue" },
+  { icon: "trophy", label: "Registrar competição", description: "Adicione resultados de competições", tone: "purple" }
 ];
 
 function ArrowIcon() {
@@ -102,49 +128,55 @@ function DashboardPreview() {
       <article className="landing-preview" aria-label="Prévia ilustrativa do painel do Criatório Virtual">
         <aside className="landing-preview-sidebar" aria-label="Navegação ilustrativa do painel">
           <BrandLockup className="landing-preview-brand" />
-          <div className="landing-preview-farm">
-            <span>Criatório selecionado</span>
-            <strong>Seu criatório</strong>
-          </div>
           <nav aria-label="Módulos do painel">
             <ul className="landing-preview-module-list">
               {previewModules.map((module, index) => (
                 <li key={module.label}>
-                  <span className={"landing-preview-module" + (index === 0 ? " is-active" : "") + (module.disabled ? " is-disabled" : "")} aria-disabled={module.disabled || undefined}>
+                  <span className={"landing-preview-module" + (index === 0 ? " is-active" : "")}>
                     <DashboardIcon name={module.icon} />
                     <span>{module.label}</span>
-                    {module.disabled && <small>Em desenvolvimento</small>}
                   </span>
                 </li>
               ))}
             </ul>
           </nav>
-          <div className="landing-preview-sidebar-footer">
-            <span className="landing-preview-brand-symbol">
-              <img src="/assets/brand/png/criatorio-virtual-symbol.png" alt="" />
-            </span>
-            <span><strong>Criatório Virtual</strong><small>Gestão do criatório</small></span>
+          <div className="landing-preview-farm-link">
+            <DashboardIcon name="home" />
+            <span>Meu Criatório</span>
+            <span aria-hidden="true">⌄</span>
+          </div>
+          <div className="landing-preview-sidebar-inspiration">
+            <p>“Grandes criatórios começam com boas histórias.”</p>
+            <img src="/assets/brand/png/criatorio-virtual-symbol.png" alt="" />
+            <small>Criatório Virtual</small>
           </div>
         </aside>
 
         <div className="landing-preview-main">
           <div className="landing-preview-mobile-header">
-            <BrandLockup className="landing-preview-brand" />
             <MenuIcon />
+            <BrandLockup className="landing-preview-brand" />
+            <span className="landing-preview-avatar" aria-hidden="true">CV</span>
           </div>
           <div className="landing-preview-topbar">
             <span><DashboardIcon name="search" /> Buscar no sistema...</span>
-            <span className="landing-preview-avatar" aria-hidden="true">CV</span>
+            <span className="landing-preview-profile">
+              <span className="landing-preview-avatar" aria-hidden="true">CV</span>
+              <span><strong>Criador</strong><small>Seu criatório</small></span>
+              <span aria-hidden="true">⌄</span>
+            </span>
           </div>
 
           <div className="landing-preview-content">
             <header className="landing-preview-page-heading">
               <div>
-                <span className="landing-preview-kicker">VISÃO DO CRIATÓRIO</span>
                 <h2>Painel</h2>
-                <p>Indicadores e atualizações em um só lugar.</p>
+                <p>Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.</p>
               </div>
-              <span className="landing-preview-period"><DashboardIcon name="calendar" /> Últimos 30 dias</span>
+              <div className="landing-preview-page-context">
+                <p><DashboardIcon name="calendar" /> <span>Hoje</span></p>
+                <p><DashboardIcon name="leaf" /> <span>Que tal fazer hoje um grande dia para o seu criatório?</span></p>
+              </div>
             </header>
 
             <section className="landing-preview-metrics" aria-label="Indicadores do criatório">
@@ -152,7 +184,7 @@ function DashboardPreview() {
                 <article className={"landing-preview-metric tone-" + metric.tone} key={metric.label}>
                   <span className="landing-preview-metric-icon"><DashboardIcon name={metric.icon} /></span>
                   <span className="landing-preview-metric-copy">
-                    <strong aria-label="Valor exibido após entrar">—</strong>
+                    <strong>{metric.value}</strong>
                     <small>{metric.label}</small>
                   </span>
                   <span className="landing-preview-metric-arrow" aria-hidden="true">›</span>
@@ -160,54 +192,152 @@ function DashboardPreview() {
               ))}
             </section>
 
-            <div className="landing-preview-primary-grid">
-              <section className="landing-preview-card landing-preview-analytics">
-                <header>
-                  <div><span>VISÃO ANALÍTICA</span><h3>Resumo do criatório</h3></div>
-                  <span>Ver estatísticas <span aria-hidden="true">›</span></span>
-                </header>
-                <p>Plantel atual e movimentações do período.</p>
-                <div className="landing-preview-chart">
-                  <div className="landing-preview-chart-y" aria-hidden="true"><span>Plantel</span><span>Atividade</span><span>Período</span></div>
-                  <svg viewBox="0 0 360 96" preserveAspectRatio="none" aria-hidden="true">
-                    <path className="landing-preview-chart-grid" d="M0 16H360M0 48H360M0 80H360" />
-                    <path className="landing-preview-chart-registered" d="M2 72C30 67 42 73 63 56S97 63 120 45 153 48 180 36 215 49 238 28 272 34 296 21 332 35 358 9" />
-                    <path className="landing-preview-chart-births" d="M2 86C30 84 42 80 63 83S97 76 120 79 153 68 180 74 215 61 238 67 272 52 296 59 332 48 358 45" />
-                  </svg>
+            <section className="landing-preview-card landing-preview-statistics" aria-labelledby="landing-preview-summary-title">
+              <header className="landing-preview-section-heading">
+                <div>
+                  <span>VISÃO ANALÍTICA</span>
+                  <h3 id="landing-preview-summary-title">Resumo do criatório</h3>
+                  <p>Plantel atual e movimentações dos últimos 30 dias.</p>
                 </div>
+                <span className="landing-preview-link">Ver estatísticas <span aria-hidden="true">›</span></span>
+              </header>
+              <div className="landing-preview-summary-metrics">
+                {previewSummaryMetrics.map((metric) => (
+                  <div className="landing-preview-summary-metric" key={metric.label}>
+                    <span><DashboardIcon name={metric.icon} /></span>
+                    <strong>{metric.value}</strong>
+                    <small>{metric.label}</small>
+                    <span aria-hidden="true" className="landing-preview-summary-arrow">›</span>
+                  </div>
+                ))}
+              </div>
+              <div className="landing-preview-distributions">
+                {previewDistributions.map((distribution) => (
+                  <section className="landing-preview-distribution" key={distribution.title}>
+                    <h4>{distribution.title}</h4>
+                    <ul>
+                      {distribution.rows.map((row) => (
+                        <li key={row.label}>
+                          <span className="landing-preview-distribution-row"><span>{row.label}</span><strong>{row.value}</strong></span>
+                          <span className="landing-preview-distribution-track" aria-hidden="true"><span style={{ width: row.width }} /></span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+              <div className="landing-preview-evolution">
+                <span className="landing-preview-evolution-kicker">EVOLUÇÃO</span>
+                <h4>Cadastros e nascimentos</h4>
+                <p>Contagens por dia no período selecionado, em UTC.</p>
                 <div className="landing-preview-chart-legend"><span>Aves cadastradas</span><span>Nascimentos</span></div>
-              </section>
+                <svg className="landing-preview-chart" viewBox="0 0 640 180" preserveAspectRatio="none" aria-hidden="true">
+                  <path className="landing-preview-chart-grid" d="M20 18H620M20 86H620M20 154H620" />
+                  <path className="landing-preview-chart-registered" d="M20 154H425L454 136 475 154 496 18 515 154 538 136 558 18 578 154H620" />
+                  <path className="landing-preview-chart-births" d="M20 154H620" />
+                </svg>
+              </div>
+            </section>
 
-              <section className="landing-preview-card landing-preview-actions">
-                <header><div><span>ACESSO RÁPIDO</span><h3>Atalhos rápidos</h3></div></header>
-                <p>Acesse as principais funções.</p>
-                <ul>
-                  {previewActions.map((action) => (
-                    <li className={"tone-" + action.tone + (action.disabled ? " is-disabled" : "")} key={action.label} aria-disabled={action.disabled || undefined}>
-                      <span className="landing-preview-action-icon"><DashboardIcon name={action.icon} /></span>
-                      <strong>{action.label}</strong>
-                      {action.disabled && <small>Em desenvolvimento</small>}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            </div>
+            <section className="landing-preview-quick-actions" aria-labelledby="landing-preview-actions-title">
+              <header className="landing-preview-section-heading">
+                <div>
+                  <span>ACESSO RÁPIDO</span>
+                  <h3 id="landing-preview-actions-title">Atalhos rápidos</h3>
+                  <p>Acesse as principais funcionalidades do sistema.</p>
+                </div>
+                <span className="landing-preview-customize"><DashboardIcon name="settings" /> Personalizar atalhos</span>
+              </header>
+              <div className="landing-preview-action-grid">
+                {previewActions.map((action) => (
+                  <div className={"landing-preview-action tone-" + action.tone} key={action.label}>
+                    <span className="landing-preview-action-icon"><DashboardIcon name={action.icon} /></span>
+                    <span className="landing-preview-action-copy"><strong>{action.label}</strong><small>{action.description}</small></span>
+                    <span className="landing-preview-action-arrow" aria-hidden="true">›</span>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             <div className="landing-preview-secondary-grid">
-              <section className="landing-preview-card">
-                <header><div><span>ATENÇÃO</span><h3>Pendências</h3></div><span className="landing-preview-count">—</span></header>
-                <div className="landing-preview-empty"><span aria-hidden="true">✓</span><p>Veja aqui os itens que precisam da sua atenção.</p></div>
+              <section className="landing-preview-card landing-preview-pending">
+                <header className="landing-preview-section-heading">
+                  <div><span>ATENÇÃO</span><h3>Pendências <span className="landing-preview-count">2</span></h3><p>Itens que precisam da sua atenção.</p></div>
+                  <span className="landing-preview-link">Ver todas <span aria-hidden="true">›</span></span>
+                </header>
+                <div className="landing-preview-pending-item"><span>!</span><strong>Aves com identificação pendente</strong><small>2 registros</small></div>
               </section>
-              <section className="landing-preview-card">
-                <header><div><span>ACOMPANHE DE PERTO</span><h3>Atividades recentes</h3></div></header>
-                <div className="landing-preview-empty"><span aria-hidden="true">•</span><p>Os registros do seu criatório aparecem nesta área.</p></div>
+              <section className="landing-preview-card landing-preview-activities">
+                <header className="landing-preview-section-heading">
+                  <div><span>ACOMPANHE DE PERTO</span><h3>Atividades recentes</h3><p>Últimas ações realizadas no seu criatório.</p></div>
+                  <span className="landing-preview-link">Ver mais <span aria-hidden="true">›</span></span>
+                </header>
+                <div className="landing-preview-activity-item"><span><DashboardIcon name="heart" /></span><strong>Reprodução cadastrada</strong><small>Hoje</small></div>
+                <div className="landing-preview-activity-item"><span><DashboardIcon name="bird" /></span><strong>Ave cadastrada</strong><small>Ontem</small></div>
               </section>
             </div>
+
+            <div className="landing-preview-inspiration-banner" aria-hidden="true" />
           </div>
         </div>
       </article>
-      <p className="landing-preview-caption"><span aria-hidden="true">i</span> Prévia ilustrativa. Seus indicadores reais aparecem após entrar.</p>
+      <p className="landing-preview-caption"><span aria-hidden="true">i</span> Prévia ilustrativa com dados de demonstração.</p>
     </div>
+  );
+}
+
+function MobileAppPreview() {
+  return (
+    <section className="mobile-app-section" aria-labelledby="titulo-app-mobile">
+      <div className="mobile-app-copy">
+        <p className="eyebrow">CRIATÓRIO NO SEU BOLSO</p>
+        <h2 id="titulo-app-mobile">Seu criatório, onde você estiver.</h2>
+        <p>Acesse pelo celular e adicione o Criatório Virtual à tela inicial para abrir como um app e chegar mais rápido ao painel.</p>
+        <div className="mobile-app-install-guide">
+          <span><DashboardIcon name="device" /></span>
+          <div><strong>Instale em poucos passos</strong><p>No menu do navegador, escolha “Adicionar à tela inicial”. No iPhone, toque em Compartilhar e depois nessa opção.</p></div>
+        </div>
+        <Link className="primary-action" href="/cadastro">Criar minha conta <ArrowIcon /></Link>
+      </div>
+      <article className="mobile-app-device" aria-label="Prévia do painel do Criatório Virtual no celular">
+        <div className="mobile-app-screen">
+          <span className="mobile-app-island" aria-hidden="true" />
+          <header className="mobile-app-header">
+            <MenuIcon />
+            <BrandLockup />
+            <span className="mobile-app-avatar" aria-hidden="true">CV</span>
+          </header>
+          <div className="mobile-app-content">
+            <header className="mobile-app-page-heading">
+              <h3>Painel</h3>
+              <p>Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.</p>
+            </header>
+            <div className="mobile-app-context">
+              <p><DashboardIcon name="calendar" /> Hoje</p>
+              <p><DashboardIcon name="leaf" /> Que tal fazer hoje um grande dia para o seu criatório?</p>
+            </div>
+            <div className="mobile-app-metrics" aria-label="Indicadores do criatório no celular">
+              {previewMetrics.map((metric) => (
+                <div className={"mobile-app-metric tone-" + metric.tone} key={metric.label}>
+                  <span><DashboardIcon name={metric.icon} /></span>
+                  <strong>{metric.value}</strong>
+                  <small>{metric.label}</small>
+                  <span aria-hidden="true" className="mobile-app-metric-arrow">›</span>
+                </div>
+              ))}
+            </div>
+            <section className="mobile-app-summary">
+              <span>VISÃO ANALÍTICA</span>
+              <h4>Resumo do criatório</h4>
+              <p>Plantel atual e movimentações dos últimos 30 dias.</p>
+              <div className="mobile-app-summary-row"><DashboardIcon name="bird" /><strong>68</strong><small>Aves no plantel</small></div>
+              <div className="mobile-app-summary-row"><DashboardIcon name="calendar" /><strong>7</strong><small>Nascimentos · 30 dias</small></div>
+            </section>
+          </div>
+          <div className="mobile-app-scroll-cue"><span>Role para ver mais do painel</span><span aria-hidden="true">⌄</span></div>
+        </div>
+      </article>
+    </section>
   );
 }
 
@@ -221,28 +351,10 @@ export default function Home() {
           <a className="landing-brand-link" href="#inicio" aria-label="Criatório Virtual, voltar ao início">
             <BrandLockup />
           </a>
-          <nav className="landing-nav" aria-label="Navegação principal">
-            <ul>
-              {navigationItems.map((item) => (
-                <li key={item.href}><a href={item.href}>{item.label}</a></li>
-              ))}
-            </ul>
-          </nav>
           <div className="landing-header-actions">
             <Link className="landing-login-link" href="/login">Entrar</Link>
             <Link className="landing-header-cta" href="/cadastro">Criar conta <ArrowIcon /></Link>
           </div>
-          <details className="landing-mobile-menu">
-            <summary aria-label="Abrir menu de navegação"><MenuIcon /></summary>
-            <nav aria-label="Navegação móvel">
-              <ul>
-                {navigationItems.map((item) => (
-                  <li key={item.href}><a href={item.href}>{item.label}</a></li>
-                ))}
-                <li><Link href="/login">Entrar</Link></li>
-              </ul>
-            </nav>
-          </details>
         </header>
 
         <div id="conteudo-principal" className="landing-main" tabIndex={-1}>
@@ -256,6 +368,10 @@ export default function Home() {
                 <Link className="secondary-action landing-secondary-action" href="/login">Já tenho conta</Link>
               </div>
               <p className="landing-plan-note"><DashboardIcon name="shield" /> Um plano com as mesmas funcionalidades nas opções mensal e anual.</p>
+              <a className="landing-scroll-cue" href="#recursos">
+                <span className="landing-scroll-cue-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v15m-6-6 6 6 6-6" /></svg></span>
+                <span><strong>Role a tela para descobrir</strong><small>Veja o que mais você pode fazer pelo seu criatório.</small></span>
+              </a>
             </div>
             <DashboardPreview />
           </section>
@@ -277,6 +393,8 @@ export default function Home() {
               ))}
             </div>
           </section>
+
+          <MobileAppPreview />
 
           <section id="planos" className="landing-section plans-section" aria-labelledby="titulo-planos">
             <div className="landing-section-heading">
