@@ -27,6 +27,7 @@ function SubscriptionScreen() {
   const [view, setView] = useState<SubscriptionView>({ kind: "loading" });
   const [paymentPage, setPaymentPage] = useState(1);
   const [pendingRegularization, setPendingRegularization] = useState<PendingRegularizationReturn | null>(() => readPendingRegularizationReturn());
+  const [isPendingFarmSelected, setIsPendingFarmSelected] = useState(false);
   const [regularizationBusy, setRegularizationBusy] = useState(false);
   const [regularizationError, setRegularizationError] = useState<string>();
   const [returnPollAttempt, setReturnPollAttempt] = useState(0);
@@ -76,7 +77,9 @@ function SubscriptionScreen() {
       if (savedReturn && savedReturn.breedingFarmId !== farm.breedingFarmId) {
         clearPendingRegularizationReturn();
         setPendingRegularization(null);
+        setIsPendingFarmSelected(false);
       } else if (savedReturn) {
+        setIsPendingFarmSelected(true);
         setPendingRegularization(savedReturn);
         const returnedPayment = payments.items.find((payment) => payment.paymentId === savedReturn.paymentId);
         if (returnedPayment && subscription && paymentAndSubscriptionAllowAccess(returnedPayment.status, subscription.status)) {
@@ -126,7 +129,7 @@ function SubscriptionScreen() {
   }, [loadSubscription, status]);
 
   useEffect(() => {
-    if (!pendingRegularization || status !== "authenticated") return;
+    if (!pendingRegularization || !isPendingFarmSelected || status !== "authenticated") return;
     let cancelled = false;
     let timer: number | undefined;
     let attempts = 0;
@@ -178,7 +181,7 @@ function SubscriptionScreen() {
       if (timer !== undefined) window.clearTimeout(timer);
       setIsPollingReturn(false);
     };
-  }, [pendingRegularization, returnPollAttempt, status]);
+  }, [isPendingFarmSelected, pendingRegularization, returnPollAttempt, status]);
 
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
     return <AppLoadingState activeNav="subscription" email={session?.email} label="Carregando assinatura" message="Um instante enquanto consultamos sua situação financeira." />;
@@ -222,6 +225,7 @@ function SubscriptionScreen() {
       }
       const pending = { breedingFarmId, paymentId: payment.paymentId };
       savePendingRegularizationReturn(pending);
+      setIsPendingFarmSelected(true);
       setPendingRegularization(pending);
       setView({ kind: "awaiting-confirmation", farmName });
       redirectToHostedInvoice(response.paymentUrl);
