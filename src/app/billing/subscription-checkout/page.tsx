@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
+import { SubscriptionCheckoutFlow } from "../../components/subscription-checkout-flow";
 
-export default async function Page({ searchParams }: Readonly<{ searchParams: Promise<{ result?: string }> }>) {
-  const { result } = await searchParams;
-  const allowedResult = ["success", "cancelled", "expired"].includes(result ?? "") ? result : "success";
-  redirect(`/assinatura?result=${allowedResult}`);
+export default function SubscriptionCheckoutReturnPage() {
+  return <SubscriptionCheckoutFlow isReturn />;
 }

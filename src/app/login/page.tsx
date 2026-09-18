@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthProvider, emailConfirmationRequiredCode, useAuth } from "../../lib/auth/auth-context";
 import { ApiClient, ApiError, createApiClient, getApiUrl } from "../../lib/http/api-client";
+import { BillingSubscription, hasSubscriptionAccess } from "../../lib/billing/subscription-access";
 import { AppLoadingState } from "../components/app-loading-state";
 import { BrandLockup, BrandPanel } from "../components/brand";
 import { GoogleAuthenticationCallback, googleAuthenticationMessageType, googleAuthenticationWindowName } from "../components/google-authentication-callback";
@@ -140,9 +141,34 @@ function LoginDestination() {
           router.replace("/onboarding/criatorio/selecionar");
           return;
         }
+        let destination = returnUrl?.startsWith("/billing/subscription-checkout") ? returnUrl : "/assinatura";
+        try {
+          const subscription = await client.current!.request<BillingSubscription>("api/billing/subscription");
+          if (hasSubscriptionAccess(subscription.status)) destination = returnUrl ?? "/dashboard";
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 401) {
+            const result = await refresh();
+            if (result.ok) setIsRetrying((current) => current + 1);
+            else {
+              const nextMessage = result.error ?? "Sua sessão expirou. Entre novamente para continuar.";
+              setMessage(nextMessage);
+              setDestinationError(nextMessage);
+            }
+            return;
+          }
+          if (!(error instanceof ApiError && error.status === 404)) {
+            if (cancelled) return;
+            const nextMessage = error instanceof ApiError && error.status >= 500
+              ? "O serviço está indisponível no momento. Tente novamente em instantes."
+              : "Não foi possível verificar sua assinatura. Tente novamente.";
+            setMessage(nextMessage);
+            setDestinationError(nextMessage);
+            return;
+          }
+        }
         if (cancelled) return;
         hasRedirected.current = true;
-        router.replace(returnUrl ?? "/dashboard");
+        router.replace(destination);
       } catch (error) {
         if (cancelled) return;
         if (error instanceof ApiError && error.status === 401) {

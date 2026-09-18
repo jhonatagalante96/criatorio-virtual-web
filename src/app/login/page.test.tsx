@@ -53,6 +53,13 @@ function breedingFarmsResponse(farms: string[], selectedBreedingFarmId: string |
   }), { headers: { "content-type": "application/json" }, status: 200 });
 }
 
+function billingTrialResponse(): Response {
+  return new Response(JSON.stringify({ billingCycle: "Monthly", status: "Trial" }), {
+    headers: { "content-type": "application/json" },
+    status: 200
+  });
+}
+
 function setBrowserSupport(get: CredentialsContainer["get"]) {
   function PublicKeyCredentialMock() {}
   Object.assign(PublicKeyCredentialMock, {
@@ -85,7 +92,8 @@ describe("LoginPage", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"))
+      .mockResolvedValueOnce(billingTrialResponse());
     const popup = { close: vi.fn(), closed: false } as unknown as Window;
     const openMock = vi.spyOn(window, "open").mockReturnValue(popup);
     vi.stubGlobal("fetch", fetchMock);
@@ -112,7 +120,8 @@ describe("LoginPage", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"))
+      .mockResolvedValueOnce(billingTrialResponse());
     const popupLocation = { href: "https://accounts.google.com/o/oauth2/auth" };
     const popup = { close: vi.fn(), closed: false, location: popupLocation } as unknown as Window;
     vi.spyOn(window, "open").mockReturnValue(popup);
@@ -126,14 +135,15 @@ describe("LoginPage", () => {
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
     expect(screen.getByRole("status").textContent).toContain("Abrindo seu espaço");
     expect(popup.close).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it("refreshes the session when the Google callback popup notifies the login page", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"))
+      .mockResolvedValueOnce(billingTrialResponse());
     const popup = { close: vi.fn(), closed: false } as unknown as Window;
     vi.spyOn(window, "open").mockReturnValue(popup);
     vi.stubGlobal("fetch", fetchMock);
@@ -154,7 +164,8 @@ describe("LoginPage", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(unauthenticatedResponse())
       .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"))
+      .mockResolvedValueOnce(billingTrialResponse());
     let popupClosed = false;
     const popup = { close: vi.fn(), get closed() { return popupClosed; } } as unknown as Window;
     vi.spyOn(window, "open").mockReturnValue(popup);
@@ -271,7 +282,8 @@ describe("LoginPage", () => {
       .mockResolvedValueOnce(new Response(null, { headers: { "X-XSRF-TOKEN": "before-login" }, status: 204 }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"))
+      .mockResolvedValueOnce(billingTrialResponse());
     vi.stubGlobal("fetch", fetchMock);
     render(<LoginPage />);
 
@@ -282,7 +294,7 @@ describe("LoginPage", () => {
 
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
     expect(screen.getByRole("status").textContent).toContain("Abrindo seu espaço");
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
 
     const [, loginRequest] = fetchMock.mock.calls[2];
     expect(new Headers(loginRequest.headers).get("x-xsrf-token")).toBe("before-login");
@@ -322,7 +334,8 @@ describe("LoginPage", () => {
       }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"))
+      .mockResolvedValueOnce(billingTrialResponse());
     vi.stubGlobal("fetch", fetchMock);
     render(<LoginPage />);
 
@@ -338,11 +351,42 @@ describe("LoginPage", () => {
     window.history.replaceState({}, "", "/login?returnUrl=https%3A%2F%2Fevil.example%2Fsteal");
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(authenticatedSession())
-      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"));
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"))
+      .mockResolvedValueOnce(billingTrialResponse());
     vi.stubGlobal("fetch", fetchMock);
     render(<LoginPage />);
 
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  it("routes authenticated users without a subscription to the subscription flow", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "No subscription." }), {
+        headers: { "content-type": "application/problem+json" },
+        status: 404
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/assinatura"));
+  });
+
+  it("does not honor a returnUrl to functional pages until subscription access is confirmed", async () => {
+    window.history.replaceState({}, "", "/login?returnUrl=%2Fplantel%2Faves");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(authenticatedSession())
+      .mockResolvedValueOnce(breedingFarmsResponse(["farm-id"], "farm-id"))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ billingCycle: "Monthly", status: "PendingSubscription" }), {
+        headers: { "content-type": "application/json" },
+        status: 200
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/assinatura"));
+    expect(routerReplace).not.toHaveBeenCalledWith("/plantel/aves");
   });
 
   it("opens the breeding-farm selector after login when there is more than one farm", async () => {
