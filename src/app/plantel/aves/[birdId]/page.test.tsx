@@ -255,6 +255,7 @@ describe("BirdDetailPage", () => {
     const transferLinks = screen.getAllByRole("link", { name: /Iniciar transferência/ });
     expect(transferLinks.length).toBeGreaterThan(0);
     expect(transferLinks.every((link) => link.getAttribute("href") === "/transferencias/nova?birdId=bird-a")).toBe(true);
+    expect(screen.getByRole("link", { name: "Ver competições" }).getAttribute("href")).toBe("/plantel/aves/bird-a/competicoes");
     expect(screen.getByText("Árvore consultada")).toBeTruthy();
 
     const detailRequest = fetchMock.mock.calls[2];

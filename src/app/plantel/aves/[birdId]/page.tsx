@@ -931,6 +931,7 @@ function BirdQuickActions({ birdId }: Readonly<{ birdId: string }>) {
     { icon: "heart" as const, label: "Registrar reprodução" },
     { href: `/transferencias/nova?birdId=${encodeURIComponent(birdId)}`, icon: "transfer" as const, label: "Iniciar transferência" },
     { href: `/competicoes/nova?birdId=${encodeURIComponent(birdId)}`, icon: "trophy" as const, label: "Registrar competição" },
+    { href: `/plantel/aves/${encodeURIComponent(birdId)}/competicoes`, icon: "trophy" as const, label: "Ver competições" },
     { icon: "document" as const, label: "Baixar ficha" }
   ];
 
