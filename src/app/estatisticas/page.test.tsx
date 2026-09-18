@@ -13,6 +13,7 @@ afterEach(() => {
   window.sessionStorage.clear();
   routerReplace.mockReset();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 function jsonResponse(value: unknown, status = 200): Response {
@@ -106,6 +107,7 @@ describe("StatisticsPage", () => {
   });
 
   it("applies a preset and custom date range, rejecting invalid ranges before the API call", async () => {
+    vi.setSystemTime(new Date("2026-09-18T12:00:00.000Z"));
     const fetchMock = createFetchMock();
     vi.stubGlobal("fetch", fetchMock);
     render(<StatisticsPage />);
@@ -114,8 +116,9 @@ describe("StatisticsPage", () => {
     fireEvent.click(screen.getByLabelText("90 dias"));
     fireEvent.click(screen.getByRole("button", { name: "Atualizar período" }));
     await waitFor(() => expect(fetchMock.mock.calls.filter(([input]) => String(input).includes("current/statistics"))).toHaveLength(2));
-    expect(String(fetchMock.mock.calls.filter(([input]) => String(input).includes("current/statistics"))[1][0]))
-      .toContain("from=2026-06-20");
+    const presetRequest = new URL(String(fetchMock.mock.calls.filter(([input]) => String(input).includes("current/statistics"))[1][0]));
+    expect(presetRequest.searchParams.get("from")).toBe("2026-06-21");
+    expect(presetRequest.searchParams.get("to")).toBe("2026-09-18");
 
     fireEvent.click(screen.getByLabelText("Personalizado"));
     fireEvent.change(screen.getByLabelText("Data inicial"), { target: { value: "2026-09-10" } });
