@@ -3574,3 +3574,61 @@ h1, h2 { line-height: 1.08; }
   .statistics-metric strong { font-size: 1.2rem; }
   .statistics-transfer-breakdown dl { display: grid; grid-template-columns: 1fr; }
 }
+
+.competition-wizard-page { max-width: 74rem; }
+.competition-wizard-progress { grid-template-columns: repeat(4, minmax(4.2rem, 1fr)); }
+.competition-wizard-card { display: grid; gap: 0; }
+.competition-wizard-card > section { min-width: 0; }
+.competition-bird-grid { display: grid; gap: .7rem; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; margin: 0; max-height: 26rem; overflow: auto; padding: .15rem; }
+.competition-bird-option { align-items: center; background: #fbfdfc; border: 1px solid #dce8e5; border-radius: .7rem; color: inherit; cursor: pointer; display: grid; gap: .7rem; grid-template-columns: 3rem minmax(0, 1fr) auto; min-height: 5.2rem; padding: .7rem; text-align: left; width: 100%; }
+.competition-bird-option:hover { border-color: #89bca4; }
+.competition-bird-option.is-selected { background: #f0faf4; border-color: #2d855b; box-shadow: 0 0 0 2px rgb(45 133 91 / 10%); }
+.competition-bird-option:focus-visible { outline: 3px solid rgb(23 105 160 / 25%); outline-offset: 2px; }
+.competition-bird-option > img { background: #edf4ef; border-radius: 50%; height: 3rem; object-fit: cover; width: 3rem; }
+.competition-bird-copy { display: grid; gap: .18rem; min-width: 0; }
+.competition-bird-copy strong { color: #173b53; font-size: .78rem; overflow-wrap: anywhere; }
+.competition-bird-copy small { color: #70818e; font-size: .62rem; line-height: 1.35; overflow-wrap: anywhere; }
+.competition-bird-check { color: #2d855b; font-size: 1rem; font-weight: 900; }
+.competition-search-field { display: grid; gap: .35rem; margin: 0 0 .9rem; max-width: 30rem; }
+.competition-search-field > span, .competition-field > span { color: #365f72; font-size: .68rem; font-weight: 800; }
+.competition-search-field input, .competition-field input, .competition-field textarea { background: #fff; border: 1px solid #cfdde2; border-radius: .45rem; color: #173b53; font: inherit; font-size: .75rem; min-height: 2.65rem; padding: .58rem .7rem; width: 100%; }
+.competition-field textarea { min-height: 8rem; resize: vertical; }
+.competition-search-field input:focus, .competition-field input:focus, .competition-field textarea:focus { border-color: #4c9d78; box-shadow: 0 0 0 3px rgb(76 157 120 / 13%); outline: 0; }
+.competition-field [aria-invalid="true"] { border-color: #b84343; }
+.competition-empty-search, .competition-selected-context { background: #f6faf9; border-radius: .5rem; color: #586d76; font-size: .72rem; margin: .3rem 0 .8rem; padding: .75rem; }
+.competition-pagination { align-items: center; display: flex; gap: .8rem; justify-content: center; margin: .85rem 0 0; }
+.competition-pagination > span { color: #718196; font-size: .65rem; }
+.competition-pagination button { background: #fff; border: 1px solid #cfdde2; border-radius: .4rem; color: #285c4a; cursor: pointer; font: inherit; font-size: .65rem; font-weight: 700; min-height: 2rem; padding: .35rem .7rem; }
+.competition-pagination button:disabled { cursor: not-allowed; opacity: .5; }
+.competition-fields-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.competition-field { display: grid; gap: .38rem; min-width: 0; }
+.competition-field-wide { grid-column: 1 / -1; }
+.competition-field b { color: #ba4b4b; }
+.competition-field em { color: #78919a; font-size: .62rem; font-style: normal; font-weight: 500; margin-left: .2rem; }
+.competition-field-error { color: #a53a32; font-size: .62rem; line-height: 1.35; }
+.competition-character-count { color: #78919a; font-size: .62rem; text-align: right; }
+.competition-tip-box, .competition-confirmation-box { align-items: flex-start; background: #f6fbf7; border: 1px solid #d8ebdd; border-radius: .55rem; color: #2d855b; display: flex; gap: .55rem; margin-top: 1rem; padding: .75rem; }
+.competition-tip-box > span, .competition-confirmation-box > span { align-items: center; background: #dff3e5; border-radius: 50%; display: inline-flex; flex: 0 0 auto; font-size: .65rem; font-weight: 900; height: 1.1rem; justify-content: center; width: 1.1rem; }
+.competition-tip-box p, .competition-confirmation-box p { color: #607873; font-size: .66rem; line-height: 1.45; margin: 0; }
+.competition-confirmation-box strong { color: #285c4a; font-size: .72rem; }
+.competition-review { margin-top: .2rem; }
+.competition-review dd { display: grid; gap: .28rem; }
+.competition-review dd > small { color: #78919a; font-size: .63rem; line-height: 1.4; overflow-wrap: anywhere; }
+.competition-review dd > button { align-self: flex-start; background: transparent; border: 0; color: #26765e; cursor: pointer; font: inherit; font-size: .62rem; font-weight: 800; padding: .15rem 0; text-decoration: underline; }
+.competition-success > .auth-primary-action, .competition-success > .auth-secondary-action { margin-top: .55rem; }
+
+@media (max-width: 46rem) {
+  .competition-wizard-page .document-wizard-header { align-items: flex-start; flex-direction: column; gap: .8rem; }
+  .competition-fields-grid, .competition-bird-grid { grid-template-columns: 1fr; }
+  .competition-field-wide { grid-column: auto; }
+  .competition-wizard-card { min-height: 0; }
+  .competition-wizard-card > section { padding: 1rem; }
+  .competition-wizard-card .document-wizard-actions { flex-wrap: wrap; }
+  .competition-wizard-card .document-wizard-actions > span { margin: 0 auto; order: 3; width: 100%; text-align: center; }
+}
+
+@media (max-width: 30rem) {
+  .competition-bird-option { gap: .5rem; grid-template-columns: 2.5rem minmax(0, 1fr) auto; padding: .55rem; }
+  .competition-bird-option > img { height: 2.5rem; width: 2.5rem; }
+  .competition-pagination { gap: .45rem; }
+}

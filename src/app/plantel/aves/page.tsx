@@ -474,10 +474,10 @@ function BirdActionMenu({
           <DashboardIcon name="transfer" />
           <span>Iniciar transferência</span>
         </Link>
-        <button className="bird-row-action" disabled title="Módulo em desenvolvimento" type="button">
+        <Link aria-label={`Registrar competição para ${bird.name}`} className="bird-row-action" href={`/competicoes/nova?birdId=${encodeURIComponent(bird.birdId)}`}>
           <DashboardIcon name="trophy" />
           <span>Registrar competição</span>
-        </button>
+        </Link>
         <div aria-hidden="true" className="bird-row-action-divider" />
         {bird.status === "Active" && (
           <BirdStatusAction

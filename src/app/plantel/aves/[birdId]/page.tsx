@@ -880,7 +880,7 @@ function BirdDetailActionMenu({
           />
         )}
         <Link href={`/transferencias/nova?birdId=${encodeURIComponent(bird.birdId)}`}>Iniciar transferência</Link>
-        <button disabled title="Módulo em desenvolvimento" type="button">Registrar competição</button>
+        <Link href={`/competicoes/nova?birdId=${encodeURIComponent(bird.birdId)}`}>Registrar competição</Link>
         <button disabled title="Módulo em desenvolvimento" type="button">Baixar ficha</button>
       </div>
     </details>
@@ -930,7 +930,7 @@ function BirdQuickActions({ birdId }: Readonly<{ birdId: string }>) {
   const actions = [
     { icon: "heart" as const, label: "Registrar reprodução" },
     { href: `/transferencias/nova?birdId=${encodeURIComponent(birdId)}`, icon: "transfer" as const, label: "Iniciar transferência" },
-    { icon: "trophy" as const, label: "Registrar competição" },
+    { href: `/competicoes/nova?birdId=${encodeURIComponent(birdId)}`, icon: "trophy" as const, label: "Registrar competição" },
     { icon: "document" as const, label: "Baixar ficha" }
   ];
 
