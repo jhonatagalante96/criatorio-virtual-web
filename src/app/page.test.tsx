@@ -53,16 +53,30 @@ describe("Home", () => {
     expect(screen.getByRole("article", { name: "Prévia ilustrativa do painel do Criatório Virtual" })).toBeTruthy();
     expect(screen.getAllByRole("heading", { name: "Painel" }).length).toBeGreaterThan(1);
     expect(screen.getAllByRole("heading", { name: "Resumo do criatório" }).length).toBeGreaterThan(1);
-    expect(screen.getByRole("heading", { name: "Atividades recentes" })).toBeTruthy();
+    expect(screen.getAllByRole("heading", { name: "Atividades recentes" })).toHaveLength(2);
     expect(document.querySelector(".landing-preview-sidebar-inspiration img")?.getAttribute("src")).toBe("/assets/brand/png/criatorio-virtual-symbol.png");
-    expect(screen.getByText(/Prévia ilustrativa com dados de demonstração\./)).toBeTruthy();
+    expect(screen.getByText(/Prévia animada com dados de demonstração\./)).toBeTruthy();
     expect(screen.getAllByText("Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.").length).toBeGreaterThan(1);
     expect(screen.getByText("Distribuição por sexo")).toBeTruthy();
     expect(screen.getByText("Principais espécies")).toBeTruthy();
-    expect(screen.getByText("Registrar competição")).toBeTruthy();
+    expect(screen.getAllByText("Registrar competição")).toHaveLength(2);
     expect(screen.queryByText("Em desenvolvimento")).toBeNull();
     expect(screen.getByRole("article", { name: "Prévia do painel do Criatório Virtual no celular" })).toBeTruthy();
     expect(screen.getByText(/Adicionar à tela inicial/)).toBeTruthy();
+    expect(screen.getAllByText("Atalhos rápidos")).toHaveLength(2);
+    expect(screen.getAllByText("Aves com identificação pendente")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Pausar a prévia do painel desktop" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Pausar a prévia do painel no celular" })).toBeTruthy();
+  });
+
+  it("lets visitors pause and resume each animated preview", () => {
+    render(<Home />);
+
+    const pauseButton = screen.getByRole("button", { name: "Pausar a prévia do painel desktop" });
+    fireEvent.click(pauseButton);
+
+    expect(screen.getByRole("button", { name: "Retomar a prévia do painel desktop" })).toBeTruthy();
+    expect(document.querySelector(".animated-feature-preview")?.classList.contains("is-paused")).toBe(true);
   });
 
   it("lists the features included in the single subscription and approved prices", () => {

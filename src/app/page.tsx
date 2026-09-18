@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import AnimatedFeaturePreview from "./components/animated-feature-preview";
 import { BrandLockup } from "./components/brand";
 import { DashboardIcon } from "./components/dashboard-icons";
 import type { DashboardIconName } from "./components/dashboard-icons";
@@ -126,6 +127,7 @@ function MenuIcon() {
 function DashboardPreview() {
   return (
     <div className="landing-preview-wrap">
+      <AnimatedFeaturePreview label="a prévia do painel desktop">
       <article className="landing-preview" aria-label="Prévia ilustrativa do painel do Criatório Virtual">
         <aside className="landing-preview-sidebar" aria-label="Navegação ilustrativa do painel">
           <BrandLockup className="landing-preview-brand" />
@@ -169,6 +171,7 @@ function DashboardPreview() {
           </div>
 
           <div className="landing-preview-content">
+            <div className="landing-preview-scroll-track">
             <header className="landing-preview-page-heading">
               <div>
                 <h2>Painel</h2>
@@ -279,10 +282,12 @@ function DashboardPreview() {
             </div>
 
             <div className="landing-preview-inspiration-banner" aria-hidden="true" />
+            </div>
           </div>
         </div>
       </article>
-      <p className="landing-preview-caption"><span aria-hidden="true">i</span> Prévia ilustrativa com dados de demonstração.</p>
+      </AnimatedFeaturePreview>
+      <p className="landing-preview-caption"><span aria-hidden="true">i</span> Prévia animada com dados de demonstração.</p>
     </div>
   );
 }
@@ -300,6 +305,7 @@ function MobileAppPreview() {
         </div>
         <Link className="primary-action" href="/cadastro">Criar minha conta <ArrowIcon /></Link>
       </div>
+      <AnimatedFeaturePreview label="a prévia do painel no celular">
       <article className="mobile-app-device" aria-label="Prévia do painel do Criatório Virtual no celular">
         <div className="mobile-app-screen">
           <span className="mobile-app-island" aria-hidden="true" />
@@ -309,6 +315,7 @@ function MobileAppPreview() {
             <span className="mobile-app-avatar" aria-hidden="true">CV</span>
           </header>
           <div className="mobile-app-content">
+            <div className="mobile-app-scroll-track">
             <header className="mobile-app-page-heading">
               <h3>Painel</h3>
               <p>Visão geral do seu criatório. Acompanhe suas aves, reproduções, transferências e muito mais.</p>
@@ -334,10 +341,31 @@ function MobileAppPreview() {
               <div className="mobile-app-summary-row"><DashboardIcon name="bird" /><strong>68</strong><small>Aves no plantel</small></div>
               <div className="mobile-app-summary-row"><DashboardIcon name="calendar" /><strong>7</strong><small>Nascimentos · 30 dias</small></div>
             </section>
+            <section className="mobile-app-shortcuts" aria-label="Atalhos rápidos">
+              <h4>Atalhos rápidos</h4>
+              <div className="mobile-app-shortcut-grid">
+                {previewActions.map((action) => (
+                  <div className={`mobile-app-shortcut tone-${action.tone}`} key={action.label}>
+                    <span><DashboardIcon name={action.icon} /></span><strong>{action.label}</strong>
+                  </div>
+                ))}
+              </div>
+            </section>
+            <section className="mobile-app-pending">
+              <span>ATENÇÃO</span><h4>Pendências <strong>2</strong></h4>
+              <p>Aves com identificação pendente</p>
+            </section>
+            <section className="mobile-app-activity">
+              <span>ACOMPANHE DE PERTO</span><h4>Atividades recentes</h4>
+              <p><DashboardIcon name="heart" /> Reprodução cadastrada <small>Hoje</small></p>
+              <p><DashboardIcon name="bird" /> Ave cadastrada <small>Ontem</small></p>
+            </section>
+            </div>
           </div>
-          <div className="mobile-app-scroll-cue"><span>Role para ver mais do painel</span><span aria-hidden="true">⌄</span></div>
+          <div className="mobile-app-scroll-cue"><span>Painel, indicadores, atalhos e atividades</span><span aria-hidden="true">⌄</span></div>
         </div>
       </article>
+      </AnimatedFeaturePreview>
     </section>
   );
 }
