@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import Link from "next/link";
 import { getLastKnownShellIdentity, isKnownFarmName, rememberShellIdentity } from "../../lib/auth/shell-identity";
 import { useAccessContext } from "../../lib/auth/access-provider";
+import { resolveOnboardingRoute } from "../../lib/auth/access-context";
 import { AppLoadingContent } from "./app-loading-state";
 import { BrandLockup, BrandPanel } from "./brand";
 import { DashboardIcon } from "./dashboard-icons";
@@ -296,11 +297,11 @@ export function AuthenticatedShell({ activeNav, children, email = "", farmName =
 
       // 1. Precedência: Sem criatório ou onboarding pendente -> retomada do onboarding (não tela de inadimplência)
       if (!breedingFarm || onboarding.status === "Pending") {
-        const onboardingHref = onboarding.nextStep
-          ?? (breedingFarm ? "/onboarding/criatorio/selecionar" : "/onboarding/criatorio");
-        const actionLabel = breedingFarm ? "Selecionar criatório" : "Criar meu criatório";
-        const heading = breedingFarm ? "Selecione um criatório" : "Crie seu primeiro criatório";
-        const message = breedingFarm
+        const onboardingHref = resolveOnboardingRoute(onboarding.nextStep, Boolean(breedingFarm));
+        const isSelecting = onboarding.nextStep === "SelectBreedingFarm" || (breedingFarm !== null && onboarding.nextStep !== "CreateBreedingFarm");
+        const actionLabel = isSelecting ? "Selecionar criatório" : "Criar meu criatório";
+        const heading = isSelecting ? "Selecione um criatório" : "Crie seu primeiro criatório";
+        const message = isSelecting
           ? "Escolha um criatório para acessar o painel e os recursos do sistema."
           : "Ainda não existe um criatório vinculado a esta conta. Crie um agora para liberar seu acesso.";
 

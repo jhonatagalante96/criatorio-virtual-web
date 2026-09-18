@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
 import { useAccessContext } from "../../lib/auth/access-provider";
+import type { AccessContextResult } from "../../lib/auth/access-context";
 import { ApiClient, ApiError, createApiClient } from "../../lib/http/api-client";
 import { BillingSubscription, hasSubscriptionAccess } from "../../lib/billing/subscription-access";
 import { AppLoadingState } from "./app-loading-state";
@@ -183,13 +184,23 @@ function CheckoutContent({ isReturn }: Readonly<{ isReturn: boolean }>) {
         if (cancelled) return;
         setSubscription(current);
         if (hasSubscriptionAccess(current.status)) {
-          const freshAccess = access?.refetch ? await access.refetch() : undefined;
+          let freshAccess: AccessContextResult | undefined;
+          try {
+            freshAccess = access?.refetch ? await access.refetch() : undefined;
+          } catch {
+            freshAccess = undefined;
+          }
           if (cancelled) return;
-          if (!freshAccess || freshAccess.access.canAccessApp) {
+          if (freshAccess?.access?.canAccessApp === true) {
             setView({ kind: "access" });
             router.replace("/dashboard");
             return;
           }
+          setView({
+            kind: "pending",
+            subscription: current
+          });
+          return;
         }
         if (current.status === "PendingSubscription") {
           setView({ kind: result === "cancelled" || result === "expired" ? "cancelled" : "pending", subscription: current });

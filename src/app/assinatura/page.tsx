@@ -89,11 +89,19 @@ function SubscriptionScreen() {
         setPendingRegularization(savedReturn);
         const returnedPayment = payments.items.find((payment) => payment.paymentId === savedReturn.paymentId);
         if (returnedPayment && subscription && paymentAndSubscriptionAllowAccess(returnedPayment.status, subscription.status)) {
-          void access?.refetch?.();
-          clearPendingRegularizationReturn();
-          setPendingRegularization(null);
-          setView({ kind: "ready", farmName: farm.name, payments, subscription, regularizationConfirmed: true });
-          return;
+          let freshAccess;
+          try {
+            freshAccess = access?.refetch ? await access.refetch() : undefined;
+          } catch {
+            freshAccess = undefined;
+          }
+          if (!isCurrent()) return;
+          if (freshAccess?.access?.canAccessApp === true) {
+            clearPendingRegularizationReturn();
+            setPendingRegularization(null);
+            setView({ kind: "ready", farmName: farm.name, payments, subscription, regularizationConfirmed: true });
+            return;
+          }
         }
         setView({ kind: "awaiting-confirmation", farmName: farm.name });
         return;
@@ -156,12 +164,20 @@ function SubscriptionScreen() {
         }
         const payment = payments.items.find((item) => item.paymentId === pendingRegularization!.paymentId);
         if (payment && paymentAndSubscriptionAllowAccess(payment.status, subscription.status)) {
-          void access?.refetch?.();
-          clearPendingRegularizationReturn();
-          setPendingRegularization(null);
-          setIsPollingReturn(false);
-          setView({ kind: "ready", farmName: "Criatório Virtual", payments, subscription, regularizationConfirmed: true });
-          return;
+          let freshAccess;
+          try {
+            freshAccess = access?.refetch ? await access.refetch() : undefined;
+          } catch {
+            freshAccess = undefined;
+          }
+          if (cancelled) return;
+          if (freshAccess?.access?.canAccessApp === true) {
+            clearPendingRegularizationReturn();
+            setPendingRegularization(null);
+            setIsPollingReturn(false);
+            setView({ kind: "ready", farmName: "Criatório Virtual", payments, subscription, regularizationConfirmed: true });
+            return;
+          }
         }
         const confirmationMessage = payment?.status === "Confirmed"
           ? "Pagamento confirmado. Estamos aguardando a atualização da permissão de acesso."

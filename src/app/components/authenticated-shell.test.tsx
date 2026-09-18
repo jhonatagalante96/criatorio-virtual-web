@@ -228,6 +228,7 @@ describe("AuthenticatedShell", () => {
                 ...baseContext.access,
                 status,
                 canAccessApp: true,
+                requiredAction: status === "GracePeriod" ? "Regularize" : "None",
                 trialEndsAt: status === "Trial" ? "2026-09-25T00:00:00Z" : null,
                 gracePeriodEndsAt: status === "GracePeriod" ? "2026-09-22T00:00:00Z" : null
               }
@@ -263,24 +264,28 @@ describe("AuthenticatedShell", () => {
       const testCases = [
         {
           action: "Subscribe" as const,
+          blockedReason: "SubscriptionRequired" as const,
           expectedHref: "/billing/subscription-checkout",
           expectedLabel: "Contratar assinatura",
           status: "PendingSubscription" as const
         },
         {
           action: "Regularize" as const,
+          blockedReason: "PaymentOverdue" as const,
           expectedHref: "/assinatura",
           expectedLabel: "Regularizar pagamento",
           status: "Blocked" as const
         },
         {
           action: "Resubscribe" as const,
+          blockedReason: "SubscriptionCancelled" as const,
           expectedHref: "/assinatura",
           expectedLabel: "Reativar assinatura",
           status: "Cancelled" as const
         },
         {
           action: "None" as const,
+          blockedReason: null,
           expectedHref: null,
           expectedLabel: "Verificar novamente",
           status: "Blocked" as const
@@ -304,6 +309,7 @@ describe("AuthenticatedShell", () => {
                 ...baseContext.access,
                 status: tc.status,
                 canAccessApp: false,
+                blockedReason: tc.blockedReason,
                 requiredAction: tc.action
               }
             }), {
@@ -353,7 +359,7 @@ describe("AuthenticatedShell", () => {
           return new Response(JSON.stringify({
             ...baseContext,
             breedingFarm: null,
-            onboarding: { status: "Pending", nextStep: "/onboarding/criatorio" },
+            onboarding: { status: "Pending", nextStep: "CreateBreedingFarm" },
             access: {
               status: "PendingSubscription",
               canAccessApp: false,
@@ -411,6 +417,7 @@ describe("AuthenticatedShell", () => {
               ...baseContext.access,
               status: "Blocked",
               canAccessApp: false,
+              blockedReason: "PaymentOverdue",
               requiredAction: "Regularize"
             }
           }), {
@@ -494,6 +501,130 @@ describe("AuthenticatedShell", () => {
       await waitFor(() => {
         expect(screen.getByTestId("dashboard-content")).not.toBeNull();
       });
+    });
+
+    it("FE-086-AC05: maps nextStep CreateBreedingFarm semantically to /onboarding/criatorio without billing overdue notices", async () => {
+      const { AuthProvider } = await import("../../lib/auth/auth-context");
+      const { AccessProvider } = await import("../../lib/auth/access-provider");
+
+      const createFarmContext = {
+        user: validUser,
+        breedingFarm: null,
+        onboarding: {
+          status: "Pending",
+          nextStep: "CreateBreedingFarm"
+        },
+        access: {
+          status: "PendingSubscription",
+          canAccessApp: false,
+          blockedReason: null,
+          requiredAction: "None",
+          trialEndsAt: null,
+          gracePeriodEndsAt: null
+        },
+        subscription: null
+      };
+
+      const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("api/auth/session")) {
+          return new Response(JSON.stringify({ email: "jhonata@example.com", emailConfirmed: true, userId: "usr-1" }), {
+            headers: { "content-type": "application/json" },
+            status: 200
+          });
+        }
+        if (url.includes("api/me/access-context")) {
+          return new Response(JSON.stringify(createFarmContext), {
+            headers: { "content-type": "application/json" },
+            status: 200
+          });
+        }
+        return new Response(null, { status: 404 });
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      render(
+        <AuthProvider>
+          <AccessProvider>
+            <AuthenticatedShell activeNav="dashboard">
+              <div data-testid="dashboard-content">Dashboard</div>
+            </AuthenticatedShell>
+          </AccessProvider>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("dashboard-content")).toBeNull();
+        expect(screen.getByText("Crie seu primeiro criatório")).not.toBeNull();
+      });
+
+      const actionLink = screen.getByRole("link", { name: "Criar meu criatório" });
+      expect(actionLink.getAttribute("href")).toBe("/onboarding/criatorio");
+
+      // Verify NO billing overdue notices are present
+      expect(screen.queryByText(/inadimplente|bloqueado|regularize|assine/i)).toBeNull();
+    });
+
+    it("FE-086-AC05: maps nextStep SelectBreedingFarm semantically to /onboarding/criatorio/selecionar without billing overdue notices", async () => {
+      const { AuthProvider } = await import("../../lib/auth/auth-context");
+      const { AccessProvider } = await import("../../lib/auth/access-provider");
+
+      const selectFarmContext = {
+        user: validUser,
+        breedingFarm: null,
+        onboarding: {
+          status: "Pending",
+          nextStep: "SelectBreedingFarm"
+        },
+        access: {
+          status: "PendingSubscription",
+          canAccessApp: false,
+          blockedReason: null,
+          requiredAction: "None",
+          trialEndsAt: null,
+          gracePeriodEndsAt: null
+        },
+        subscription: null
+      };
+
+      const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("api/auth/session")) {
+          return new Response(JSON.stringify({ email: "jhonata@example.com", emailConfirmed: true, userId: "usr-1" }), {
+            headers: { "content-type": "application/json" },
+            status: 200
+          });
+        }
+        if (url.includes("api/me/access-context")) {
+          return new Response(JSON.stringify(selectFarmContext), {
+            headers: { "content-type": "application/json" },
+            status: 200
+          });
+        }
+        return new Response(null, { status: 404 });
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      render(
+        <AuthProvider>
+          <AccessProvider>
+            <AuthenticatedShell activeNav="dashboard">
+              <div data-testid="dashboard-content">Dashboard</div>
+            </AuthenticatedShell>
+          </AccessProvider>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("dashboard-content")).toBeNull();
+        expect(screen.getByText("Selecione um criatório")).not.toBeNull();
+      });
+
+      const actionLink = screen.getByRole("link", { name: "Selecionar criatório" });
+      expect(actionLink.getAttribute("href")).toBe("/onboarding/criatorio/selecionar");
+
+      // Verify NO billing overdue notices are present
+      expect(screen.queryByText(/inadimplente|bloqueado|regularize|assine/i)).toBeNull();
     });
   });
 });

@@ -31,9 +31,10 @@ export interface BreedingFarmAccessSummary {
   name: string;
   role: string;
 }
+export type OnboardingNextStep = "CreateBreedingFarm" | "SelectBreedingFarm" | null;
 
 export interface OnboardingSummary {
-  nextStep: string | null;
+  nextStep: OnboardingNextStep;
   status: OnboardingStatus;
 }
 
@@ -94,6 +95,17 @@ const validOnboardingStatuses = new Set<OnboardingStatus>([
   "Pending"
 ]);
 
+const validOnboardingNextSteps = new Set<string>([
+  "CreateBreedingFarm",
+  "SelectBreedingFarm"
+]);
+
+export function resolveOnboardingRoute(nextStep: OnboardingNextStep, hasBreedingFarm: boolean): string {
+  if (nextStep === "SelectBreedingFarm") return "/onboarding/criatorio/selecionar";
+  if (nextStep === "CreateBreedingFarm") return "/onboarding/criatorio";
+  return hasBreedingFarm ? "/onboarding/criatorio/selecionar" : "/onboarding/criatorio";
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -148,8 +160,25 @@ export function parseAccessContext(payload: unknown): AccessContextResult {
   if (!validOnboardingStatuses.has(onboardingStatus)) {
     throw new InvalidAccessContextError(`Status de onboarding desconhecido: ${String(payload.onboarding.status)}`);
   }
+
+  let nextStep: OnboardingNextStep = null;
+  if (payload.onboarding.nextStep !== null && payload.onboarding.nextStep !== undefined) {
+    const rawStep = String(payload.onboarding.nextStep).trim();
+    if (!validOnboardingNextSteps.has(rawStep)) {
+      throw new InvalidAccessContextError(`Passo de onboarding desconhecido ou rota arbitrária não permitida: ${rawStep}`);
+    }
+    nextStep = rawStep as "CreateBreedingFarm" | "SelectBreedingFarm";
+  }
+
+  if (onboardingStatus === "Completed" && nextStep !== null) {
+    throw new InvalidAccessContextError("Combinação inconsistente: onboarding Completed deve possuir nextStep nulo.");
+  }
+  if (onboardingStatus === "Pending" && nextStep === null) {
+    throw new InvalidAccessContextError("Combinação inconsistente: onboarding Pending deve possuir nextStep definido.");
+  }
+
   const onboarding: OnboardingSummary = {
-    nextStep: parseNullableString(payload.onboarding.nextStep),
+    nextStep,
     status: onboardingStatus
   };
 
@@ -180,15 +209,73 @@ export function parseAccessContext(payload: unknown): AccessContextResult {
     blockedReason = candidateReason;
   }
 
-  // Inconsistent combinations check (Fail-Closed)
-  if (canAccessApp && (accessStatus === "Blocked" || accessStatus === "Cancelled" || accessStatus === "PendingSubscription")) {
-    throw new InvalidAccessContextError(`Combinação inconsistente: canAccessApp é true com status ${accessStatus}.`);
-  }
-  if (!canAccessApp && (accessStatus === "Trial" || accessStatus === "Active")) {
-    throw new InvalidAccessContextError(`Combinação inconsistente: canAccessApp é false com status ${accessStatus}.`);
-  }
-  if (breedingFarm === null && canAccessApp) {
-    throw new InvalidAccessContextError("Combinação inconsistente: canAccessApp é true sem criatório selecionado.");
+  // Complete Backend Consistency Enforcement (Fail-Closed)
+  switch (accessStatus) {
+    case "Trial":
+      if (!canAccessApp || blockedReason !== null || requiredAction !== "None" || breedingFarm === null) {
+        throw new InvalidAccessContextError("Combinação inconsistente para status Trial.");
+      }
+      break;
+    case "Active":
+      if (!canAccessApp || blockedReason !== null || requiredAction !== "None" || breedingFarm === null) {
+        throw new InvalidAccessContextError("Combinação inconsistente para status Active.");
+      }
+      break;
+    case "GracePeriod":
+      if (!canAccessApp || blockedReason !== null || requiredAction !== "Regularize" || breedingFarm === null) {
+        throw new InvalidAccessContextError("Combinação inconsistente para status GracePeriod.");
+      }
+      break;
+    case "Blocked":
+      if (canAccessApp || breedingFarm === null) {
+        throw new InvalidAccessContextError("Combinação inconsistente para status Blocked.");
+      }
+      if (blockedReason === "PaymentOverdue" && requiredAction !== "Regularize") {
+        throw new InvalidAccessContextError("Combinação inconsistente para status Blocked.");
+      }
+      if (blockedReason === null && requiredAction !== "None") {
+        throw new InvalidAccessContextError("Combinação inconsistente para status Blocked.");
+      }
+      if (blockedReason !== "PaymentOverdue" && blockedReason !== null) {
+        throw new InvalidAccessContextError("Combinação inconsistente para status Blocked.");
+      }
+      break;
+    case "Cancelled":
+      if (canAccessApp || breedingFarm === null) {
+        throw new InvalidAccessContextError("Combinação inconsistente para status Cancelled.");
+      }
+      if (blockedReason === "SubscriptionCancelled" && requiredAction !== "Resubscribe") {
+        throw new InvalidAccessContextError("Combinação inconsistente para status Cancelled.");
+      }
+      if (blockedReason === null && requiredAction !== "None") {
+        throw new InvalidAccessContextError("Combinação inconsistente para status Cancelled.");
+      }
+      if (blockedReason !== "SubscriptionCancelled" && blockedReason !== null) {
+        throw new InvalidAccessContextError("Combinação inconsistente para status Cancelled.");
+      }
+      break;
+    case "PendingSubscription":
+      if (canAccessApp) {
+        throw new InvalidAccessContextError("Combinação inconsistente: PendingSubscription não pode ter canAccessApp=true.");
+      }
+      if (breedingFarm !== null) {
+        if (blockedReason === "SubscriptionRequired" && requiredAction !== "Subscribe") {
+          throw new InvalidAccessContextError("Combinação inconsistente para PendingSubscription com criatório selecionado.");
+        }
+        if (blockedReason === null && requiredAction !== "None") {
+          throw new InvalidAccessContextError("Combinação inconsistente para PendingSubscription com criatório selecionado.");
+        }
+        if (blockedReason !== "SubscriptionRequired" && blockedReason !== null) {
+          throw new InvalidAccessContextError("Combinação inconsistente para PendingSubscription com criatório selecionado.");
+        }
+      } else {
+        if (blockedReason !== null || requiredAction !== "None") {
+          throw new InvalidAccessContextError("Combinação inconsistente para PendingSubscription sem criatório selecionado.");
+        }
+      }
+      break;
+    default:
+      throw new InvalidAccessContextError(`Status de assinatura não suportado: ${accessStatus}`);
   }
 
   const access: AccessDetails = {

@@ -118,13 +118,13 @@ describe("parseAccessContext", () => {
     expect(pendingResult.access.requiredAction).toBe("Subscribe");
   });
 
-  it("parses unselected breeding farm with canAccessApp=false", () => {
-    const unselectedPayload = {
+  it("parses unselected breeding farm with canAccessApp=false and semantic nextStep", () => {
+    const unselectedCreatePayload = {
       ...validBasePayload,
       breedingFarm: null,
       onboarding: {
         status: "Pending",
-        nextStep: "/onboarding/criatorio"
+        nextStep: "CreateBreedingFarm"
       },
       access: {
         status: "PendingSubscription",
@@ -136,13 +136,36 @@ describe("parseAccessContext", () => {
       },
       subscription: null
     };
-    const result = parseAccessContext(unselectedPayload);
-    expect(result.breedingFarm).toBeNull();
-    expect(result.onboarding.status).toBe("Pending");
-    expect(result.access.canAccessApp).toBe(false);
+    const createResult = parseAccessContext(unselectedCreatePayload);
+    expect(createResult.breedingFarm).toBeNull();
+    expect(createResult.onboarding.status).toBe("Pending");
+    expect(createResult.onboarding.nextStep).toBe("CreateBreedingFarm");
+    expect(createResult.access.canAccessApp).toBe(false);
+    expect(createResult.access.requiredAction).toBe("None");
+    expect(createResult.access.blockedReason).toBeNull();
+
+    const unselectedSelectPayload = {
+      ...unselectedCreatePayload,
+      onboarding: {
+        status: "Pending",
+        nextStep: "SelectBreedingFarm"
+      }
+    };
+    const selectResult = parseAccessContext(unselectedSelectPayload);
+    expect(selectResult.onboarding.nextStep).toBe("SelectBreedingFarm");
   });
 
-  it("fails closed on unknown enums", () => {
+  it("resolves onboarding routes semantically", async () => {
+    const { resolveOnboardingRoute } = await import("./access-context");
+    expect(resolveOnboardingRoute("CreateBreedingFarm", false)).toBe("/onboarding/criatorio");
+    expect(resolveOnboardingRoute("CreateBreedingFarm", true)).toBe("/onboarding/criatorio");
+    expect(resolveOnboardingRoute("SelectBreedingFarm", false)).toBe("/onboarding/criatorio/selecionar");
+    expect(resolveOnboardingRoute("SelectBreedingFarm", true)).toBe("/onboarding/criatorio/selecionar");
+    expect(resolveOnboardingRoute(null, false)).toBe("/onboarding/criatorio");
+    expect(resolveOnboardingRoute(null, true)).toBe("/onboarding/criatorio/selecionar");
+  });
+
+  it("fails closed on unknown enums and arbitrary nextStep URLs", () => {
     expect(() => parseAccessContext({
       ...validBasePayload,
       access: { ...validBasePayload.access, status: "UnknownStatus" }
@@ -157,33 +180,159 @@ describe("parseAccessContext", () => {
       ...validBasePayload,
       onboarding: { ...validBasePayload.onboarding, status: "InFlight" }
     })).toThrow(InvalidAccessContextError);
+
+    // Arbitrary URLs or unrecognized nextStep strings MUST fail-closed
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      breedingFarm: null,
+      onboarding: { status: "Pending", nextStep: "/onboarding/criatorio" },
+      access: { status: "PendingSubscription", canAccessApp: false, blockedReason: null, requiredAction: "None", trialEndsAt: null, gracePeriodEndsAt: null },
+      subscription: null
+    })).toThrow(InvalidAccessContextError);
+
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      breedingFarm: null,
+      onboarding: { status: "Pending", nextStep: "ArbitraryStep" },
+      access: { status: "PendingSubscription", canAccessApp: false, blockedReason: null, requiredAction: "None", trialEndsAt: null, gracePeriodEndsAt: null },
+      subscription: null
+    })).toThrow(InvalidAccessContextError);
   });
 
-  it("fails closed on inconsistent combinations", () => {
-    // canAccessApp is true but status is Blocked
+  it("fails closed on onboarding status and nextStep inconsistencies", () => {
+    // Completed onboarding cannot have a nextStep
     expect(() => parseAccessContext({
       ...validBasePayload,
-      access: { ...validBasePayload.access, status: "Blocked", canAccessApp: true }
+      onboarding: { status: "Completed", nextStep: "CreateBreedingFarm" }
     })).toThrow(InvalidAccessContextError);
 
-    // canAccessApp is true but status is Cancelled
+    // Pending onboarding must have a valid nextStep
     expect(() => parseAccessContext({
       ...validBasePayload,
-      access: { ...validBasePayload.access, status: "Cancelled", canAccessApp: true }
+      breedingFarm: null,
+      onboarding: { status: "Pending", nextStep: null },
+      access: { status: "PendingSubscription", canAccessApp: false, blockedReason: null, requiredAction: "None", trialEndsAt: null, gracePeriodEndsAt: null },
+      subscription: null
+    })).toThrow(InvalidAccessContextError);
+  });
+
+  it("fails closed on all inconsistent access combinations aligned with backend policy", () => {
+    // 1. Trial combinations
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Trial", canAccessApp: false }
     })).toThrow(InvalidAccessContextError);
 
-    // canAccessApp is false but status is Active
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Trial", requiredAction: "Subscribe" }
+    })).toThrow(InvalidAccessContextError);
+
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Trial", blockedReason: "SubscriptionRequired" }
+    })).toThrow(InvalidAccessContextError);
+
+    // 2. Active combinations
     expect(() => parseAccessContext({
       ...validBasePayload,
       access: { ...validBasePayload.access, status: "Active", canAccessApp: false }
     })).toThrow(InvalidAccessContextError);
 
-    // canAccessApp is true without breeding farm
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Active", requiredAction: "Regularize" }
+    })).toThrow(InvalidAccessContextError);
+
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Active", blockedReason: "PaymentOverdue" }
+    })).toThrow(InvalidAccessContextError);
+
+    // 3. GracePeriod combinations
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "GracePeriod", canAccessApp: false }
+    })).toThrow(InvalidAccessContextError);
+
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "GracePeriod", requiredAction: "None" }
+    })).toThrow(InvalidAccessContextError);
+
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "GracePeriod", blockedReason: "PaymentOverdue" }
+    })).toThrow(InvalidAccessContextError);
+
+    // 4. Blocked combinations
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Blocked", canAccessApp: true }
+    })).toThrow(InvalidAccessContextError);
+
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Blocked", requiredAction: "Subscribe" }
+    })).toThrow(InvalidAccessContextError);
+
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Blocked", blockedReason: "SubscriptionRequired" }
+    })).toThrow(InvalidAccessContextError);
+
+    // 5. Cancelled combinations
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Cancelled", canAccessApp: true }
+    })).toThrow(InvalidAccessContextError);
+
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Cancelled", requiredAction: "None" }
+    })).toThrow(InvalidAccessContextError);
+
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "Cancelled", blockedReason: null }
+    })).toThrow(InvalidAccessContextError);
+
+    // 6. PendingSubscription combinations
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "PendingSubscription", canAccessApp: true }
+    })).toThrow(InvalidAccessContextError);
+
+    // PendingSubscription with farm but requiredAction None
+    expect(() => parseAccessContext({
+      ...validBasePayload,
+      access: { ...validBasePayload.access, status: "PendingSubscription", canAccessApp: false, blockedReason: "SubscriptionRequired", requiredAction: "None" }
+    })).toThrow(InvalidAccessContextError);
+
+    // PendingSubscription without farm but requiredAction Subscribe
     expect(() => parseAccessContext({
       ...validBasePayload,
       breedingFarm: null,
-      access: { ...validBasePayload.access, canAccessApp: true }
+      onboarding: { status: "Pending", nextStep: "CreateBreedingFarm" },
+      access: { status: "PendingSubscription", canAccessApp: false, blockedReason: null, requiredAction: "Subscribe", trialEndsAt: null, gracePeriodEndsAt: null },
+      subscription: null
     })).toThrow(InvalidAccessContextError);
+
+    // 7. Functional statuses without breeding farm
+    for (const status of ["Trial", "Active", "GracePeriod", "Blocked", "Cancelled"] as const) {
+      expect(() => parseAccessContext({
+        ...validBasePayload,
+        breedingFarm: null,
+        onboarding: { status: "Pending", nextStep: "CreateBreedingFarm" },
+        access: {
+          ...validBasePayload.access,
+          status,
+          canAccessApp: status === "Trial" || status === "Active" || status === "GracePeriod",
+          requiredAction: status === "GracePeriod" || status === "Blocked" ? "Regularize" : status === "Cancelled" ? "Resubscribe" : "None",
+          blockedReason: status === "Blocked" ? "PaymentOverdue" : status === "Cancelled" ? "SubscriptionCancelled" : null
+        }
+      })).toThrow(InvalidAccessContextError);
+    }
   });
 
   it("fails closed on malformed or incomplete payloads", () => {
