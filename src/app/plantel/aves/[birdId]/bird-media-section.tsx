@@ -35,6 +35,11 @@ interface BirdMediaSectionProps {
   prepareMutation: () => Promise<void>;
 }
 
+interface RetryableDeletion {
+  attachment: BirdAttachment;
+  breedingFarmId: string;
+}
+
 type LoadState = "error" | "loading" | "ready";
 
 const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
@@ -122,11 +127,19 @@ function getErrorMessage(error: unknown, operation: "delete" | "primary" | "uplo
   if (error.status === 404) return "A ave ou o arquivo não está mais disponível no criatório selecionado. Atualize a ficha.";
   if (error.status === 409) {
     const message = `${error.message} ${error.details ?? ""}`.toLowerCase();
-    return message.includes("transfer")
-      ? "Esta ave está com uma transferência pendente. Não é possível alterar os arquivos até esse fluxo ser encerrado."
-      : "A seleção do criatório mudou. Atualize a ficha e tente novamente.";
+    if (message.includes("transfer")) {
+      return "Esta ave está com uma transferência pendente. Não é possível alterar os arquivos até esse fluxo ser encerrado.";
+    }
+    if (operation === "delete" && message.includes("primary photo")) {
+      return "A foto principal mudou. Atualize a ficha e desmarque ou substitua a foto antes de removê-la.";
+    }
+    return "A seleção do criatório mudou. Atualize a ficha e tente novamente.";
   }
-  if (error.status === 503) return "O armazenamento privado está indisponível no momento. Tente novamente em instantes.";
+  if (error.status === 503) {
+    return operation === "delete"
+      ? "O anexo foi retirado da lista, mas a limpeza do armazenamento está pendente. Tente novamente para concluir."
+      : "O armazenamento privado está indisponível no momento. Tente novamente em instantes.";
+  }
   if (error.status >= 500) return "O serviço está indisponível no momento. Tente novamente em instantes.";
   return "Não foi possível concluir a operação. Verifique sua conexão e tente novamente.";
 }
@@ -186,6 +199,7 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [activeAttachmentId, setActiveAttachmentId] = useState<string>();
+  const [retryableDeletion, setRetryableDeletion] = useState<RetryableDeletion>();
   const [transferBlocked, setTransferBlocked] = useState(false);
   const [previewAttachment, setPreviewAttachment] = useState<BirdAttachment>();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -193,6 +207,11 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
   const requestId = useRef(0);
   const uploadController = useRef<AbortController | null>(null);
   const mutationBlocked = bird.status === "Transferred" || transferBlocked;
+  const retryableDeletionForCurrentBird = retryableDeletion &&
+    sameTenantId(retryableDeletion.attachment.birdId, bird.birdId) &&
+    sameTenantId(retryableDeletion.breedingFarmId, bird.breedingFarmId)
+    ? retryableDeletion.attachment
+    : undefined;
 
   const loadAttachments = useCallback(async (signal?: AbortSignal, recoverSession = true) => {
     const currentRequestId = ++requestId.current;
@@ -247,6 +266,10 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
   }, [loadAttachments]);
 
   useEffect(() => {
+    setRetryableDeletion(undefined);
+  }, [bird.birdId, bird.breedingFarmId]);
+
+  useEffect(() => {
     if (previewAttachment) dialogRef.current?.showModal();
   }, [previewAttachment]);
 
@@ -264,13 +287,18 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
       setActionError("Sua sessão expirou. Entre novamente para continuar.");
       return;
     }
+    let reloadAttachments = false;
     if (error instanceof ApiError && error.status === 409) {
       const message = `${error.message} ${error.details ?? ""}`.toLowerCase();
       if (message.includes("transfer")) setTransferBlocked(true);
+      if (operation === "delete" && message.includes("primary photo")) reloadAttachments = true;
     }
     setActionError(getErrorMessage(error, operation));
     setActionSuccess(undefined);
     if (operation === "delete" && error instanceof ApiError && error.status === 503) {
+      reloadAttachments = true;
+    }
+    if (reloadAttachments) {
       client.clearCache();
       await loadAttachments();
     }
@@ -278,7 +306,7 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
 
   async function uploadAttachment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedFile || uploading || activeAttachmentId || mutationBlocked) return;
+    if (!selectedFile || mutationInProgress || mutationBlocked) return;
     const validationError = validateFile(selectedFile);
     if (validationError) {
       setUploadError(validationError);
@@ -330,7 +358,7 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
   }
 
   async function setPrimaryPhoto(attachment: BirdAttachment) {
-    if (!isImage(attachment) || attachment.isPrimary || uploading || activeAttachmentId || mutationBlocked) return;
+    if (!isImage(attachment) || attachment.isPrimary || mutationInProgress || mutationBlocked) return;
     setActiveAttachmentId(attachment.attachmentId);
     setActionError(undefined);
     setActionSuccess(undefined);
@@ -352,14 +380,27 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
     }
   }
 
-  async function deleteAttachment(attachment: BirdAttachment) {
-    if (attachment.isPrimary || uploading || activeAttachmentId || mutationBlocked) return;
-    const isGalleryMedia = isImage(attachment) || isVideo(attachment);
-    const confirmation = isGalleryMedia
-      ? `Remover “${attachment.caption || attachment.fileName}”? A mídia também deixará de aparecer na Galeria do Criatório.`
-      : `Remover “${attachment.fileName}” desta ficha?`;
-    if (!window.confirm(confirmation)) return;
+  async function clearPrimaryPhoto(attachment: BirdAttachment) {
+    if (!attachment.isPrimary || !isImage(attachment) || uploading || mutationInProgress || mutationBlocked) return;
+    setActiveAttachmentId(attachment.attachmentId);
+    setActionError(undefined);
+    setActionSuccess(undefined);
+    try {
+      await prepareMutation();
+      await client.request(`api/birds/${encodeURIComponent(bird.birdId)}/primary-photo`, { method: "DELETE" });
+      client.clearCache();
+      setAttachments((current) => current.map((item) => ({ ...item, isPrimary: false })));
+      setActionSuccess("A foto principal foi desmarcada. Você pode removê-la agora.");
+      onBirdUpdated();
+    } catch (error) {
+      await reportFailure(error, "primary");
+    } finally {
+      setActiveAttachmentId(undefined);
+    }
+  }
 
+  async function performAttachmentDeletion(attachment: BirdAttachment) {
+    const isGalleryMedia = isImage(attachment) || isVideo(attachment);
     setActiveAttachmentId(attachment.attachmentId);
     setActionError(undefined);
     setActionSuccess(undefined);
@@ -371,15 +412,39 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
         method: "DELETE"
       });
       client.clearCache();
+      setRetryableDeletion(undefined);
       setAttachments((current) => current.filter((item) => item.attachmentId !== attachment.attachmentId));
       setActionSuccess(isGalleryMedia
         ? "A mídia foi removida da ficha e da Galeria do Criatório."
         : "O anexo foi removido da ficha da ave.");
     } catch (error) {
+      const retryAttempt = retryableDeletion?.attachment.attachmentId === attachment.attachmentId;
+      const retryableServerError = error instanceof ApiError && (error.status === 401 || error.status >= 500);
+      if ((error instanceof ApiError && error.status === 503) || (retryAttempt && (retryableServerError || !(error instanceof ApiError)))) {
+        setRetryableDeletion({ attachment, breedingFarmId: bird.breedingFarmId });
+      } else {
+        setRetryableDeletion(undefined);
+      }
       await reportFailure(error, "delete");
     } finally {
       setActiveAttachmentId(undefined);
     }
+  }
+
+  async function deleteAttachment(attachment: BirdAttachment) {
+    if (attachment.isPrimary || uploading || mutationInProgress || mutationBlocked) return;
+    const isGalleryMedia = isImage(attachment) || isVideo(attachment);
+    const confirmation = isGalleryMedia
+      ? `Remover “${attachment.caption || attachment.fileName}”? A mídia também deixará de aparecer na Galeria do Criatório.`
+      : `Remover “${attachment.fileName}” desta ficha?`;
+    if (!window.confirm(confirmation)) return;
+    await performAttachmentDeletion(attachment);
+  }
+
+  async function retryAttachmentDeletion() {
+    const attachment = retryableDeletionForCurrentBird;
+    if (!attachment || uploading || activeAttachmentId || mutationBlocked) return;
+    await performAttachmentDeletion(attachment);
   }
 
   function retry() {
@@ -391,7 +456,7 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
 
   const media = attachments.filter((attachment) => isImage(attachment) || isVideo(attachment));
   const otherAttachments = attachments.filter((attachment) => !isImage(attachment) && !isVideo(attachment));
-  const mutationInProgress = uploading || Boolean(activeAttachmentId);
+  const mutationInProgress = uploading || Boolean(activeAttachmentId) || Boolean(retryableDeletionForCurrentBird);
 
   return (
     <section aria-labelledby="titulo-fotos-ave" aria-busy={loadState === "loading"} className="bird-detail-section bird-detail-media-card">
@@ -462,7 +527,18 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
                       </button>
                     )}
                     {attachment.isPrimary ? (
-                      <button aria-describedby={primaryHintId} className="bird-media-danger-action" disabled type="button">Remover</button>
+                      <>
+                        <button
+                          aria-describedby={primaryHintId}
+                          className="bird-media-secondary-action"
+                          disabled={mutationInProgress || mutationBlocked}
+                          onClick={() => void clearPrimaryPhoto(attachment)}
+                          type="button"
+                        >
+                          {busy ? "Desmarcando…" : "Desmarcar foto principal"}
+                        </button>
+                        <button aria-describedby={primaryHintId} className="bird-media-danger-action" disabled type="button">Remover</button>
+                      </>
                     ) : (
                       <button
                         aria-describedby={mutationBlocked ? "bird-media-blocked-help" : undefined}
@@ -475,7 +551,7 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
                       </button>
                     )}
                   </div>
-                  {attachment.isPrimary && <p className="bird-media-primary-note" id={primaryHintId}>Defina outra foto principal antes de remover esta imagem.</p>}
+                  {attachment.isPrimary && <p className="bird-media-primary-note" id={primaryHintId}>Desmarque ou defina outra foto principal antes de remover esta imagem.</p>}
                 </div>
               </article>
             );
@@ -541,6 +617,16 @@ export function BirdMediaSection({ bird, client, onBirdUpdated, onSessionExpired
       )}
 
       {actionError && <p className="bird-media-action-error" role="alert">{actionError}</p>}
+      {retryableDeletionForCurrentBird && (
+        <button
+          className="bird-media-secondary-action"
+          disabled={uploading || Boolean(activeAttachmentId) || mutationBlocked}
+          onClick={() => void retryAttachmentDeletion()}
+          type="button"
+        >
+          Tentar remoção novamente
+        </button>
+      )}
       {actionSuccess && <p className="bird-media-action-success" role="status">{actionSuccess}</p>}
 
       <dialog

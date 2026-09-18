@@ -98,6 +98,88 @@ describe("BirdMediaSection", () => {
     expect(onBirdUpdated).toHaveBeenCalledOnce();
   });
 
+  it("allows unmarking the primary photo before confirming its removal", async () => {
+    const client = createClient([photo]);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderSection(client);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Desmarcar foto principal" }));
+
+    expect(await screen.findByText("A foto principal foi desmarcada. Você pode removê-la agora.")).toBeTruthy();
+    expect(client.request).toHaveBeenNthCalledWith(2, "api/birds/bird-a/primary-photo", { method: "DELETE" });
+    expect(screen.getByRole("button", { name: "Definir como principal" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Remover" }).hasAttribute("disabled")).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Remover" }));
+
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(await screen.findByText("A mídia foi removida da ficha e da Galeria do Criatório.")).toBeTruthy();
+    expect(client.request).toHaveBeenNthCalledWith(3, "api/birds/bird-a/attachments/photo-a", {
+      body: JSON.stringify({ confirmed: true }),
+      headers: { "content-type": "application/json" },
+      method: "DELETE"
+    });
+  });
+
+  it("keeps a retry action when storage cleanup returns 503 after removing the attachment", async () => {
+    const attachment = { ...photo, isPrimary: false };
+    const listResponse = { breedingFarmId: bird.breedingFarmId, birdId: bird.birdId, items: [attachment] };
+    const client = createClient([attachment]);
+    const request = vi.mocked(client.request)
+      .mockResolvedValueOnce(listResponse)
+      .mockRejectedValueOnce(new ApiError(503, "The attachment was removed from the list, but private storage cleanup is pending. Retry the operation."))
+      .mockResolvedValueOnce({ ...listResponse, items: [] });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderSection(client);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Remover" }));
+
+    expect(await screen.findByText("O anexo foi retirado da lista, mas a limpeza do armazenamento está pendente. Tente novamente para concluir.")).toBeTruthy();
+    expect(await screen.findByText("Nenhuma foto ou anexo cadastrado.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Tentar remoção novamente" }).hasAttribute("disabled")).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tentar remoção novamente" }));
+
+    expect(await screen.findByText("A mídia foi removida da ficha e da Galeria do Criatório.")).toBeTruthy();
+    const deleteOptions = {
+      body: JSON.stringify({ confirmed: true }),
+      headers: { "content-type": "application/json" },
+      method: "DELETE"
+    };
+    expect(request).toHaveBeenNthCalledWith(2, "api/birds/bird-a/attachments/photo-a", deleteOptions);
+    expect(request).toHaveBeenNthCalledWith(4, "api/birds/bird-a/attachments/photo-a", deleteOptions);
+    expect(confirm).toHaveBeenCalledOnce();
+  });
+
+  it("refreshes and blocks removal when the backend reports that the photo became primary", async () => {
+    const attachment = { ...photo, isPrimary: false };
+    const updatedAttachment = { ...attachment, isPrimary: true };
+    const client = createClient([attachment]);
+    vi.mocked(client.request)
+      .mockResolvedValueOnce({ breedingFarmId: bird.breedingFarmId, birdId: bird.birdId, items: [attachment] })
+      .mockRejectedValueOnce(new ApiError(409, "Replace the primary photo before removing this attachment."))
+      .mockResolvedValueOnce({ breedingFarmId: bird.breedingFarmId, birdId: bird.birdId, items: [updatedAttachment] });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderSection(client);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Remover" }));
+
+    expect(await screen.findByText("A foto principal mudou. Atualize a ficha e desmarque ou substitua a foto antes de removê-la.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Remover" }).hasAttribute("disabled")).toBe(true);
+    expect(client.request).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not send a delete request when the user cancels confirmation", async () => {
+    const client = createClient([{ ...photo, isPrimary: false }]);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderSection(client);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Remover" }));
+
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(client.request).toHaveBeenCalledTimes(1);
+  });
+
   it("blocks further photo changes after the API reports a pending transfer", async () => {
     const candidate = { ...photo, attachmentId: "photo-b", isPrimary: false };
     const client = createClient([candidate]);
