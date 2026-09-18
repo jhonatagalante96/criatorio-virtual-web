@@ -132,8 +132,10 @@ export function CompetitionHistoryScreen({ birdId, competitionId }: CompetitionH
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteComplete, setDeleteComplete] = useState(false);
   const csrfToken = useRef<string | undefined>(undefined);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
   const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const cancelDeleteButtonRef = useRef<HTMLButtonElement>(null);
+  const wasEditing = useRef(false);
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
 
@@ -192,6 +194,11 @@ export function CompetitionHistoryScreen({ birdId, competitionId }: CompetitionH
     void load();
     return () => { requestVersion.current += 1; };
   }, [load, status]);
+
+  useEffect(() => {
+    if (wasEditing.current && !isEditing && selectedCompetition) editButtonRef.current?.focus();
+    wasEditing.current = isEditing;
+  }, [isEditing, selectedCompetition]);
 
   function startEditing() {
     if (!selectedCompetition) return;
@@ -436,7 +443,7 @@ export function CompetitionHistoryScreen({ birdId, competitionId }: CompetitionH
             </form>
           ) : (
             <div className="competition-management-actions">
-              <button className="auth-secondary-action" onClick={startEditing} type="button">Editar</button>
+              <button className="auth-secondary-action" onClick={startEditing} ref={editButtonRef} type="button">Editar</button>
               <button className="competition-danger-action" onClick={() => { setDeleteError(""); setHasDeleteConflict(false); setIsDeleteDialogOpen(true); }} ref={deleteButtonRef} type="button">Excluir</button>
               <Link className="auth-secondary-action" href={listHref}>Voltar ao histórico</Link>
             </div>
@@ -455,7 +462,25 @@ export function CompetitionHistoryScreen({ birdId, competitionId }: CompetitionH
           </ul>
         </section>}
         {isDeleteDialogOpen && <div className="competition-delete-backdrop" onClick={(event) => { if (event.target === event.currentTarget) closeDeleteDialog(); }}>
-          <section aria-describedby="competition-delete-description" aria-labelledby="competition-delete-title" aria-modal="true" className="competition-delete-dialog" onKeyDown={(event) => { if (event.key === "Escape") closeDeleteDialog(); }} role="alertdialog" tabIndex={-1}>
+          <section aria-describedby="competition-delete-description" aria-labelledby="competition-delete-title" aria-modal="true" className="competition-delete-dialog" onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              closeDeleteDialog();
+              return;
+            }
+            if (event.key === "Tab") {
+              const focusable = event.currentTarget.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]");
+              if (focusable.length === 0) return;
+              const first = focusable.item(0);
+              const last = focusable.item(focusable.length - 1);
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+              }
+            }
+          }} role="alertdialog" tabIndex={-1}>
             <span aria-hidden="true" className="competition-delete-icon"><DashboardIcon name="trash" /></span>
             <h2 id="competition-delete-title">Excluir competição?</h2>
             <p id="competition-delete-description">O registro “{selectedCompetition?.name}” será removido do histórico desta ave. Esta ação não pode ser desfeita.</p>

@@ -180,6 +180,7 @@ describe("CompetitionHistoryScreen", () => {
 
     await screen.findByText("Competição atualizada com sucesso.");
     expect(screen.getByRole("heading", { name: "Copa Nacional" })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Editar" }));
     const [url, options] = fetchMock.mock.calls[4];
     expect(String(url)).toContain("/api/birds/bird-a/competitions/competition-a");
     expect(options.method).toBe("PUT");
@@ -227,10 +228,19 @@ describe("CompetitionHistoryScreen", () => {
     render(<CompetitionHistoryScreen birdId="bird-a" competitionId="competition-a" />);
     await screen.findByRole("heading", { name: "Exposição Estadual" });
     fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
-    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toBeTruthy();
+    const cancelButton = screen.getByRole("button", { name: "Cancelar" });
+    const confirmButton = screen.getByRole("button", { name: "Excluir competição" });
+    expect(document.activeElement).toBe(cancelButton);
+    fireEvent.keyDown(cancelButton, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(confirmButton);
+    fireEvent.keyDown(confirmButton, { key: "Tab" });
+    expect(document.activeElement).toBe(cancelButton);
     expect(screen.getByText(/será removido do histórico desta ave/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    fireEvent.click(cancelButton);
     expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Excluir" }));
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
     fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
