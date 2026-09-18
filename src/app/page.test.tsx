@@ -13,9 +13,12 @@ describe("Home", () => {
     const header = document.querySelector(".landing-header");
     expect(header?.querySelector("nav")).toBeNull();
     expect(header?.querySelector("details")).toBeNull();
-    expect(screen.getByRole("link", { name: /Role a tela para descobrir/ }).getAttribute("href")).toBe("#recursos");
+    expect(screen.getByRole("link", { name: /Role até o final para conhecer tudo/ }).getAttribute("href")).toBe("#recursos");
     expect(document.querySelector("#recursos")).toBeTruthy();
+    expect(document.querySelector("#acesso-movel")).toBeTruthy();
     expect(document.querySelector("#planos")).toBeTruthy();
+    const scrollPrompts = Array.from(document.querySelectorAll<HTMLAnchorElement>(".landing-scroll-next"));
+    expect(scrollPrompts.map((prompt) => prompt.getAttribute("href"))).toEqual(["#acesso-movel", "#planos"]);
     expect(screen.getAllByRole("link", { name: "Entrar" }).some((link) => link.getAttribute("href") === "/login")).toBe(true);
     expect(screen.getAllByRole("link", { name: "Criar minha conta" })).toHaveLength(3);
     expect(screen.getByRole("link", { name: "Criar conta" }).getAttribute("href")).toBe("/cadastro");

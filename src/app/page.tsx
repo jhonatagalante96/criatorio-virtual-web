@@ -288,7 +288,7 @@ function DashboardPreview() {
 
 function MobileAppPreview() {
   return (
-    <section className="mobile-app-section" aria-labelledby="titulo-app-mobile">
+    <section className="mobile-app-section" id="acesso-movel" aria-labelledby="titulo-app-mobile">
       <div className="mobile-app-copy">
         <p className="eyebrow">CRIATÓRIO NO SEU BOLSO</p>
         <h2 id="titulo-app-mobile">Seu criatório, onde você estiver.</h2>
@@ -367,11 +367,11 @@ export default function Home() {
                 <Link className="primary-action" href="/cadastro">Criar minha conta <ArrowIcon /></Link>
                 <Link className="secondary-action landing-secondary-action" href="/login">Já tenho conta</Link>
               </div>
-              <p className="landing-plan-note"><DashboardIcon name="shield" /> Um plano com as mesmas funcionalidades nas opções mensal e anual.</p>
               <a className="landing-scroll-cue" href="#recursos">
                 <span className="landing-scroll-cue-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v15m-6-6 6 6 6-6" /></svg></span>
-                <span><strong>Role a tela para descobrir</strong><small>Veja o que mais você pode fazer pelo seu criatório.</small></span>
+                <span><strong>Role até o final para conhecer tudo</strong><small>Recursos, versão mobile e plano completo estão logo abaixo.</small></span>
               </a>
+              <p className="landing-plan-note"><DashboardIcon name="shield" /> Um plano com as mesmas funcionalidades nas opções mensal e anual.</p>
             </div>
             <DashboardPreview />
           </section>
@@ -394,7 +394,19 @@ export default function Home() {
             </div>
           </section>
 
+          <a className="landing-scroll-next" href="#acesso-movel">
+            <span className="landing-scroll-next-step">01 <i /> 03</span>
+            <span><strong>Ainda tem mais para descobrir</strong><small>Continue rolando para ver o Criatório Virtual no celular.</small></span>
+            <span className="landing-scroll-next-arrow" aria-hidden="true">↓</span>
+          </a>
+
           <MobileAppPreview />
+
+          <a className="landing-scroll-next" href="#planos">
+            <span className="landing-scroll-next-step">02 <i /> 03</span>
+            <span><strong>Conheça o plano completo</strong><small>Mais um passo e você vê tudo o que está incluído.</small></span>
+            <span className="landing-scroll-next-arrow" aria-hidden="true">↓</span>
+          </a>
 
           <section id="planos" className="landing-section plans-section" aria-labelledby="titulo-planos">
             <div className="landing-section-heading">
