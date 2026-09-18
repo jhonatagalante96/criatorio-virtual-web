@@ -644,6 +644,24 @@ h1, h2 { line-height: 1.08; }
 .subscription-alert-blocked { background: #fff0ef; border-color: #edc5c2; color: #8c2f29; }
 .subscription-alert strong { font-size: .82rem; }
 .subscription-alert p { font-size: .72rem; line-height: 1.5; margin: .25rem 0 0; }
+.subscription-alert-success { background: #eaf7ee; border-color: #b9dfc4; color: #176b3a; }
+.subscription-regularization { background: #fff; border: 1px solid #e0e9ed; border-radius: .7rem; box-shadow: 0 .35rem 1rem rgb(6 58 86 / 4%); display: grid; gap: 1rem; padding: clamp(1rem, 2vw, 1.4rem); }
+.subscription-regularization h2 { color: var(--ink); font-size: 1.1rem; margin: 0; }
+.subscription-regularization > div > p:not(.eyebrow) { color: #596780; font-size: .76rem; line-height: 1.5; margin: .35rem 0 0; max-width: 65ch; }
+.subscription-regularization-facts { border-block: 1px solid #edf3f3; display: grid; gap: .7rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: .8rem 0; }
+.subscription-regularization-facts dt { color: #78919a; font-size: .67rem; }
+.subscription-regularization-facts dd { color: #26384e; font-size: .8rem; font-weight: 800; margin: .25rem 0 0; }
+.subscription-regularization-empty, .subscription-regularization-error { color: #8c2f29; font-size: .74rem; line-height: 1.5; margin: 0; }
+.subscription-regularization .auth-primary-action { align-items: center; cursor: pointer; display: inline-flex; font: inherit; font-size: .72rem; font-weight: 800; justify-content: center; justify-self: start; min-height: 2.6rem; padding: .55rem 1rem; }
+.subscription-regularization .auth-primary-action:disabled { cursor: wait; opacity: .65; }
+.subscription-return-page { align-items: center; background: #f3f8f7; display: grid; min-height: 100dvh; padding: 1rem; }
+.subscription-return-card { background: #fff; border: 1px solid #e0e9ed; border-radius: .8rem; box-shadow: 0 .5rem 1.5rem rgb(6 58 86 / 7%); display: grid; gap: .75rem; justify-items: start; margin-inline: auto; max-width: 34rem; padding: clamp(1.25rem, 4vw, 2rem); width: 100%; }
+.subscription-return-icon { align-items: center; background: #e8f5ee; border-radius: 50%; color: #167548; display: inline-flex; font-size: 1.4rem; height: 3rem; justify-content: center; width: 3rem; }
+.subscription-return-card h1 { color: var(--ink); font-size: clamp(1.4rem, 4vw, 1.8rem); margin: 0; }
+.subscription-return-card > p:not(.eyebrow) { color: #596780; font-size: .82rem; line-height: 1.55; margin: 0; }
+.subscription-return-progress { color: #167548; font-size: .72rem; }
+.subscription-return-card .auth-secondary-action { background: #fff; border: 1px solid #cfdde2; border-radius: .4rem; color: #145f4f; cursor: pointer; font: inherit; font-size: .72rem; font-weight: 800; min-height: 2.5rem; padding: .5rem .85rem; }
+.subscription-return-card .auth-secondary-action:disabled { cursor: wait; opacity: .6; }
 .subscription-empty { align-items: center; background: linear-gradient(115deg, #f1faf4, #f5f9fb); display: flex; gap: .9rem; }
 .subscription-empty-icon { align-items: center; background: #d8f0e3; border-radius: .7rem; color: #167548; display: inline-flex; flex: 0 0 auto; font-size: 1.4rem; height: 3rem; justify-content: center; width: 3rem; }
 .subscription-empty h2, .subscription-notice h1 { color: var(--ink); font-size: 1rem; margin: 0; }

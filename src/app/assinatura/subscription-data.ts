@@ -46,6 +46,7 @@ const subscriptionStatuses: Record<string, string> = {
 const paymentStatuses: Record<string, string> = {
   Cancelled: "Cancelada",
   Canceled: "Cancelada",
+  Confirmed: "Paga",
   Failed: "Não aprovada",
   Paid: "Paga",
   Pending: "Pendente",

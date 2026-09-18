@@ -8,8 +8,9 @@ import { normalizeFarmResponse, selectedFarmFromResponse, type BreedingFarmSelec
 import { AppLoadingState } from "../components/app-loading-state";
 import { AuthenticatedShell } from "../components/authenticated-shell";
 import { SessionRecovery } from "../components/session-recovery";
-import { BillingPaymentsResponse, BillingSubscription, billingStatusLabel, formatBillingAmount, formatBillingDate, paymentStatusLabel } from "./subscription-data";
 import { SubscriptionActions } from "./subscription-screen";
+import { type BillingPayment, type BillingPaymentsResponse, type BillingSubscription, billingStatusLabel, formatBillingAmount, formatBillingDate, paymentStatusLabel } from "./subscription-data";
+import { clearPendingRegularizationReturn, findCurrentRegularizablePayment, type HostedInvoiceRegularizationResponse, isSafeHostedInvoiceUrl, paymentAndSubscriptionAllowAccess, type PendingRegularizationReturn, readPendingRegularizationReturn, redirectToHostedInvoice, savePendingRegularizationReturn } from "./regularization";
 
 type SubscriptionView =
   | { kind: "loading" }
@@ -17,7 +18,8 @@ type SubscriptionView =
   | { kind: "unselected" }
   | { kind: "missing-farm" }
   | { kind: "error"; message: string }
-  | { kind: "ready"; farmName: string; payments: BillingPaymentsResponse; subscription: BillingSubscription | null };
+  | { kind: "awaiting-confirmation"; farmName: string; message?: string }
+  | { kind: "ready"; farmName: string; payments: BillingPaymentsResponse; subscription: BillingSubscription | null; regularizationConfirmed?: boolean };
 
 const pageSize = 20;
 
@@ -25,6 +27,12 @@ function SubscriptionScreen() {
   const { error: authError, refresh, session, status } = useAuth();
   const [view, setView] = useState<SubscriptionView>({ kind: "loading" });
   const [paymentPage, setPaymentPage] = useState(1);
+  const [pendingRegularization, setPendingRegularization] = useState<PendingRegularizationReturn | null>(() => readPendingRegularizationReturn());
+  const [isPendingFarmSelected, setIsPendingFarmSelected] = useState(false);
+  const [regularizationBusy, setRegularizationBusy] = useState(false);
+  const [regularizationError, setRegularizationError] = useState<string>();
+  const [returnPollAttempt, setReturnPollAttempt] = useState(0);
+  const [isPollingReturn, setIsPollingReturn] = useState(false);
   const [pollAttempts, setPollAttempts] = useState(0);
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
@@ -37,7 +45,7 @@ function SubscriptionScreen() {
   const loadSubscription = useCallback(async (recoverSession = true) => {
     const currentRequest = ++requestId.current;
     const isCurrent = () => requestId.current === currentRequest;
-    setView({ kind: "loading" });
+    if (!pendingRegularization) setView({ kind: "loading" });
 
     try {
       const selection = normalizeFarmResponse(await client.current!.request<BreedingFarmSelectionResponse>("api/breeding-farms"));
@@ -69,12 +77,34 @@ function SubscriptionScreen() {
       const payments = await client.current!.request<BillingPaymentsResponse>(`api/billing/payments?page=${paymentPage}&pageSize=${pageSize}`);
       if (!isCurrent()) return;
       if (payments.breedingFarmId !== farm.breedingFarmId) throw new StaleTenantResponseError();
+      const savedReturn = pendingRegularization ?? readPendingRegularizationReturn();
+      if (savedReturn && savedReturn.breedingFarmId !== farm.breedingFarmId) {
+        clearPendingRegularizationReturn();
+        setPendingRegularization(null);
+        setIsPendingFarmSelected(false);
+      } else if (savedReturn) {
+        setIsPendingFarmSelected(true);
+        setPendingRegularization(savedReturn);
+        const returnedPayment = payments.items.find((payment) => payment.paymentId === savedReturn.paymentId);
+        if (returnedPayment && subscription && paymentAndSubscriptionAllowAccess(returnedPayment.status, subscription.status)) {
+          clearPendingRegularizationReturn();
+          setPendingRegularization(null);
+          setView({ kind: "ready", farmName: farm.name, payments, subscription, regularizationConfirmed: true });
+          return;
+        }
+        setView({ kind: "awaiting-confirmation", farmName: farm.name });
+        return;
+      }
       setView({ kind: "ready", farmName: farm.name, payments, subscription });
     } catch (requestError) {
       if (!isCurrent()) return;
       if (requestError instanceof ApiError && requestError.status === 401 && recoverSession) {
         const refreshed = await refresh();
         if (isCurrent() && refreshed.ok) await loadSubscription(false);
+        return;
+      }
+      if ((pendingRegularization ?? readPendingRegularizationReturn()) && !(requestError instanceof ApiError && requestError.status === 409)) {
+        setView({ kind: "awaiting-confirmation", farmName: "", message: "Não foi possível confirmar o pagamento agora. Tente consultar novamente." });
         return;
       }
       if (requestError instanceof ApiError && requestError.status === 409) {
@@ -94,13 +124,68 @@ function SubscriptionScreen() {
             : "Verifique sua conexão e tente novamente."
       });
     }
-  }, [paymentPage, refresh]);
+  }, [paymentPage, pendingRegularization, refresh]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
     void loadSubscription();
     return () => { requestId.current += 1; };
   }, [loadSubscription, status]);
+
+  useEffect(() => {
+    if (!pendingRegularization || !isPendingFarmSelected || status !== "authenticated") return;
+    let cancelled = false;
+    let timer: number | undefined;
+    let attempts = 0;
+    setIsPollingReturn(true);
+
+    async function pollPaymentStatus() {
+      try {
+        client.current!.setTenant(pendingRegularization!.breedingFarmId);
+        client.current!.clearCache();
+        const [subscription, payments] = await Promise.all([
+          client.current!.request<BillingSubscription>("api/billing/subscription"),
+          client.current!.request<BillingPaymentsResponse>("api/billing/payments?page=1&pageSize=20")
+        ]);
+        if (cancelled) return;
+        if (subscription.breedingFarmId !== pendingRegularization!.breedingFarmId || payments.breedingFarmId !== pendingRegularization!.breedingFarmId) {
+          throw new StaleTenantResponseError();
+        }
+        const payment = payments.items.find((item) => item.paymentId === pendingRegularization!.paymentId);
+        if (payment && paymentAndSubscriptionAllowAccess(payment.status, subscription.status)) {
+          clearPendingRegularizationReturn();
+          setPendingRegularization(null);
+          setIsPollingReturn(false);
+          setView({ kind: "ready", farmName: "Criatório Virtual", payments, subscription, regularizationConfirmed: true });
+          return;
+        }
+        const confirmationMessage = payment?.status === "Confirmed"
+          ? "Pagamento confirmado. Estamos aguardando a atualização da permissão de acesso."
+          : "Assim que o Asaas confirmar o pagamento, o acesso será liberado automaticamente.";
+        attempts += 1;
+        if (attempts >= 60) {
+          setView({ kind: "awaiting-confirmation", farmName: "", message: "Ainda não recebemos a confirmação. Você pode consultar novamente." });
+          setIsPollingReturn(false);
+          return;
+        }
+        setView((current) => current.kind === "awaiting-confirmation"
+          ? { ...current, message: confirmationMessage }
+          : { kind: "awaiting-confirmation", farmName: "", message: confirmationMessage });
+        timer = window.setTimeout(() => void pollPaymentStatus(), 3000);
+      } catch {
+        if (cancelled) return;
+        setView({ kind: "awaiting-confirmation", farmName: "", message: "Não foi possível consultar a confirmação agora. Tente novamente." });
+        setIsPollingReturn(false);
+      }
+    }
+
+    void pollPaymentStatus();
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+      setIsPollingReturn(false);
+    };
+  }, [isPendingFarmSelected, pendingRegularization, returnPollAttempt, status]);
 
   useEffect(() => {
     if (!callback || ["cancelled", "expired"].includes(callbackResult ?? "") || view.kind !== "ready" || view.subscription?.status !== "PendingSubscription" || pollAttempts >= 12) return;
@@ -120,14 +205,65 @@ function SubscriptionScreen() {
   }
   if (status === "unauthenticated" || !session) return <SessionRecovery />;
   if (view.kind === "loading") return <AppLoadingState activeNav="subscription" email={session.email} label="Carregando assinatura" message="Um instante enquanto consultamos sua situação financeira." />;
+  if (view.kind === "awaiting-confirmation") return <AwaitingPaymentConfirmation busy={isPollingReturn} message={view.message} onRetry={() => setReturnPollAttempt((attempt) => attempt + 1)} />;
 
   const content = (() => {
     if (view.kind === "no-farm") return <SubscriptionNotice actionHref="/onboarding/criatorio" actionLabel="Criar meu criatório" heading="Crie seu primeiro criatório" message="Vincule um criatório à sua conta para consultar a assinatura e as cobranças." />;
     if (view.kind === "unselected") return <SubscriptionNotice actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar criatório" heading="Selecione um criatório" message="Escolha o criatório que deseja consultar." />;
     if (view.kind === "missing-farm") return <SubscriptionNotice actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar outro criatório" heading="Criatório indisponível" message="Não foi possível localizar o criatório selecionado. Escolha outro para continuar." onRetry={() => void loadSubscription()} />;
     if (view.kind === "error") return <SubscriptionNotice heading="Não foi possível carregar a assinatura" message={view.message} onRetry={() => void loadSubscription()} />;
-    return <SubscriptionDetails callback={callback} callbackResult={callbackResult} client={client.current!} farmName={view.farmName} onRefresh={() => { client.current?.clearCache(); void loadSubscription(); }} onPageChange={setPaymentPage} payments={view.payments} pollAttempts={pollAttempts} subscription={view.subscription} />;
+    return <SubscriptionDetails
+      callback={callback}
+      callbackResult={callbackResult}
+      client={client.current!}
+      farmName={view.farmName}
+      onRefresh={() => { client.current?.clearCache(); void loadSubscription(); }}
+      onPageChange={setPaymentPage}
+      onRegularize={(payment) => void startRegularization(payment, view.farmName, view.subscription?.breedingFarmId)}
+      payments={view.payments}
+      pollAttempts={pollAttempts}
+      regularizationBusy={regularizationBusy}
+      regularizationError={regularizationError}
+      regularizationConfirmed={view.regularizationConfirmed === true}
+      subscription={view.subscription}
+    />;
   })();
+
+  async function startRegularization(payment: BillingPayment, farmName: string, breedingFarmId?: string) {
+    if (!breedingFarmId || regularizationBusy) return;
+    setRegularizationBusy(true);
+    setRegularizationError(undefined);
+    try {
+      if (!csrfToken.current) csrfToken.current = await client.current!.fetchAntiforgeryToken();
+      const response = await client.current!.request<HostedInvoiceRegularizationResponse>(
+        `api/billing/payments/${encodeURIComponent(payment.paymentId)}/regularization`,
+        { method: "POST" }
+      );
+      if (response.paymentId !== payment.paymentId || response.status !== "awaitingCustomerPayment" || !isSafeHostedInvoiceUrl(response.paymentUrl)) {
+        throw new Error("invoice_unavailable");
+      }
+      const pending = { breedingFarmId, paymentId: payment.paymentId };
+      savePendingRegularizationReturn(pending);
+      setIsPendingFarmSelected(true);
+      setPendingRegularization(pending);
+      setView({ kind: "awaiting-confirmation", farmName });
+      redirectToHostedInvoice(response.paymentUrl);
+    } catch (requestError) {
+      setRegularizationError(requestError instanceof ApiError && requestError.status === 409
+        ? "A cobrança mudou de situação e não pode mais ser regularizada por esta fatura. Atualize os dados para consultar o estado atual."
+        : requestError instanceof ApiError && requestError.status === 404
+          ? "Não encontramos a cobrança atual deste criatório. Atualize os dados e tente novamente."
+          : requestError instanceof ApiError && requestError.status >= 500
+            ? "O serviço de pagamento está indisponível. Tente novamente em instantes."
+            : requestError instanceof Error && requestError.message === "invoice_unavailable"
+              ? "O link seguro de pagamento não está disponível. Tente novamente em instantes."
+              : "Não foi possível iniciar a regularização. Verifique sua conexão e tente novamente.");
+      client.current!.clearCache();
+      if (requestError instanceof ApiError && [404, 409].includes(requestError.status)) void loadSubscription();
+    } finally {
+      setRegularizationBusy(false);
+    }
+  }
 
   return <AuthenticatedShell activeNav="subscription" email={session.email} farmName={view.kind === "ready" ? view.farmName : "Criatório Virtual"}>{content}</AuthenticatedShell>;
 }
@@ -136,17 +272,19 @@ function SubscriptionNotice({ actionHref, actionLabel, heading, message, onRetry
   return <main className="subscription-page"><section className="subscription-notice"><h1>{heading}</h1><p>{message}</p><div className="subscription-notice-actions">{actionHref && actionLabel && <Link className="auth-primary-action" href={actionHref}>{actionLabel}</Link>}{onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">Tentar novamente</button>}</div></section></main>;
 }
 
-function SubscriptionDetails({ callback, callbackResult, client, farmName, onRefresh, onPageChange, payments, pollAttempts, subscription }: Readonly<{ callback: boolean; callbackResult: string | null; client: ApiClient; farmName: string; onRefresh: () => void; onPageChange: (page: number) => void; payments: BillingPaymentsResponse; pollAttempts: number; subscription: BillingSubscription | null }>) {
+function SubscriptionDetails({ callback, callbackResult, client, farmName, onRefresh, onPageChange, onRegularize, payments, pollAttempts, regularizationBusy, regularizationError, regularizationConfirmed, subscription }: Readonly<{ callback: boolean; callbackResult: string | null; client: ApiClient; farmName: string; onRefresh: () => void; onPageChange: (page: number) => void; onRegularize: (payment: BillingPayment) => void; payments: BillingPaymentsResponse; pollAttempts: number; regularizationBusy: boolean; regularizationError?: string; regularizationConfirmed: boolean; subscription: BillingSubscription | null }>) {
   const isTrial = subscription?.status === "Trial";
   const isGracePeriod = subscription?.status === "GracePeriod";
   const isBlocked = subscription?.status === "Blocked";
   const totalPages = Math.max(1, Math.ceil(payments.totalCount / payments.pageSize));
+  const regularizablePayment = findCurrentRegularizablePayment(subscription, payments);
 
   return (
     <main className="subscription-page">
       <nav aria-label="Navegação estrutural" className="settings-breadcrumb"><Link href="/dashboard">Painel</Link><span aria-hidden="true">›</span><span aria-current="page">Assinatura</span></nav>
       <header className="subscription-header"><div><p className="eyebrow">Conta e pagamentos</p><h1>Assinatura</h1><p>Acompanhe o período gratuito, as próximas cobranças e o histórico financeiro de {farmName}.</p></div>{subscription && <span className={`subscription-status${isBlocked || isGracePeriod ? " subscription-status-warning" : ""}`}>{billingStatusLabel(subscription.status)}</span>}</header>
 
+      {regularizationConfirmed && <div aria-live="polite" className="subscription-alert subscription-alert-success" role="status"><strong>Pagamento confirmado</strong><p>O backend confirmou a cobrança e o acesso ao criatório foi restabelecido.</p></div>}
       {callback && <p aria-live="polite" className="subscription-action-notice">{subscription?.status === "Trial" || subscription?.status === "Active"
         ? "Assinatura confirmada pelo backend. O acesso segue o estado autorizado recebido do serviço."
         : callbackResult === "cancelled" ? "O checkout foi cancelado. Sua assinatura não foi reativada. Você pode tentar novamente quando quiser."
@@ -162,7 +300,15 @@ function SubscriptionDetails({ callback, callbackResult, client, farmName, onRef
         </section>
       ) : (
         <>
-          {(isGracePeriod || isBlocked) && <section aria-live="polite" className={`subscription-alert${isBlocked ? " subscription-alert-blocked" : ""}`}><strong>{isBlocked ? "Acesso financeiro bloqueado" : "Pagamento em período de tolerância"}</strong><p>{isBlocked ? "A assinatura está bloqueada. Consulte a situação das cobranças ou fale com o suporte." : `Restam ${subscription.gracePeriodDaysRemaining ?? 0} dia(s) no período de tolerância, até ${formatBillingDate(subscription.gracePeriodEndsAtUtc)}.`}</p></section>}
+          {(isGracePeriod || isBlocked) && <>
+            <section aria-live="polite" className={`subscription-alert${isBlocked ? " subscription-alert-blocked" : ""}`}><strong>{isBlocked ? "Acesso financeiro bloqueado" : "Pagamento em período de tolerância"}</strong><p>{isBlocked ? "A assinatura está bloqueada. Regularize a cobrança para recuperar o acesso aos recursos do criatório." : `Restam ${subscription.gracePeriodDaysRemaining ?? 0} dia(s) no período de tolerância, até ${formatBillingDate(subscription.gracePeriodEndsAtUtc)}.`}</p></section>
+            <section aria-labelledby="regularization-title" className="subscription-regularization">
+              <div><p className="eyebrow">Cobrança atual</p><h2 id="regularization-title">Regularize seu acesso</h2><p>Você seguirá para a fatura hospedada e segura do Asaas. O acesso será liberado após a confirmação do pagamento.</p></div>
+              {regularizablePayment ? <dl className="subscription-regularization-facts"><div><dt>Vencimento</dt><dd>{formatBillingDate(regularizablePayment.dueAtUtc)}</dd></div><div><dt>Valor</dt><dd>{formatBillingAmount(regularizablePayment.amount, regularizablePayment.currencyCode)}</dd></div><div><dt>Situação</dt><dd>{paymentStatusLabel(regularizablePayment.status)}</dd></div></dl> : <p className="subscription-regularization-empty">Não encontramos uma cobrança atual disponível para regularização. Atualize a consulta ou tente novamente mais tarde.</p>}
+              {regularizationError && <p className="subscription-regularization-error" role="alert">{regularizationError}</p>}
+              {regularizablePayment && <button className="auth-primary-action" disabled={regularizationBusy} onClick={() => onRegularize(regularizablePayment)} type="button">{regularizationBusy ? "Preparando fatura segura…" : "Regularizar pagamento"}</button>}
+            </section>
+          </>}
           <section aria-labelledby="subscription-overview-title" className="subscription-overview">
             <div className="subscription-overview-heading"><div><p className="eyebrow">Resumo financeiro</p><h2 id="subscription-overview-title">Detalhes da assinatura</h2></div><span className="subscription-plan">{subscription.planCode.replaceAll("-", " ")}</span></div>
             <dl className="subscription-facts">
@@ -188,10 +334,14 @@ function SubscriptionDetails({ callback, callbackResult, client, farmName, onRef
   );
 }
 
+function AwaitingPaymentConfirmation({ busy, message, onRetry }: Readonly<{ busy: boolean; message?: string; onRetry: () => void }>) {
+  return <main className="subscription-return-page"><section aria-live="polite" aria-busy={busy} className="subscription-return-card"><span aria-hidden="true" className="subscription-return-icon">◷</span><p className="eyebrow">Regularização de cobrança</p><h1>Aguardando confirmação</h1><p>{message ?? "A confirmação é feita pelo Asaas e pelo backend. Esta página não considera o retorno da fatura como pagamento confirmado."}</p>{busy && <span className="subscription-return-progress">Consultando a situação do pagamento…</span>}<button className="auth-secondary-action" disabled={busy} onClick={onRetry} type="button">Consultar novamente</button></section></main>;
+}
+
 function SubscriptionPageContent() {
   return <SubscriptionScreen />;
 }
 
-export default function Page() {
+export default function SubscriptionPage() {
   return <AuthProvider><SubscriptionPageContent /></AuthProvider>;
 }
