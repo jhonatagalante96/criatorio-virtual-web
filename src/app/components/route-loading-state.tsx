@@ -42,6 +42,10 @@ function loadingCopyForPathname(pathname: string): LoadingCopy {
     return { activeNav: "farm", label: "Carregando criatório", message: "Um instante enquanto preparamos as informações do criatório." };
   }
 
+  if (pathname.startsWith("/assinatura")) {
+    return { activeNav: "subscription", label: "Carregando assinatura", message: "Um instante enquanto consultamos sua situação financeira." };
+  }
+
   if (pathname.startsWith("/configuracoes")) {
     return { activeNav: "settings", label: "Carregando configurações", message: "Um instante enquanto preparamos suas configurações." };
   }
