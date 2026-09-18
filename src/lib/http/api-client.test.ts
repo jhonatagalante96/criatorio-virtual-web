@@ -201,5 +201,39 @@ describe("ApiClient", () => {
       .rejects.toThrow("Binary API requests must use the configured API origin.");
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("notifies listeners and clears cache on 403 functional_access_blocked", async () => {
+    const { onFunctionalAccessBlocked } = await import("./api-client");
+    const listener = vi.fn();
+    const unsubscribe = onFunctionalAccessBlocked(listener);
+
+    const client = new ApiClient("http://localhost:5000");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ name: "CachedBird" }), { headers: { "content-type": "application/json" }, status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        code: "functional_access_blocked",
+        detail: "Functional access is blocked by billing.",
+        title: "Forbidden"
+      }), { headers: { "content-type": "application/problem+json" }, status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    // Initial successful request gets cached
+    expect(await client.request("api/birds")).toEqual({ name: "CachedBird" });
+
+    // Second request receives 403 functional_access_blocked
+    await expect(client.request("api/birds/action", { method: "POST" })).rejects.toMatchObject({
+      code: "functional_access_blocked",
+      status: 403
+    });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    // Cache should be cleared, next GET should hit fetchMock again
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ name: "FreshBird" }), { headers: { "content-type": "application/json" }, status: 200 }));
+    expect(await client.request("api/birds")).toEqual({ name: "FreshBird" });
+
+    unsubscribe();
+  });
 });
+
 

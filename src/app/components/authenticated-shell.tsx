@@ -1,9 +1,12 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { getLastKnownShellIdentity, isKnownFarmName, rememberShellIdentity } from "../../lib/auth/shell-identity";
-import { BrandLockup } from "./brand";
+import { useAccessContext } from "../../lib/auth/access-provider";
+import { AppLoadingContent } from "./app-loading-state";
+import { BrandLockup, BrandPanel } from "./brand";
 import { DashboardIcon } from "./dashboard-icons";
 import { PwaInstallPrompt } from "./pwa-install-prompt";
+import { SessionRecovery } from "./session-recovery";
 import type { DashboardIconName } from "./dashboard-icons";
 
 export type AuthenticatedNav = "dashboard" | "statistics" | "birds" | "reproduction" | "transfers" | "competitions" | "documents" | "farm" | "subscription" | "settings";
@@ -11,8 +14,8 @@ export type AuthenticatedNav = "dashboard" | "statistics" | "birds" | "reproduct
 interface AuthenticatedShellProps {
   activeNav: AuthenticatedNav;
   children: React.ReactNode;
-  email: string;
-  farmName: string;
+  email?: string;
+  farmName?: string;
 }
 
 interface NavigationItem {
@@ -57,16 +60,37 @@ function initialsFromName(name: string): string {
     .join("") || "CV";
 }
 
-function NavigationLinks({ activeNav, items = primaryNavigation }: Readonly<{ activeNav: AuthenticatedNav; items?: NavigationItem[] }>) {
+function NavigationLinks({
+  activeNav,
+  canAccessApp = true,
+  items = primaryNavigation
+}: Readonly<{
+  activeNav: AuthenticatedNav;
+  canAccessApp?: boolean;
+  items?: NavigationItem[];
+}>) {
   return (
     <ul className="authenticated-nav-list">
       {items.map((item) => {
+        const isFunctional = primaryNavigation.some((primary) => primary.id === item.id) || item.id === "farm";
+        const isBlocked = !canAccessApp && isFunctional;
+
         const content = (
           <>
             <span aria-hidden="true" className="authenticated-nav-symbol"><DashboardIcon name={item.icon} /></span>
             <span>{item.label}</span>
           </>
         );
+
+        if (isBlocked) {
+          return (
+            <li key={item.id}>
+              <span aria-disabled="true" className="authenticated-nav-link is-disabled" title="Acesso bloqueado por pendência de assinatura">
+                {content}
+              </span>
+            </li>
+          );
+        }
 
         return (
           <li key={item.id}>
@@ -115,16 +139,21 @@ function AccountMenu({ compact = false, displayName, email, farmName }: Readonly
   );
 }
 
-export function AuthenticatedShell({ activeNav, children, email, farmName }: Readonly<AuthenticatedShellProps>) {
-  const cachedIdentity = getLastKnownShellIdentity();
-  const resolvedEmail = email || cachedIdentity.email || "";
-  const resolvedFarmName = isKnownFarmName(farmName) ? farmName : cachedIdentity.farmName || farmName;
-  const displayName = displayNameFromEmail(resolvedEmail);
-
-  useEffect(() => {
-    rememberShellIdentity({ email, farmName });
-  }, [email, farmName]);
-
+function AuthenticatedShellLayout({
+  activeNav,
+  canAccessApp = true,
+  children,
+  displayName,
+  email,
+  farmName
+}: Readonly<{
+  activeNav: AuthenticatedNav;
+  canAccessApp?: boolean;
+  children: React.ReactNode;
+  displayName: string;
+  email: string;
+  farmName: string;
+}>) {
   return (
     <main className="authenticated-page">
       <a className="skip-link" href="#conteudo-autenticado">Pular para o conteúdo</a>
@@ -135,10 +164,10 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
           </Link>
           <div className="authenticated-sidebar-navigation">
             <nav aria-label="Módulos disponíveis" className="authenticated-desktop-nav">
-              <NavigationLinks activeNav={activeNav} />
+              <NavigationLinks activeNav={activeNav} canAccessApp={canAccessApp} />
             </nav>
             <nav aria-label="Conta e configurações" className="authenticated-sidebar-secondary-nav">
-              <NavigationLinks activeNav={activeNav} items={secondaryNavigation} />
+              <NavigationLinks activeNav={activeNav} canAccessApp={canAccessApp} items={secondaryNavigation} />
             </nav>
           </div>
           <div className="authenticated-sidebar-inspiration" aria-label="Mensagem inspiradora">
@@ -156,7 +185,7 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
               <span>Buscar no sistema...</span>
             </div>
             <div className="authenticated-topbar-actions">
-              <AccountMenu displayName={displayName} email={resolvedEmail} farmName={resolvedFarmName} />
+              <AccountMenu displayName={displayName} email={email} farmName={farmName} />
             </div>
           </header>
           <header className="authenticated-mobile-header">
@@ -168,17 +197,17 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
               <div className="authenticated-mobile-menu-panel">
                 <div className="authenticated-farm-context">
                   <span className="authenticated-context-label">Criatório selecionado</span>
-                  <strong suppressHydrationWarning title={resolvedFarmName}>{resolvedFarmName}</strong>
+                  <strong suppressHydrationWarning title={farmName}>{farmName}</strong>
                 </div>
                 <nav aria-label="Módulos disponíveis no celular">
-                  <NavigationLinks activeNav={activeNav} />
+                  <NavigationLinks activeNav={activeNav} canAccessApp={canAccessApp} />
                 </nav>
                 <nav aria-label="Conta e configurações no celular" className="authenticated-mobile-menu-links">
-                  <NavigationLinks activeNav={activeNav} items={secondaryNavigation} />
+                  <NavigationLinks activeNav={activeNav} canAccessApp={canAccessApp} items={secondaryNavigation} />
                 </nav>
                 <div className="authenticated-mobile-menu-account">
                   <strong suppressHydrationWarning>{displayName}</strong>
-                  <small suppressHydrationWarning>{resolvedEmail}</small>
+                  <small suppressHydrationWarning>{email}</small>
                   <Link href="/configuracoes?section=session">Gerenciar sessão</Link>
                 </div>
               </div>
@@ -187,7 +216,7 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
               <BrandLockup />
             </Link>
             <div className="authenticated-mobile-account-control">
-              <AccountMenu compact displayName={displayName} email={resolvedEmail} farmName={resolvedFarmName} />
+              <AccountMenu compact displayName={displayName} email={email} farmName={farmName} />
             </div>
           </header>
           <div className="authenticated-content" id="conteudo-autenticado">
@@ -196,5 +225,176 @@ export function AuthenticatedShell({ activeNav, children, email, farmName }: Rea
         </div>
       </div>
     </main>
+  );
+}
+
+export function AuthenticatedShell({ activeNav, children, email = "", farmName = "" }: Readonly<AuthenticatedShellProps>) {
+  const access = useAccessContext();
+  const cachedIdentity = getLastKnownShellIdentity();
+
+  const contextEmail = access?.accessContext?.user?.email;
+  const contextFarmName = access?.accessContext?.breedingFarm?.name;
+
+  const resolvedEmail = email || contextEmail || cachedIdentity.email || "";
+  const resolvedFarmName = isKnownFarmName(farmName)
+    ? farmName
+    : contextFarmName || cachedIdentity.farmName || farmName || "Criatório Virtual";
+  const displayName = displayNameFromEmail(resolvedEmail);
+
+  useEffect(() => {
+    if (resolvedEmail || resolvedFarmName) {
+      rememberShellIdentity({ email: resolvedEmail, farmName: resolvedFarmName });
+    }
+  }, [resolvedEmail, resolvedFarmName]);
+
+  // Se estiver dentro de AccessProvider, aplicar a guarda de acesso
+  if (access) {
+    if (access.status === "loading") {
+      return (
+        <AuthenticatedShellLayout
+          activeNav={activeNav}
+          canAccessApp={false}
+          displayName={displayName}
+          email={resolvedEmail}
+          farmName={resolvedFarmName}
+        >
+          <AppLoadingContent
+            label="Carregando"
+            message="Um instante enquanto verificamos seu acesso."
+          />
+        </AuthenticatedShellLayout>
+      );
+    }
+
+    if (access.status === "unauthenticated") {
+      return <SessionRecovery />;
+    }
+
+    if (access.status === "error") {
+      return (
+        <main className="auth-page dashboard-access-page">
+          <a className="skip-link" href="#conteudo-shell-erro">Pular para o conteúdo</a>
+          <div className="auth-shell dashboard-access-shell">
+            <BrandPanel />
+            <section aria-labelledby="titulo-shell-erro" className="auth-form-panel">
+              <div className="auth-form-content auth-state-card" id="conteudo-shell-erro">
+                <BrandLockup stacked />
+                <h1 id="titulo-shell-erro" tabIndex={-1}>Não foi possível verificar seu acesso</h1>
+                <p className="lede">{access.error ?? "Ocorreu um erro ao validar as permissões da sua conta. Tente novamente para continuar."}</p>
+                <button className="auth-secondary-action" onClick={() => void access.refetch()} type="button">
+                  Tentar novamente
+                </button>
+              </div>
+            </section>
+          </div>
+        </main>
+      );
+    }
+
+    if (access.status === "ready" && access.accessContext) {
+      const { breedingFarm, onboarding, access: accessDetails } = access.accessContext;
+
+      // 1. Precedência: Sem criatório ou onboarding pendente -> retomada do onboarding (não tela de inadimplência)
+      if (!breedingFarm || onboarding.status === "Pending") {
+        const onboardingHref = onboarding.nextStep
+          ?? (breedingFarm ? "/onboarding/criatorio/selecionar" : "/onboarding/criatorio");
+        const actionLabel = breedingFarm ? "Selecionar criatório" : "Criar meu criatório";
+        const heading = breedingFarm ? "Selecione um criatório" : "Crie seu primeiro criatório";
+        const message = breedingFarm
+          ? "Escolha um criatório para acessar o painel e os recursos do sistema."
+          : "Ainda não existe um criatório vinculado a esta conta. Crie um agora para liberar seu acesso.";
+
+        return (
+          <main className="auth-page dashboard-access-page">
+            <a className="skip-link" href="#conteudo-shell-onboarding">Pular para o conteúdo</a>
+            <div className="auth-shell dashboard-access-shell">
+              <BrandPanel />
+              <section aria-labelledby="titulo-shell-onboarding" className="auth-form-panel">
+                <div className="auth-form-content auth-state-card" id="conteudo-shell-onboarding">
+                  <BrandLockup stacked />
+                  <h1 id="titulo-shell-onboarding" tabIndex={-1}>{heading}</h1>
+                  <p className="lede">{message}</p>
+                  <Link className="auth-primary-action" href={onboardingHref}>{actionLabel}</Link>
+                </div>
+              </section>
+            </div>
+          </main>
+        );
+      }
+
+      // 2. Precedência: canAccessApp === false -> bloquear conteúdo funcional e obedecer exclusivamente a requiredAction
+      if (!accessDetails.canAccessApp) {
+        if (activeNav === "subscription" && (accessDetails.requiredAction === "Regularize" || accessDetails.requiredAction === "Resubscribe")) {
+          return (
+            <AuthenticatedShellLayout
+              activeNav={activeNav}
+              canAccessApp={false}
+              displayName={displayName}
+              email={resolvedEmail}
+              farmName={resolvedFarmName}
+            >
+              {children}
+            </AuthenticatedShellLayout>
+          );
+        }
+
+        let heading = "Acesso suspenso";
+        let message = "O acesso funcional deste criatório está temporariamente bloqueado. Entre em contato com o suporte para mais informações.";
+        let actionHref: string | undefined;
+        let actionLabel: string | undefined;
+
+        if (accessDetails.requiredAction === "Subscribe") {
+          heading = "Assinatura necessária";
+          message = "Para acessar as funcionalidades do criatório, inicie seu período de avaliação ou contrate uma assinatura.";
+          actionHref = "/billing/subscription-checkout";
+          actionLabel = "Contratar assinatura";
+        } else if (accessDetails.requiredAction === "Regularize") {
+          heading = "Acesso bloqueado por pagamento pendente";
+          message = "Existe uma fatura em aberto para o criatório. Regularize seu pagamento para restabelecer o acesso funcional.";
+          actionHref = "/assinatura";
+          actionLabel = "Regularizar pagamento";
+        } else if (accessDetails.requiredAction === "Resubscribe") {
+          heading = "Assinatura cancelada";
+          message = "A assinatura deste criatório foi cancelada. Reative sua assinatura para recuperar o acesso às funcionalidades.";
+          actionHref = "/assinatura";
+          actionLabel = "Reativar assinatura";
+        }
+
+        return (
+          <main className="auth-page dashboard-access-page">
+            <a className="skip-link" href="#conteudo-shell-bloqueado">Pular para o conteúdo</a>
+            <div className="auth-shell dashboard-access-shell">
+              <BrandPanel />
+              <section aria-labelledby="titulo-shell-bloqueado" className="auth-form-panel">
+                <div className="auth-form-content auth-state-card" id="conteudo-shell-bloqueado">
+                  <BrandLockup stacked />
+                  <h1 id="titulo-shell-bloqueado" tabIndex={-1}>{heading}</h1>
+                  <p className="lede">{message}</p>
+                  {actionHref && actionLabel ? (
+                    <Link className="auth-primary-action" href={actionHref}>{actionLabel}</Link>
+                  ) : (
+                    <button className="auth-secondary-action" onClick={() => void access.refetch()} type="button">
+                      Verificar novamente
+                    </button>
+                  )}
+                </div>
+              </section>
+            </div>
+          </main>
+        );
+      }
+    }
+  }
+
+  return (
+    <AuthenticatedShellLayout
+      activeNav={activeNav}
+      canAccessApp={access?.accessContext?.access?.canAccessApp ?? true}
+      displayName={displayName}
+      email={resolvedEmail}
+      farmName={resolvedFarmName}
+    >
+      {children}
+    </AuthenticatedShellLayout>
   );
 }

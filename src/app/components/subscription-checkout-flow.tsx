@@ -4,6 +4,7 @@ import React, { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "../../lib/auth/auth-context";
+import { useAccessContext } from "../../lib/auth/access-provider";
 import { ApiClient, ApiError, createApiClient } from "../../lib/http/api-client";
 import { BillingSubscription, hasSubscriptionAccess } from "../../lib/billing/subscription-access";
 import { AppLoadingState } from "./app-loading-state";
@@ -151,6 +152,7 @@ function CheckoutForm({
 
 function CheckoutContent({ isReturn }: Readonly<{ isReturn: boolean }>) {
   const { error: authenticationError, refresh, session, status } = useAuth();
+  const access = useAccessContext();
   const router = useRouter();
   const api = useRef<ApiClient | null>(null);
   const csrfToken = useRef<string | undefined>(undefined);
@@ -181,9 +183,13 @@ function CheckoutContent({ isReturn }: Readonly<{ isReturn: boolean }>) {
         if (cancelled) return;
         setSubscription(current);
         if (hasSubscriptionAccess(current.status)) {
-          setView({ kind: "access" });
-          router.replace("/dashboard");
-          return;
+          const freshAccess = access?.refetch ? await access.refetch() : undefined;
+          if (cancelled) return;
+          if (!freshAccess || freshAccess.access.canAccessApp) {
+            setView({ kind: "access" });
+            router.replace("/dashboard");
+            return;
+          }
         }
         if (current.status === "PendingSubscription") {
           setView({ kind: result === "cancelled" || result === "expired" ? "cancelled" : "pending", subscription: current });

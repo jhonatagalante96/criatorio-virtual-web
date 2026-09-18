@@ -6,3 +6,5 @@ coverage/
 # Local environment files
 .env*.local
 certificates/
+.codex-worktrees/
+.codex-remote-attachments/

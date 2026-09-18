@@ -1,6 +1,28 @@
 export type ApiMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
 
 export const ANTIFORGERY_HEADER = "X-XSRF-TOKEN";
+export const FUNCTIONAL_ACCESS_BLOCKED_CODE = "functional_access_blocked";
+
+export type FunctionalAccessBlockedListener = () => void | Promise<void>;
+
+const functionalAccessBlockedListeners = new Set<FunctionalAccessBlockedListener>();
+
+export function onFunctionalAccessBlocked(listener: FunctionalAccessBlockedListener): () => void {
+  functionalAccessBlockedListeners.add(listener);
+  return () => {
+    functionalAccessBlockedListeners.delete(listener);
+  };
+}
+
+export function notifyFunctionalAccessBlocked(): void {
+  for (const listener of functionalAccessBlockedListeners) {
+    try {
+      void listener();
+    } catch {
+      // safe ignore
+    }
+  }
+}
 
 export type ValidationErrors = Record<string, string[]>;
 
@@ -56,16 +78,24 @@ async function toApiError(response: Response): Promise<ApiError> {
   const fallbackTitle = response.status >= 500 ? "Não foi possível concluir a solicitação." : "Não foi possível concluir a solicitação.";
   const contentType = response.headers.get("content-type") ?? "";
 
-  if (!contentType.includes("json")) return new ApiError(response.status, fallbackTitle);
+  if (!contentType.includes("json")) {
+    return new ApiError(response.status, fallbackTitle);
+  }
 
   const payload = await response.json() as ProblemDetailsPayload;
-  return new ApiError(
+  const error = new ApiError(
     response.status,
     payload.title ?? fallbackTitle,
     payload.detail,
     readValidationErrors(payload),
     payload.code
   );
+
+  if (response.status === 403 && payload.code === FUNCTIONAL_ACCESS_BLOCKED_CODE) {
+    notifyFunctionalAccessBlocked();
+  }
+
+  return error;
 }
 
 export class ApiClient {
@@ -117,7 +147,13 @@ export class ApiClient {
     });
 
     if (requestVersion !== this.tenantVersion) throw new StaleTenantResponseError();
-    if (!response.ok && !options.acceptedStatuses?.includes(response.status)) throw await toApiError(response);
+    if (!response.ok && !options.acceptedStatuses?.includes(response.status)) {
+      const error = await toApiError(response);
+      if (error.code === FUNCTIONAL_ACCESS_BLOCKED_CODE) {
+        this.clearCache();
+      }
+      throw error;
+    }
     if (response.status === 204) return undefined as T;
 
     const data = await response.json() as T;
