@@ -131,6 +131,23 @@ describe("SubscriptionCheckoutFlow", () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("antiforgery/token"))).toBe(true);
   });
 
+  it("explains when the selected farm cannot be used to start a subscription", async () => {
+    const unavailableFarm = new Response(JSON.stringify({ status: 404, title: "The selected breeding farm was not found." }), {
+      headers: { "content-type": "application/problem+json" },
+      status: 404
+    });
+    const fetchMock = mockFetch(noSubscriptionResponse(), unavailableFarm);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SubscriptionCheckoutFlow />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Escolha sua assinatura" })).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("CPF ou CNPJ"), { target: { value: "123.456.789-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar para o pagamento" }));
+
+    const checkoutError = await screen.findByRole("alert");
+    expect(checkoutError.textContent).toBe("Não foi possível contratar o criatório selecionado. Confira se este é o criatório correto e se sua conta tem autorização de responsável.");
+  });
+
   it("does not navigate to a checkout URL outside the Asaas domain", async () => {
     const checkoutResponse = new Response(JSON.stringify({
       checkoutId: "checkout-id",

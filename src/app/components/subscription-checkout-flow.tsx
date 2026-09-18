@@ -261,6 +261,8 @@ function CheckoutContent({ isReturn }: Readonly<{ isReturn: boolean }>) {
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setCheckoutError("Sua sessão expirou. Entre novamente para continuar.");
+      } else if (error instanceof ApiError && error.status === 404) {
+        setCheckoutError("Não foi possível contratar o criatório selecionado. Confira se este é o criatório correto e se sua conta tem autorização de responsável.");
       } else if (error instanceof ApiError && error.status === 400) {
         setCheckoutError("Confira o CPF ou CNPJ e a periodicidade antes de continuar.");
       } else if (error instanceof ApiError && error.status === 409) {
