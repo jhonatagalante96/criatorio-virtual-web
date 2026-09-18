@@ -3,9 +3,16 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import SubscriptionPage from "./page";
 
+vi.mock("./regularization", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./regularization")>();
+  return { ...actual, redirectToHostedInvoice: vi.fn() };
+});
+import { redirectToHostedInvoice } from "./regularization";
+
 afterEach(() => {
   cleanup();
   window.sessionStorage.clear();
+  vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -125,5 +132,64 @@ describe("SubscriptionPage", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Não foi possível carregar a assinatura" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeTruthy();
     expect(screen.getByText("A consulta está indisponível no momento. Tente novamente em instantes.")).toBeTruthy();
+  });
+
+  it("requests a hosted invoice without card data and navigates only to the validated Asaas link", async () => {
+    const duePayment = {
+      amount: 119.5,
+      createdAtUtc: "2026-02-15T12:00:00Z",
+      currencyCode: "BRL",
+      dueAtUtc: "2026-02-15T12:00:00Z",
+      paidAtUtc: null,
+      paymentId: "current-payment-id",
+      status: "Pending"
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("api/auth/session")) return sessionResponse();
+      if (url.includes("antiforgery/token")) return new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 });
+      if (url.includes("api/breeding-farms")) return jsonResponse(farmSelectionResponse());
+      if (url.includes("api/billing/subscription")) return jsonResponse({ ...subscriptionResponse(), status: "Blocked" });
+      if (url.includes("api/billing/payments/current-payment-id/regularization")) {
+        expect(init?.method).toBe("POST");
+        expect(init?.body).toBeUndefined();
+        expect(new Headers(init?.headers).get("x-xsrf-token")).toBe("csrf-token");
+        return jsonResponse({ paymentId: "current-payment-id", paymentStatus: "Pending", paymentUrl: "https://www.asaas.com/i/invoice-id", status: "awaitingCustomerPayment" });
+      }
+      if (url.includes("api/billing/payments")) return jsonResponse(paymentsResponse([duePayment]));
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SubscriptionPage />);
+
+    await screen.findByRole("button", { name: "Regularizar pagamento" });
+    screen.getByRole("button", { name: "Regularizar pagamento" }).click();
+
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/regularization"))).toBe(true));
+    await waitFor(() => expect(redirectToHostedInvoice).toHaveBeenCalled());
+    expect(redirectToHostedInvoice).toHaveBeenCalledWith("https://www.asaas.com/i/invoice-id");
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/regularization"))).toBe(true);
+  });
+
+  it("does not navigate when the hosted invoice URL is outside Asaas", async () => {
+    const duePayment = { amount: 119.5, createdAtUtc: "2026-02-15T12:00:00Z", currencyCode: "BRL", dueAtUtc: "2026-02-15T12:00:00Z", paidAtUtc: null, paymentId: "current-payment-id", status: "Pending" };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api/auth/session")) return sessionResponse();
+      if (url.includes("antiforgery/token")) return new Response(null, { headers: { "X-XSRF-TOKEN": "csrf-token" }, status: 204 });
+      if (url.includes("api/breeding-farms")) return jsonResponse(farmSelectionResponse());
+      if (url.includes("api/billing/subscription")) return jsonResponse({ ...subscriptionResponse(), status: "Blocked" });
+      if (url.includes("/regularization")) return jsonResponse({ paymentId: "current-payment-id", paymentStatus: "Pending", paymentUrl: "https://attacker.example/invoice", status: "awaitingCustomerPayment" });
+      if (url.includes("api/billing/payments")) return jsonResponse(paymentsResponse([duePayment]));
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SubscriptionPage />);
+
+    await screen.findByRole("button", { name: "Regularizar pagamento" });
+    screen.getByRole("button", { name: "Regularizar pagamento" }).click();
+
+    expect((await screen.findByRole("alert")).textContent).toContain("link seguro de pagamento não está disponível");
+    expect(redirectToHostedInvoice).not.toHaveBeenCalled();
   });
 });
