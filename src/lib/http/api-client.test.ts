@@ -300,6 +300,9 @@ describe("ApiClient", () => {
 
     // Explicitly exempt mutation is allowed
     await expect(client.request("api/custom-webhook", { body: "{}", exemptCsrf: true, method: "POST" })).resolves.toEqual({ ok: true });
+    // requiresCsrf: false does NOT bypass defaultRequiresCsrf: true
+    await expect(client.request("api/custom-action", { body: "{}", method: "POST", requiresCsrf: false })).rejects.toBeInstanceOf(MissingCsrfTokenError);
+
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

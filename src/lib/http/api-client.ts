@@ -112,25 +112,6 @@ export interface ApiClientOptions {
   defaultRequiresCsrf?: boolean;
 }
 
-/**
- * Retorna se o caminho é acessível anonimamente (público).
- * Nota: Endpoints públicos/AllowAnonymous no backend NÃO são automaticamente isentos de antiforgery.
- * Para isenção de CSRF, use a opção explícita `exemptCsrf: true`.
- */
-export function isPublicEndpoint(path: string): boolean {
-  const normalized = path.replace(/^\/+/, "").toLowerCase();
-  return (
-    normalized.startsWith("api/auth/login") ||
-    normalized.startsWith("api/auth/register") ||
-    normalized.startsWith("api/auth/confirm-email") ||
-    normalized.startsWith("api/auth/forgot-password") ||
-    normalized.startsWith("api/auth/reset-password") ||
-    normalized.startsWith("api/auth/google") ||
-    normalized.startsWith("antiforgery/token") ||
-    normalized.startsWith("health")
-  );
-}
-
 export class ApiClient {
   private readonly cache = new Map<string, unknown>();
   private readonly csrfToken: () => string | undefined;
@@ -151,7 +132,7 @@ export class ApiClient {
 
   private isCsrfRequired(method: ApiMethod, path: string, options?: ApiRequestOptions): boolean {
     if (!isMutation(method)) return false;
-    if (options?.exemptCsrf === true || options?.requiresCsrf === false) return false;
+    if (options?.exemptCsrf === true) return false;
     if (options?.requiresCsrf === true || options?.protected === true) return true;
     if (this.defaultRequiresCsrf) return true;
     return false;
