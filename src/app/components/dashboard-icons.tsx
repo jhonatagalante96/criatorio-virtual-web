@@ -20,6 +20,7 @@ export type DashboardIconName =
   | "settings"
   | "shield"
   | "tag"
+  | "trash"
   | "transfer"
   | "trophy"
   | "user"
@@ -118,6 +119,10 @@ export function DashboardIcon({ name, className = "" }: Readonly<{ name: Dashboa
 
   if (name === "tag") {
     return <svg {...props}><path d="M4 5.5h6l8.5 8.5-5.5 5.5L4.5 11V5.5Z" /><circle cx="7.5" cy="8.5" r="1" /></svg>;
+  }
+
+  if (name === "trash") {
+    return <svg {...props}><path d="M4.5 7h15M9 7V4h6v3M7.5 7l.9 13h7.2l.9-13M10 11v5M14 11v5" /></svg>;
   }
 
   if (name === "user") {
