@@ -9,6 +9,7 @@ import { AppLoadingState } from "../components/app-loading-state";
 import { AuthenticatedShell } from "../components/authenticated-shell";
 import { SessionRecovery } from "../components/session-recovery";
 import { BillingPaymentsResponse, BillingSubscription, billingStatusLabel, formatBillingAmount, formatBillingDate, paymentStatusLabel } from "./subscription-data";
+import { SubscriptionActions } from "./subscription-screen";
 
 type SubscriptionView =
   | { kind: "loading" }
@@ -24,9 +25,12 @@ function SubscriptionScreen() {
   const { error: authError, refresh, session, status } = useAuth();
   const [view, setView] = useState<SubscriptionView>({ kind: "loading" });
   const [paymentPage, setPaymentPage] = useState(1);
+  const [pollAttempts, setPollAttempts] = useState(0);
   const csrfToken = useRef<string | undefined>(undefined);
   const client = useRef<ApiClient | null>(null);
   const requestId = useRef(0);
+  const callbackResult = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("result");
+  const callback = ["success", "cancelled", "expired"].includes(callbackResult ?? "");
 
   if (!client.current) client.current = createApiClient(() => csrfToken.current);
 
@@ -98,6 +102,16 @@ function SubscriptionScreen() {
     return () => { requestId.current += 1; };
   }, [loadSubscription, status]);
 
+  useEffect(() => {
+    if (!callback || ["cancelled", "expired"].includes(callbackResult ?? "") || view.kind !== "ready" || view.subscription?.status !== "PendingSubscription" || pollAttempts >= 12) return;
+    const timer = window.setTimeout(() => {
+      client.current?.clearCache();
+      setPollAttempts((attempts) => attempts + 1);
+      void loadSubscription();
+    }, 5000);
+    return () => window.clearTimeout(timer);
+  }, [callback, callbackResult, loadSubscription, pollAttempts, view]);
+
   if (status === "loading" || status === "authenticating" || status === "signing-out") {
     return <AppLoadingState activeNav="subscription" email={session?.email} label="Carregando assinatura" message="Um instante enquanto consultamos sua situação financeira." />;
   }
@@ -112,7 +126,7 @@ function SubscriptionScreen() {
     if (view.kind === "unselected") return <SubscriptionNotice actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar criatório" heading="Selecione um criatório" message="Escolha o criatório que deseja consultar." />;
     if (view.kind === "missing-farm") return <SubscriptionNotice actionHref="/onboarding/criatorio/selecionar" actionLabel="Selecionar outro criatório" heading="Criatório indisponível" message="Não foi possível localizar o criatório selecionado. Escolha outro para continuar." onRetry={() => void loadSubscription()} />;
     if (view.kind === "error") return <SubscriptionNotice heading="Não foi possível carregar a assinatura" message={view.message} onRetry={() => void loadSubscription()} />;
-    return <SubscriptionDetails farmName={view.farmName} onPageChange={setPaymentPage} payments={view.payments} subscription={view.subscription} />;
+    return <SubscriptionDetails callback={callback} callbackResult={callbackResult} client={client.current!} farmName={view.farmName} onRefresh={() => { client.current?.clearCache(); void loadSubscription(); }} onPageChange={setPaymentPage} payments={view.payments} pollAttempts={pollAttempts} subscription={view.subscription} />;
   })();
 
   return <AuthenticatedShell activeNav="subscription" email={session.email} farmName={view.kind === "ready" ? view.farmName : "Criatório Virtual"}>{content}</AuthenticatedShell>;
@@ -122,7 +136,7 @@ function SubscriptionNotice({ actionHref, actionLabel, heading, message, onRetry
   return <main className="subscription-page"><section className="subscription-notice"><h1>{heading}</h1><p>{message}</p><div className="subscription-notice-actions">{actionHref && actionLabel && <Link className="auth-primary-action" href={actionHref}>{actionLabel}</Link>}{onRetry && <button className="auth-secondary-action" onClick={onRetry} type="button">Tentar novamente</button>}</div></section></main>;
 }
 
-function SubscriptionDetails({ farmName, onPageChange, payments, subscription }: Readonly<{ farmName: string; onPageChange: (page: number) => void; payments: BillingPaymentsResponse; subscription: BillingSubscription | null }>) {
+function SubscriptionDetails({ callback, callbackResult, client, farmName, onRefresh, onPageChange, payments, pollAttempts, subscription }: Readonly<{ callback: boolean; callbackResult: string | null; client: ApiClient; farmName: string; onRefresh: () => void; onPageChange: (page: number) => void; payments: BillingPaymentsResponse; pollAttempts: number; subscription: BillingSubscription | null }>) {
   const isTrial = subscription?.status === "Trial";
   const isGracePeriod = subscription?.status === "GracePeriod";
   const isBlocked = subscription?.status === "Blocked";
@@ -132,6 +146,14 @@ function SubscriptionDetails({ farmName, onPageChange, payments, subscription }:
     <main className="subscription-page">
       <nav aria-label="Navegação estrutural" className="settings-breadcrumb"><Link href="/dashboard">Painel</Link><span aria-hidden="true">›</span><span aria-current="page">Assinatura</span></nav>
       <header className="subscription-header"><div><p className="eyebrow">Conta e pagamentos</p><h1>Assinatura</h1><p>Acompanhe o período gratuito, as próximas cobranças e o histórico financeiro de {farmName}.</p></div>{subscription && <span className={`subscription-status${isBlocked || isGracePeriod ? " subscription-status-warning" : ""}`}>{billingStatusLabel(subscription.status)}</span>}</header>
+
+      {callback && <p aria-live="polite" className="subscription-action-notice">{subscription?.status === "Trial" || subscription?.status === "Active"
+        ? "Assinatura confirmada pelo backend. O acesso segue o estado autorizado recebido do serviço."
+        : callbackResult === "cancelled" ? "O checkout foi cancelado. Sua assinatura não foi reativada. Você pode tentar novamente quando quiser."
+          : callbackResult === "expired" ? "O link do checkout expirou. Confira os dados e inicie uma nova tentativa."
+            : subscription?.status === "PendingSubscription" ? "Checkout recebido. Estamos aguardando a confirmação do backend; o redirecionamento não ativa a assinatura."
+              : "Recebemos o retorno do checkout. A confirmação depende da atualização segura do backend."}</p>}
+      {callback && subscription?.status === "PendingSubscription" && pollAttempts >= 12 && <button className="auth-secondary-action" onClick={onRefresh} type="button">Atualizar status</button>}
 
       {!subscription ? (
         <section aria-labelledby="subscription-empty-title" className="subscription-empty">
@@ -152,6 +174,7 @@ function SubscriptionDetails({ farmName, onPageChange, payments, subscription }:
               <div><dt>Assinatura criada em</dt><dd>{formatBillingDate(subscription.createdAtUtc)}</dd></div>
             </dl>
           </section>
+          <SubscriptionActions callback={callback} callbackResult={callbackResult} client={client} farmId={subscription.breedingFarmId} onRefresh={onRefresh} subscription={subscription} />
         </>
       )}
 
@@ -169,6 +192,6 @@ function SubscriptionPageContent() {
   return <SubscriptionScreen />;
 }
 
-export default function SubscriptionPage() {
+export default function Page() {
   return <AuthProvider><SubscriptionPageContent /></AuthProvider>;
 }
