@@ -5,13 +5,22 @@ import { ApiClient, ApiError } from "../../lib/http/api-client";
 import type { BillingSubscription } from "./subscription-data";
 import { SubscriptionActions } from "./subscription-screen";
 
-const { mockRequest, mockFetchAntiforgeryToken, mockRefresh, mockSetTenant, mockClearCache } = vi.hoisted(() => ({
+const { mockRequest, mockFetchAntiforgeryToken, mockRefresh, mockSetTenant, mockClearCache, mockRedirectToHostedAsaas } = vi.hoisted(() => ({
   mockRequest: vi.fn(),
   mockFetchAntiforgeryToken: vi.fn(),
   mockRefresh: vi.fn(),
   mockSetTenant: vi.fn(),
-  mockClearCache: vi.fn()
+  mockClearCache: vi.fn(),
+  mockRedirectToHostedAsaas: vi.fn()
 }));
+
+vi.mock("../../lib/billing/asaas-redirect", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/billing/asaas-redirect")>();
+  return {
+    ...actual,
+    redirectToHostedAsaas: mockRedirectToHostedAsaas
+  };
+});
 
 const client = {
   clearCache: mockClearCache,
@@ -78,5 +87,36 @@ describe("SubscriptionActions", () => {
 
     expect((await screen.findByRole("alert")).textContent).toContain("Informe um CPF com 11 caracteres");
     expect(mockRequest).not.toHaveBeenCalled();
+  });
+
+  it("navigates to the validated Asaas checkout URL on successful rehire", async () => {
+    mockRequest.mockResolvedValue({
+      checkoutUrl: "https://sandbox.asaas.com/checkoutSession/show/rehire-123",
+      status: "pendingCheckout"
+    });
+    renderActions(cancelledSubscription);
+
+    fireEvent.change(await screen.findByLabelText("CPF ou CNPJ do responsável"), { target: { value: "123.456.789-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar para o checkout seguro" }));
+
+    await waitFor(() => expect(mockRedirectToHostedAsaas).toHaveBeenCalledWith("https://sandbox.asaas.com/checkoutSession/show/rehire-123"));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("does not navigate and displays a recoverable error when rehire checkout URL is outside Asaas allowlist", async () => {
+    mockRequest.mockResolvedValue({
+      checkoutUrl: "https://evilasaas.com/checkout",
+      status: "pendingCheckout"
+    });
+    renderActions(cancelledSubscription);
+
+    const input = await screen.findByLabelText("CPF ou CNPJ do responsável");
+    fireEvent.change(input, { target: { value: "123.456.789-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar para o checkout seguro" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("Não foi possível iniciar o checkout");
+    expect(mockRedirectToHostedAsaas).not.toHaveBeenCalled();
+    // Tax identifier remains preserved so user can retry without retyping
+    expect((input as HTMLInputElement).value).toBe("123.456.789-01");
   });
 });

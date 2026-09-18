@@ -8,6 +8,7 @@ import { useAccessContext } from "../../lib/auth/access-provider";
 import type { AccessContextResult } from "../../lib/auth/access-context";
 import { ApiClient, ApiError, createApiClient } from "../../lib/http/api-client";
 import { BillingSubscription, hasSubscriptionAccess } from "../../lib/billing/subscription-access";
+import { sanitizeHostedAsaasUrl } from "../../lib/billing/asaas-redirect";
 import { AppLoadingState } from "./app-loading-state";
 import { BrandLockup, BrandPanel } from "./brand";
 import { navigateToHostedCheckout } from "./hosted-checkout-navigation";
@@ -33,18 +34,6 @@ type BillingView =
   | { kind: "cancelled"; subscription: BillingSubscription }
   | { kind: "blocked"; subscription: BillingSubscription }
   | { kind: "access" };
-
-function safeCheckoutUrl(value: string): string | undefined {
-  try {
-    const url = new URL(value);
-    const host = url.hostname.toLowerCase();
-    const isAsaasHost = host === "asaas.com" || host.endsWith(".asaas.com");
-    if (url.protocol !== "https:" || !isAsaasHost || url.username || url.password) return undefined;
-    return url.toString();
-  } catch {
-    return undefined;
-  }
-}
 
 function normalizeTaxIdentifier(value: string): string {
   return value.replace(/[^a-z\d]/gi, "").toUpperCase();
@@ -269,7 +258,7 @@ function CheckoutContent({ isReturn }: Readonly<{ isReturn: boolean }>) {
         headers: { "content-type": "application/json" },
         method: "POST"
       });
-      const checkoutUrl = safeCheckoutUrl(checkout.checkoutUrl);
+      const checkoutUrl = sanitizeHostedAsaasUrl(checkout.checkoutUrl);
       if (checkout.status !== "pendingCheckout" || !checkout.checkoutId || !checkout.subscriptionId || !checkoutUrl) {
         setCheckoutError("Não foi possível abrir o checkout seguro. Tente novamente em instantes.");
         return;
