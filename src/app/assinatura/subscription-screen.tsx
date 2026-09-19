@@ -2,6 +2,7 @@
 
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 import { ApiClient, ApiError } from "../../lib/http/api-client";
+import { isSafeHostedAsaasUrl, redirectToHostedAsaas } from "../../lib/billing/asaas-redirect";
 import type { BillingSubscription } from "./subscription-data";
 
 type Checkout = { checkoutUrl: string; status: string };
@@ -82,9 +83,9 @@ export function SubscriptionActions({ callback, callbackResult, client, farmId, 
         headers: { "content-type": "application/json" },
         method: "POST"
       });
-      if (result.status !== "pendingCheckout" || !result.checkoutUrl) throw new Error("Checkout indisponível");
+      if (result.status !== "pendingCheckout" || !isSafeHostedAsaasUrl(result.checkoutUrl)) throw new Error("Checkout indisponível");
       setTaxIdentifier("");
-      window.location.assign(result.checkoutUrl);
+      redirectToHostedAsaas(result.checkoutUrl);
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) setErrorNotice("Sua sessão expirou. Entre novamente para continuar.");
       else if (cause instanceof ApiError && cause.status === 409) setErrorNotice("Não foi possível iniciar a recontratação para o estado atual da assinatura. Atualize os dados e tente novamente.");

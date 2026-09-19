@@ -1,3 +1,5 @@
+import { redirectToHostedAsaas } from "../../lib/billing/asaas-redirect";
+
 export function navigateToHostedCheckout(url: string): void {
-  window.location.assign(url);
+  redirectToHostedAsaas(url);
 }

@@ -1,4 +1,5 @@
 import type { BillingPayment, BillingPaymentsResponse, BillingSubscription } from "./subscription-data";
+import { isSafeHostedAsaasUrl, redirectToHostedAsaas } from "../../lib/billing/asaas-redirect";
 
 export interface HostedInvoiceRegularizationResponse {
   paymentId: string;
@@ -31,14 +32,7 @@ export function findCurrentRegularizablePayment(
 }
 
 export function isSafeHostedInvoiceUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && (url.port === "" || url.port === "443") &&
-      !url.username && !url.password &&
-      (url.hostname.toLowerCase() === "asaas.com" || url.hostname.toLowerCase().endsWith(".asaas.com"));
-  } catch {
-    return false;
-  }
+  return isSafeHostedAsaasUrl(value);
 }
 
 export function paymentAndSubscriptionAllowAccess(paymentStatus: string, subscriptionStatus: string): boolean {
@@ -69,5 +63,5 @@ export function clearPendingRegularizationReturn(): void {
 }
 
 export function redirectToHostedInvoice(url: string): void {
-  window.location.assign(url);
+  redirectToHostedAsaas(url);
 }
