@@ -4243,3 +4243,38 @@ h1, h2 { line-height: 1.08; }
 .subscription-confirm-dialog p { color: #596780; font-size: .84rem; line-height: 1.55; margin: .65rem 0 1rem; }
 .subscription-dialog-actions { display: flex; flex-wrap: wrap; gap: .55rem; justify-content: flex-end; }
 @media (max-width: 47.99rem) { .subscription-actions-panel { border-radius: .65rem; padding: .85rem; } .subscription-dialog-actions > button { flex: 1 1 100%; } }
+.subscription-checkout-content { color: var(--ink); width: 100%; }
+.subscription-checkout-content > .eyebrow { color: #145f4f; font-size: .68rem; font-weight: 800; letter-spacing: .06em; margin: 0 0 .5rem; text-transform: uppercase; }
+.subscription-checkout-content > h1 { color: var(--ink); font-size: clamp(1.65rem, 3vw, 2.35rem); letter-spacing: -.045em; line-height: 1.12; margin: 0; }
+.subscription-checkout-content > .lede { color: #596780; font-size: .92rem; line-height: 1.55; margin: .8rem 0 1.15rem; max-width: 48ch; }
+.subscription-checkout-form { display: grid; gap: .85rem; margin: 0 0 1rem; }
+.subscription-plan-fieldset { border: 0; display: grid; gap: .55rem; margin: 0; min-width: 0; padding: 0; }
+.subscription-plan-fieldset > legend { color: #34485e; font-size: .82rem; font-weight: 700; margin-bottom: .15rem; padding: 0; }
+.subscription-plan-choice { align-items: center; background: #fff; border: 1px solid #dce6e9; border-radius: .6rem; cursor: pointer; display: grid; gap: .2rem .65rem; grid-template-columns: auto minmax(0, 1fr) auto; padding: .7rem .8rem; }
+.subscription-plan-choice.is-selected { background: #f0f8f5; border-color: #80b8a5; box-shadow: 0 0 0 1px rgb(128 184 165 / 20%); }
+.subscription-plan-choice > input { accent-color: #216c59; grid-row: 1 / span 2; margin: 0; }
+.subscription-plan-copy, .subscription-plan-price { display: grid; gap: .1rem; }
+.subscription-plan-copy strong, .subscription-plan-price strong { color: #263d4f; font-size: .85rem; line-height: 1.3; }
+.subscription-plan-copy small, .subscription-plan-price small { color: #68778b; font-size: .72rem; line-height: 1.35; }
+.subscription-plan-price { grid-column: 3; grid-row: 1 / span 2; text-align: right; }
+.subscription-savings { background: #e1f3e8; border-radius: 999px; color: #176346; display: inline-block; font-size: .65rem; margin-left: .25rem; padding: .13rem .4rem; white-space: nowrap; }
+.subscription-plan-fieldset:disabled .subscription-plan-choice { cursor: wait; opacity: .72; }
+.subscription-pending-note { background: #f2f7fb; border: 1px solid #d8e4ef; border-radius: .5rem; color: #435b71; font-size: .8rem; line-height: 1.5; margin: 0; padding: .7rem .8rem; }
+.subscription-checkout-form .field-group { margin: 0; }
+.subscription-checkout-form .field-group > label { color: #34485e; font-size: .78rem; font-weight: 700; height: auto; left: auto; overflow: visible; position: static; top: auto; width: auto; }
+.subscription-checkout-form .field-group input { font-size: .85rem; min-height: 3rem; padding: .65rem .75rem; }
+.subscription-checkout-form .field-help { color: #68778b; font-size: .72rem; line-height: 1.45; margin: .1rem 0 0; }
+.subscription-checkout-form .auth-primary-action { min-height: 3rem; width: 100%; }
+.subscription-secure-note { color: #68778b; font-size: .76rem; line-height: 1.5; margin: -.3rem 0 0; }
+.subscription-checkout-content > .text-action { color: #176b9b; display: inline-block; font-size: .85rem; font-weight: 700; margin-top: .1rem; }
+.subscription-checkout-content > .text-action:focus-visible, .subscription-plan-choice:focus-within { outline: 3px solid rgb(57 137 113 / 35%); outline-offset: 2px; }
+@media (max-width: 47.99rem) {
+  .subscription-checkout-panel { overflow-y: auto; }
+  .subscription-checkout-content > .eyebrow { font-size: .64rem; text-align: left; }
+  .subscription-checkout-content > h1 { font-size: clamp(1.55rem, 7vw, 2rem); text-align: left; }
+  .subscription-checkout-content > .lede { font-size: .82rem; margin: .6rem 0 1rem; }
+  .subscription-plan-choice { gap: .2rem .5rem; padding: .65rem .6rem; }
+  .subscription-plan-copy strong, .subscription-plan-price strong { font-size: .78rem; }
+  .subscription-plan-copy small, .subscription-plan-price small { font-size: .66rem; }
+  .subscription-savings { font-size: .6rem; margin-left: 0; }
+}
