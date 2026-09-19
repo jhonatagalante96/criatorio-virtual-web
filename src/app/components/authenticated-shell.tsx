@@ -32,7 +32,7 @@ const primaryNavigation: NavigationItem[] = [
   { href: "/plantel/aves", icon: "bird", id: "birds", label: "Aves" },
   { href: "/reproducao", icon: "heart", id: "reproduction", label: "Reprodução" },
   { href: "/transferencias", icon: "transfer", id: "transfers", label: "Transferências" },
-  { icon: "trophy", id: "competitions", label: "Competições" },
+  { href: "/competicoes", icon: "trophy", id: "competitions", label: "Competições" },
   { href: "/documentos", icon: "document", id: "documents", label: "Documentos" }
 ];
 
