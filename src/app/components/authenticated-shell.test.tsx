@@ -123,6 +123,21 @@ describe("AuthenticatedShell", () => {
     expect(statisticsLinks.every((link) => link.getAttribute("aria-current") === "page")).toBe(true);
   });
 
+  it("opens Competições from the primary navigation on desktop and mobile", async () => {
+    render(
+      <AuthenticatedShell activeNav="competitions" email="jhonata@example.com" farmName="Criatório Aurora">
+        <div>Módulo global de competições</div>
+      </AuthenticatedShell>
+    );
+
+    await waitFor(() => expect(screen.getAllByText("Jhonata").length).toBeGreaterThan(0));
+    const competitionLinks = screen.getAllByRole("link", { name: "Competições" });
+    expect(competitionLinks).toHaveLength(2);
+    expect(competitionLinks.every((link) => link.getAttribute("href") === "/competicoes")).toBe(true);
+    expect(competitionLinks.every((link) => link.getAttribute("aria-current") === "page")).toBe(true);
+    expect(screen.queryByTitle("Módulo em desenvolvimento")).toBeNull();
+  });
+
   describe("AccessContext guard and billing routing", () => {
     const validUser = {
       id: "usr-1",

@@ -3953,6 +3953,15 @@ h1, h2 { line-height: 1.08; }
 .competition-delete-dialog > .competition-action-error { margin-top: .85rem; text-align: left; }
 .competition-delete-actions { justify-content: center; }
 .competition-delete-dialog > .auth-secondary-action { margin-top: .7rem; }
+.competition-filter-form { background: #fbfdfd; border-bottom: 1px solid #e4eeee; padding: clamp(1rem, 2.5vw, 1.4rem) clamp(1.1rem, 3vw, 2rem); }
+.competition-filter-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+.competition-filter-field { display: grid; gap: .3rem; min-width: 0; }
+.competition-filter-field > span { color: #365f72; font-size: .66rem; font-weight: 800; }
+.competition-filter-field input, .competition-filter-field select { background: #fff; border: 1px solid #bfd4d8; border-radius: .45rem; color: var(--ink); font: inherit; font-size: .75rem; min-height: 2.65rem; padding: .5rem .7rem; width: 100%; }
+.competition-filter-field input:focus, .competition-filter-field select:focus { border-color: #4d9e86; box-shadow: 0 0 0 3px rgb(77 158 134 / 16%); outline: none; }
+.competition-filter-error { background: #fff6f4; border: 1px solid #efd5d0; border-radius: .45rem; color: #9d3931; font-size: .68rem; margin: .6rem 0 0; padding: .5rem .7rem; }
+.competition-filter-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .85rem; }
+.competition-filter-actions button { font-size: .7rem; min-height: 2.4rem; padding: .45rem .85rem; }
 
 @media (max-width: 47.99rem) {
   .competition-history-header .document-wizard-header-actions { width: 100%; }
@@ -3965,6 +3974,7 @@ h1, h2 { line-height: 1.08; }
   .competition-management-actions > * { width: 100%; }
   .competition-delete-actions { flex-direction: column-reverse; }
   .competition-delete-actions > * { width: 100%; }
+  .competition-filter-grid { grid-template-columns: 1fr; }
 }
 .competition-wizard-progress { grid-template-columns: repeat(4, minmax(4.2rem, 1fr)); }
 .competition-wizard-card { display: grid; gap: 0; }
