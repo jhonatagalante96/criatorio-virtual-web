@@ -113,7 +113,21 @@ export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }:
         setSelectedFarmId(undefined);
         setFarmName("Criatório selecionado");
         setFarmState("blocked");
+        setBirds([]);
+        setAppliedFilters({});
         return;
+      }
+
+      if (selectedFarmId && selectedFarmId !== selectedFarm.breedingFarmId) {
+        setSearch("");
+        setCategory("");
+        setBirdId("");
+        setFromDate("");
+        setToDate("");
+        setDateError(undefined);
+        setAppliedFilters({});
+        setPage(1);
+        setBirds([]);
       }
 
       client.current!.setTenant(selectedFarm.breedingFarmId);

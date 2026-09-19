@@ -322,4 +322,59 @@ describe("CompetitionsListScreen", () => {
     const selectLink = screen.getByRole("link", { name: "Selecionar criatório" });
     expect(selectLink.getAttribute("href")).toBe("/onboarding/criatorio/selecionar");
   });
+
+  it("ignores stale response when tenant changes while request is in flight", async () => {
+    let resolveFirstFarm!: (res: Response) => void;
+    const firstFarmPromise = new Promise<Response>((resolve) => {
+      resolveFirstFarm = resolve;
+    });
+
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api/breeding-farms")) return farmResponse("farm-1");
+      if (url.includes("api/birds")) return birdsApiResponse();
+      if (url.includes("api/competitions")) {
+        return firstFarmPromise;
+      }
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { unmount } = render(<CompetitionsListScreen />);
+
+    // Unmount before request resolves
+    unmount();
+
+    // Late resolution must not throw or crash
+    resolveFirstFarm(competitionsApiResponse([sampleItem], 1, 20, 1, 1));
+  });
+
+  it("refreshes an expired session before retrying the list request", async () => {
+    let attempts = 0;
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api/breeding-farms")) return farmResponse("farm-1");
+      if (url.includes("api/birds")) return birdsApiResponse();
+      if (url.includes("api/competitions")) {
+        attempts += 1;
+        if (attempts === 1) {
+          return new Response(JSON.stringify({ title: "Sessão expirada", status: 401 }), {
+            headers: { "content-type": "application/json" },
+            status: 401
+          });
+        }
+        return competitionsApiResponse([sampleItem], 1, 20, 1, 1);
+      }
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CompetitionsListScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Torneio Nacional de Canto")).not.toBeNull();
+    });
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
 });
