@@ -3962,6 +3962,16 @@ h1, h2 { line-height: 1.08; }
 .competition-filter-error { background: #fff6f4; border: 1px solid #efd5d0; border-radius: .45rem; color: #9d3931; font-size: .68rem; margin: .6rem 0 0; padding: .5rem .7rem; }
 .competition-filter-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .85rem; }
 .competition-filter-actions button { font-size: .7rem; min-height: 2.4rem; padding: .45rem .85rem; }
+.competition-bird-filter-control { position: relative; }
+.competition-bird-clear-btn { align-items: center; background: transparent; border: 0; color: #66808d; cursor: pointer; display: flex; font-size: 1.15rem; height: 2.3rem; justify-content: center; line-height: 1; position: absolute; right: .25rem; top: .18rem; width: 2.3rem; }
+.competition-bird-clear-btn:hover { color: var(--ink); }
+.competition-bird-clear-btn:focus-visible { border-radius: .35rem; outline: 3px solid #e5a343; outline-offset: -2px; }
+.competition-bird-dropdown { background: #fff; border: 1px solid #bfd4d8; border-radius: .45rem; box-shadow: 0 .6rem 1.4rem rgb(6 58 86 / 16%); display: grid; gap: .15rem; list-style: none; margin: .25rem 0 0; max-height: 14rem; overflow-y: auto; padding: .3rem; position: absolute; left: 0; right: 0; top: 100%; z-index: 30; }
+.competition-bird-dropdown li { min-width: 0; }
+.competition-bird-dropdown button { align-items: center; background: transparent; border: 0; border-radius: .3rem; color: var(--ink); cursor: pointer; display: flex; flex-wrap: wrap; font: inherit; font-size: .72rem; gap: .3rem; padding: .45rem .6rem; text-align: left; width: 100%; }
+.competition-bird-dropdown button:hover, .competition-bird-dropdown button:focus-visible { background: #e7f5ec; outline: none; }
+.competition-bird-dropdown button[aria-selected="true"] { background: #e0f2e8; font-weight: 700; }
+.competition-bird-dropdown-empty { color: #6a7b8d; font-size: .68rem; padding: .6rem; text-align: center; }
 
 @media (max-width: 47.99rem) {
   .competition-history-header .document-wizard-header-actions { width: 100%; }

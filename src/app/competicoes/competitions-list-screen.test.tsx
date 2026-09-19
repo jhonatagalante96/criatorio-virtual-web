@@ -323,7 +323,121 @@ describe("CompetitionsListScreen", () => {
     expect(selectLink.getAttribute("href")).toBe("/onboarding/criatorio/selecionar");
   });
 
-  it("ignores stale response when tenant changes while request is in flight", async () => {
+  it("searches birds with autocomplete, selects an option, and clears the selection", async () => {
+    let birdSearchQuery = "";
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api/breeding-farms")) return farmResponse("farm-1");
+      if (url.includes("api/birds")) {
+        birdSearchQuery = url;
+        if (url.includes("search=Campe")) {
+          return new Response(JSON.stringify({
+            breedingFarmId: "farm-1",
+            items: [
+              { birdId: "bird-99", name: "Campeão das Américas", ringNumber: "BR-999" }
+            ]
+          }), { headers: { "content-type": "application/json" }, status: 200 });
+        }
+        return birdsApiResponse();
+      }
+      if (url.includes("api/competitions")) {
+        return competitionsApiResponse([sampleItem], 1, 20, 1, 1);
+      }
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CompetitionsListScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Torneio Nacional de Canto")).not.toBeNull();
+    });
+
+    const birdInput = screen.getByLabelText("Ave");
+    fireEvent.focus(birdInput);
+
+    // Initial birds should be visible in dropdown
+    await waitFor(() => {
+      expect(screen.getByText("Todas as aves")).not.toBeNull();
+    });
+
+    // Type query to trigger debounced bird search
+    fireEvent.change(birdInput, { target: { value: "Campeão" } });
+
+    await waitFor(() => {
+      expect(birdSearchQuery).toContain("search=Campe");
+      expect(screen.getByText("Campeão das Américas")).not.toBeNull();
+    });
+
+    // Select the option from dropdown
+    fireEvent.click(screen.getByRole("option", { name: /Campeão das Américas/ }));
+
+    // Input should now display the selected bird name
+    expect((birdInput as HTMLInputElement).value).toContain("Campeão das Américas");
+
+    // Clear selection
+    const clearBtn = screen.getByLabelText("Limpar seleção de ave");
+    fireEvent.click(clearBtn);
+
+    expect((birdInput as HTMLInputElement).value).toBe("");
+  });
+
+  it("discards in-flight competition response from previous tenant when tenant changes", async () => {
+    let resolveFarm1Competitions!: (res: Response) => void;
+    const farm1Promise = new Promise<Response>((resolve) => {
+      resolveFarm1Competitions = resolve;
+    });
+
+    let notifyFarm1Started!: () => void;
+    const farm1StartedPromise = new Promise<void>((resolve) => {
+      notifyFarm1Started = resolve;
+    });
+
+    const farm2Item = {
+      ...sampleItem,
+      breedingFarmId: "farm-2",
+      competitionId: "comp-farm-2",
+      name: "Torneio Fazenda Horizonte"
+    };
+
+    let compRequests = 0;
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api/breeding-farms")) return farmResponse("farm-1");
+      if (url.includes("api/birds")) return birdsApiResponse();
+      if (url.includes("api/competitions")) {
+        compRequests += 1;
+        if (compRequests === 1) {
+          notifyFarm1Started();
+          return farm1Promise;
+        }
+        return competitionsApiResponse([farm2Item], 1, 20, 1, 1);
+      }
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { rerender } = render(<CompetitionsListScreen tenantId="farm-1" />);
+
+    // Wait until farm-1 competitions request is actually in-flight
+    await farm1StartedPromise;
+
+    // Switch tenant while farm-1 is in-flight
+    rerender(<CompetitionsListScreen tenantId="farm-2" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Torneio Fazenda Horizonte")).not.toBeNull();
+    });
+
+    // Resolve delayed farm-1 response
+    resolveFarm1Competitions(competitionsApiResponse([sampleItem], 1, 20, 1, 1));
+
+    // Farm-1 competition should not overwrite farm-2
+    expect(screen.queryByText("Torneio Nacional de Canto")).toBeNull();
+    expect(screen.getByText("Torneio Fazenda Horizonte")).not.toBeNull();
+  });
+
+  it("ignores stale response when component unmounts while request is in flight", async () => {
     let resolveFirstFarm!: (res: Response) => void;
     const firstFarmPromise = new Promise<Response>((resolve) => {
       resolveFirstFarm = resolve;

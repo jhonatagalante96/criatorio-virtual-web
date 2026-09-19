@@ -25,7 +25,7 @@ type ListState = "error" | "loading" | "ready";
 
 const PAGE_SIZE = 20;
 
-interface BirdOption {
+export interface BirdOption {
   birdId: string;
   name: string;
   ringNumber: string | null;
@@ -35,9 +35,10 @@ interface BirdListApiResponse {
   items: BirdOption[];
 }
 
-interface CompetitionsListScreenProps {
+export interface CompetitionsListScreenProps {
   initialFilters?: CompetitionFilterValues;
   initialPage?: number;
+  tenantId?: string;
 }
 
 function farmErrorMessage(error: unknown): string {
@@ -67,18 +68,26 @@ function StateCard({
   );
 }
 
-export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }: CompetitionsListScreenProps) {
+export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1, tenantId }: CompetitionsListScreenProps) {
   const { refresh, session, status } = useAuth();
   const client = useRef<ApiClient | null>(null);
   const farmRequestVersion = useRef(0);
   const listRequestVersion = useRef(0);
+  const currentTenantIdRef = useRef<string | undefined>(undefined);
 
   const [farmError, setFarmError] = useState<string>();
   const [farmName, setFarmName] = useState("Criatório selecionado");
   const [farmState, setFarmState] = useState<FarmState>("loading");
   const [selectedFarmId, setSelectedFarmId] = useState<string>();
 
+  // Bird selector state (supports pagination and live search)
   const [birds, setBirds] = useState<BirdOption[]>([]);
+  const [selectedBird, setSelectedBird] = useState<BirdOption>();
+  const [birdQuery, setBirdQuery] = useState("");
+  const [isBirdDropdownOpen, setIsBirdDropdownOpen] = useState(false);
+  const [isSearchingBirds, setIsSearchingBirds] = useState(false);
+  const birdSearchRequestId = useRef(0);
+  const birdControlRef = useRef<HTMLDivElement>(null);
 
   // Filter input states
   const [search, setSearch] = useState(initialFilters.search ?? "");
@@ -99,6 +108,29 @@ export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }:
 
   if (!client.current) client.current = createApiClient();
 
+  const searchBirds = useCallback(async (query: string) => {
+    const activeTenant = currentTenantIdRef.current;
+    if (!activeTenant) return;
+    const reqId = ++birdSearchRequestId.current;
+    setIsSearchingBirds(true);
+    try {
+      const trimmed = query.trim();
+      const endpoint = trimmed
+        ? `api/birds?search=${encodeURIComponent(trimmed)}&pageSize=50&sortBy=name&sortDirection=asc`
+        : "api/birds?sortBy=name&sortDirection=asc&page=1&pageSize=50";
+      const response = await client.current!.request<BirdListApiResponse>(endpoint);
+      if (reqId === birdSearchRequestId.current && currentTenantIdRef.current === activeTenant) {
+        setBirds(response.items ?? []);
+      }
+    } catch {
+      // ignore search failures gracefully
+    } finally {
+      if (reqId === birdSearchRequestId.current) {
+        setIsSearchingBirds(false);
+      }
+    }
+  }, []);
+
   const loadFarm = useCallback(async (recoverSession = true) => {
     const version = ++farmRequestVersion.current;
     setFarmState("loading");
@@ -107,21 +139,30 @@ export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }:
       const rawResponse = await client.current!.request<BreedingFarmSelectionResponse>("api/breeding-farms");
       if (version !== farmRequestVersion.current) return;
       const response = normalizeFarmResponse(rawResponse);
-      const selectedFarm = selectedFarmFromResponse(response);
+      const selectedFarm = (tenantId
+        ? response.breedingFarms.find((farm) => farm.breedingFarmId === tenantId)
+        : undefined) ?? selectedFarmFromResponse(response);
       if (!selectedFarm) {
+        currentTenantIdRef.current = undefined;
         client.current!.setTenant(undefined);
         setSelectedFarmId(undefined);
         setFarmName("Criatório selecionado");
         setFarmState("blocked");
         setBirds([]);
+        setSelectedBird(undefined);
+        setBirdId("");
+        setBirdQuery("");
         setAppliedFilters({});
         return;
       }
 
-      if (selectedFarmId && selectedFarmId !== selectedFarm.breedingFarmId) {
+      const previousTenantId = currentTenantIdRef.current;
+      if (previousTenantId && previousTenantId !== selectedFarm.breedingFarmId) {
         setSearch("");
         setCategory("");
         setBirdId("");
+        setSelectedBird(undefined);
+        setBirdQuery("");
         setFromDate("");
         setToDate("");
         setDateError(undefined);
@@ -130,21 +171,22 @@ export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }:
         setBirds([]);
       }
 
+      currentTenantIdRef.current = selectedFarm.breedingFarmId;
       client.current!.setTenant(selectedFarm.breedingFarmId);
       setSelectedFarmId(selectedFarm.breedingFarmId);
       setFarmName(selectedFarm.name);
       setFarmState("ready");
 
-      // Load available birds for filter dropdown
+      // Load initial birds for search/dropdown
       try {
         const birdsResponse = await client.current!.request<BirdListApiResponse>(
-          "api/birds?sortBy=name&sortDirection=asc&page=1&pageSize=100"
+          "api/birds?sortBy=name&sortDirection=asc&page=1&pageSize=50"
         );
-        if (version === farmRequestVersion.current) {
+        if (version === farmRequestVersion.current && currentTenantIdRef.current === selectedFarm.breedingFarmId) {
           setBirds(birdsResponse.items ?? []);
         }
       } catch {
-        // Silently ignore bird list failure for filters
+        // Silently ignore initial bird list failure
       }
     } catch (error) {
       if (version !== farmRequestVersion.current || error instanceof StaleTenantResponseError) return;
@@ -158,10 +200,11 @@ export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }:
       setFarmState(error instanceof ApiError && (error.status === 403 || error.status === 404 || error.status === 409) ? "blocked" : "error");
       setFarmError(farmErrorMessage(error));
     }
-  }, [refresh]);
+  }, [refresh, tenantId]);
 
   const loadCompetitions = useCallback(async (recoverSession = true) => {
-    if (!selectedFarmId) return;
+    const activeTenantId = currentTenantIdRef.current;
+    if (!activeTenantId) return;
     const version = ++listRequestVersion.current;
     setListState("loading");
     setListError(undefined);
@@ -171,14 +214,14 @@ export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }:
 
     try {
       const response = await client.current!.request<CompetitionListResponse>(`api/competitions?${query}`);
-      if (version !== listRequestVersion.current) return;
+      if (version !== listRequestVersion.current || currentTenantIdRef.current !== activeTenantId) return;
       setList(response);
       setListState("ready");
     } catch (error) {
-      if (version !== listRequestVersion.current || error instanceof StaleTenantResponseError) return;
+      if (version !== listRequestVersion.current || currentTenantIdRef.current !== activeTenantId || error instanceof StaleTenantResponseError) return;
       if (error instanceof ApiError && error.status === 401 && recoverSession) {
         const result = await refresh({ showLoading: false });
-        if (result.ok && version === listRequestVersion.current) {
+        if (result.ok && version === listRequestVersion.current && currentTenantIdRef.current === activeTenantId) {
           await loadCompetitions(false);
           return;
         }
@@ -186,7 +229,7 @@ export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }:
       setListState("error");
       setListError(competitionListErrorMessage(error));
     }
-  }, [appliedFilters, page, refresh, selectedFarmId]);
+  }, [appliedFilters, page, refresh]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -195,7 +238,7 @@ export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }:
       farmRequestVersion.current += 1;
       listRequestVersion.current += 1;
     };
-  }, [loadFarm, status]);
+  }, [loadFarm, status, tenantId]);
 
   useEffect(() => {
     if (status !== "authenticated" || farmState !== "ready" || !selectedFarmId) return;
@@ -204,6 +247,46 @@ export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }:
       listRequestVersion.current += 1;
     };
   }, [farmState, loadCompetitions, selectedFarmId, status]);
+
+  // Debounced search for birds
+  useEffect(() => {
+    if (selectedBird || farmState !== "ready") return;
+    const timer = setTimeout(() => {
+      void searchBirds(birdQuery);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [birdQuery, farmState, searchBirds, selectedBird]);
+
+  // Initial bird lookup when birdId was passed in initial filters
+  useEffect(() => {
+    if (!initialFilters.birdId || selectedBird || farmState !== "ready") return;
+    let isMounted = true;
+    client.current!.request<BirdOption>(`api/birds/${encodeURIComponent(initialFilters.birdId)}`)
+      .then((resolved) => {
+        if (isMounted && resolved) {
+          setSelectedBird(resolved);
+          setBirdId(resolved.birdId);
+          setBirdQuery(resolved.name);
+        }
+      })
+      .catch(() => {
+        // safe ignore
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [farmState, initialFilters.birdId, selectedBird]);
+
+  // Close bird dropdown on outside click
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (birdControlRef.current && !birdControlRef.current.contains(event.target as Node)) {
+        setIsBirdDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -227,6 +310,9 @@ export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }:
     setSearch("");
     setCategory("");
     setBirdId("");
+    setSelectedBird(undefined);
+    setBirdQuery("");
+    setIsBirdDropdownOpen(false);
     setFromDate("");
     setToDate("");
     setDateError(undefined);
@@ -355,21 +441,98 @@ export function CompetitionsListScreen({ initialFilters = {}, initialPage = 1 }:
                 />
               </label>
 
-              <label className="competition-filter-field" htmlFor="filtro-ave">
-                <span>Ave</span>
-                <select
-                  id="filtro-ave"
-                  onChange={(event) => setBirdId(event.target.value)}
-                  value={birdId}
-                >
-                  <option value="">Todas as aves</option>
-                  {birds.map((b) => (
-                    <option key={b.birdId} value={b.birdId}>
-                      {b.name}{b.ringNumber ? ` (${b.ringNumber})` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="competition-filter-field" ref={birdControlRef}>
+                <label htmlFor="filtro-ave">
+                  <span>Ave</span>
+                </label>
+                <div className="competition-bird-filter-control">
+                  <input
+                    aria-autocomplete="list"
+                    aria-controls="filtro-ave-opcoes"
+                    aria-expanded={isBirdDropdownOpen}
+                    autoComplete="off"
+                    id="filtro-ave"
+                    onChange={(event) => {
+                      const val = event.target.value;
+                      const matchedById = birds.find((b) => b.birdId === val);
+                      if (matchedById) {
+                        setSelectedBird(matchedById);
+                        setBirdId(matchedById.birdId);
+                        setBirdQuery(matchedById.name);
+                        setIsBirdDropdownOpen(false);
+                        return;
+                      }
+                      if (selectedBird) {
+                        setSelectedBird(undefined);
+                        setBirdId("");
+                      }
+                      setBirdQuery(val);
+                      setIsBirdDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsBirdDropdownOpen(true)}
+                    placeholder={selectedBird ? undefined : "Todas as aves (digite para buscar...)"}
+                    type="search"
+                    value={selectedBird ? `${selectedBird.name}${selectedBird.ringNumber ? ` (${selectedBird.ringNumber})` : ""}` : birdQuery}
+                  />
+                  {(selectedBird || birdQuery) && (
+                    <button
+                      aria-label="Limpar seleção de ave"
+                      className="competition-bird-clear-btn"
+                      onClick={() => {
+                        setSelectedBird(undefined);
+                        setBirdId("");
+                        setBirdQuery("");
+                        setIsBirdDropdownOpen(false);
+                      }}
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  )}
+                  {isBirdDropdownOpen && (
+                    <ul className="competition-bird-dropdown" id="filtro-ave-opcoes" role="listbox">
+                      <li>
+                        <button
+                          aria-selected={!birdId}
+                          onClick={() => {
+                            setSelectedBird(undefined);
+                            setBirdId("");
+                            setBirdQuery("");
+                            setIsBirdDropdownOpen(false);
+                          }}
+                          role="option"
+                          type="button"
+                        >
+                          <strong>Todas as aves</strong>
+                        </button>
+                      </li>
+                      {birds.map((b) => (
+                        <li key={b.birdId}>
+                          <button
+                            aria-selected={birdId === b.birdId}
+                            onClick={() => {
+                              setSelectedBird(b);
+                              setBirdId(b.birdId);
+                              setBirdQuery(b.name);
+                              setIsBirdDropdownOpen(false);
+                            }}
+                            role="option"
+                            type="button"
+                          >
+                            <strong>{b.name}</strong>
+                            {b.ringNumber ? <small> · Anilha {b.ringNumber}</small> : <small> · Sem anilha</small>}
+                          </button>
+                        </li>
+                      ))}
+                      {!isSearchingBirds && birds.length === 0 && birdQuery.trim() && (
+                        <li className="competition-bird-dropdown-empty">
+                          <small>Nenhuma ave encontrada com esse termo.</small>
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              </div>
 
               <label className="competition-filter-field" htmlFor="filtro-categoria">
                 <span>Categoria</span>
